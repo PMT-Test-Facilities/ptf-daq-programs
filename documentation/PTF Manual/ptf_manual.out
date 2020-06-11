@@ -1,0 +1,10 @@
+\BOOKMARK [1][-]{section.1}{Introduction}{}
+\BOOKMARK [1][-]{section.2}{Motor Control}{}
+\BOOKMARK [2][-]{subsection.2.1}{Limit Switchs}{section.2}
+\BOOKMARK [2][-]{subsection.2.2}{Phidget Accelerometer/Magnetometer}{section.2}
+\BOOKMARK [1][-]{section.3}{MIDAS front-end Programs}{}
+\BOOKMARK [2][-]{subsection.3.1}{feMotor}{section.3}
+\BOOKMARK [2][-]{subsection.3.2}{feMotor}{section.3}
+\BOOKMARK [2][-]{subsection.3.3}{feScan}{section.3}
+\BOOKMARK [1][-]{section.4}{Instruction Checklist}{}
+\BOOKMARK [1][-]{section.5}{List of Known Problems and Needed Improvements}{}

@@ -1,0 +1,252 @@
+#include "TRotationCalculator.hxx"
+#include "midas.h" // for logging
+
+//----------------------------------------------------------
+TRotationCalculator::TRotationCalculator(){
+//----------------------------------------------------------
+
+    fObject_rot1 = new Polygon();
+    fObject_rot2 = new Polygon();
+}
+
+//----------------------------------------------------------
+bool TRotationCalculator::CalculatePath(std::pair<double, double> start1, std::pair<double, double> start2, std::pair<double, double> rotation1, std::pair<double, double> rotation2, double gant1_tilt, double gant2_tilt, std::pair<double, double> tank_height_start, std::pair<double, double> tank_height_end){
+//----------------------------------------------------------
+
+  // initialize variables
+  double startX1 = start1.first;
+  double startY1 = start1.second;
+  double startX2 = start2.first;
+  double startY2 = start2.second;
+  double rot_start1 = rotation1.first;
+  double rot_end1 = rotation1.second;
+  double rot_start2 = rotation2.first;
+  double rot_end2 = rotation2.second;
+  bool validEndPoint1 = true;
+  bool validEndPoint2 = true;
+
+  // Set tank test
+  double xdif1;
+  double ydif1;
+  double xdif2;
+  double ydif2;
+  double xcent = 0.325;
+  double ycent = 0.335;
+  double maxval = 0.61; // radius of tank ~0.61 
+  double ydifmax = 0.53; // max/min from center where PMT holders sit
+
+  std::vector<double> X1(4);
+  std::vector<double> Y1(4);
+  std::vector<double> X2(4);
+  std::vector<double> Y2(4);
+
+  bool collides_gant = 0;
+  const double pi = boost::math::constants::pi<double>();
+
+  //determine number of increments in rotation analyzed 
+  double increment = 5.0; // increment size (degrees) - 5.0 default
+  double tot_rot1 = rot_start1 - rot_end1;
+  int N1_steps = abs(tot_rot1)/increment;
+  double tot_rot2 = rot_start2 - rot_end2;
+  int N2_steps = abs(tot_rot2)/increment;
+  double rot1 = rot_start1*pi/180;
+  double rot2 = rot_start2*pi/180;
+
+  //cm_msg(MINFO,"CreatePath"," NUMBER STEPS  = %3.3i & %3.3i", N1_steps, N2_steps);
+  // if number of rotation steps in gantry 1 >= gantry 2
+  if(N1_steps >= N2_steps){
+    for(int i = 0; i < N1_steps + 1; i++){
+      // Rounding errors - take to final rotation position on last step
+      if(i > N1_steps - 1){
+        rot2 = rot_end2*pi/180;
+        rot1 = rot_end1*pi/180;
+      }     
+      std::cout<< "RF DEBUG " << "Rotation:  " << rot1 << " " << rot2 << std::endl;
+      std::cout<< "RF DEBUG " << "N steps:  " << N1_steps << std::endl;
+
+      // determine boundary coordintes for gantry 1 & 2
+      Y1[0] = cos(gant1_tilt)*(-0.070*cos(rot1)-0.200*sin(rot1))+(1-cos(gant1_tilt))*(-0.070*cos(rot1)-0.110*sin(rot1)) + startY1;
+      X1[0] = cos(gant1_tilt)*(-0.200*cos(rot1)+0.070*sin(rot1))+(1-cos(gant1_tilt))*(-0.110*cos(rot1)+0.070*sin(rot1)) + startX1;
+      Y1[1] = cos(gant1_tilt)*(-0.070*cos(rot1)+0.140*sin(rot1))+(1-cos(gant1_tilt))*(-0.070*cos(rot1)+0.110*sin(rot1)) + startY1;
+      X1[1] = cos(gant1_tilt)*(0.140*cos(rot1)+0.070*sin(rot1))+(1-cos(gant1_tilt))*(0.110*cos(rot1)+0.070*sin(rot1)) + startX1;
+      Y1[2] = cos(gant1_tilt)*(0.160*cos(rot1)+0.140*sin(rot1))+(1-cos(gant1_tilt))*(0.160*cos(rot1)+0.110*sin(rot1)) + startY1;
+      X1[2] = cos(gant1_tilt)*(0.140*cos(rot1)-0.160*sin(rot1))+(1-cos(gant1_tilt))*(0.110*cos(rot1)-0.160*sin(rot1)) + startX1;
+      Y1[3] = cos(gant1_tilt)*(0.160*cos(rot1)-0.200*sin(rot1))+(1-cos(gant1_tilt))*(0.160*cos(rot1)-0.110*sin(rot1)) + startY1;
+      X1[3] = cos(gant1_tilt)*(-0.200*cos(rot1)-0.160*sin(rot1))+(1-cos(gant1_tilt))*(-0.110*cos(rot1)-0.160*sin(rot1)) + startX1;
+
+      Y2[0] = cos(gant2_tilt)*(0.070*cos(rot2)+0.200*sin(rot2))+(1-cos(gant2_tilt))*(0.070*cos(rot2)+0.110*sin(rot2)) + startY2;
+      X2[0] = cos(gant2_tilt)*(0.200*cos(rot2)-0.070*sin(rot2))+(1-cos(gant2_tilt))*(0.110*cos(rot2)-0.070*sin(rot2)) + startX2;
+      Y2[1] = cos(gant2_tilt)*(0.070*cos(rot2)-0.140*sin(rot2))+(1-cos(gant2_tilt))*(0.070*cos(rot2)-0.110*sin(rot2)) + startY2;
+      X2[1] = cos(gant2_tilt)*(-0.140*cos(rot2)-0.070*sin(rot2))+(1-cos(gant2_tilt))*(-0.110*cos(rot2)-0.070*sin(rot2)) + startX2;
+      Y2[2] = cos(gant2_tilt)*(-0.160*cos(rot2)-0.140*sin(rot2))+(1-cos(gant2_tilt))*(-0.160*cos(rot2)-0.110*sin(rot2)) + startY2;
+      X2[2] = cos(gant2_tilt)*(-0.140*cos(rot2)+0.160*sin(rot2))+(1-cos(gant2_tilt))*(-0.110*cos(rot2)+0.160*sin(rot2)) + startX2;
+      Y2[3] = cos(gant2_tilt)*(-0.160*cos(rot2)+0.200*sin(rot2))+(1-cos(gant2_tilt))*(-0.160*cos(rot2)+0.110*sin(rot2)) + startY2;
+      X2[3] = cos(gant2_tilt)*(0.200*cos(rot2)+0.160*sin(rot2))+(1-cos(gant2_tilt))*(0.110*cos(rot2)+0.160*sin(rot2)) + startX2; 
+     
+      // append these coordinates to fObject_rot1 & fObject_rot2
+      for(int j = 0; j < 4; ++j){
+        boost::geometry::append(*fObject_rot1, boost::geometry::make<boost::geometry::model::d2::point_xy<double> >(X1[j],Y1[j]));
+        boost::geometry::append(*fObject_rot2, boost::geometry::make<boost::geometry::model::d2::point_xy<double> >(X2[j],Y2[j]));
+        std::cout<< "RF DEBUG " << "Corner values:  " << X1[j] << " " << Y1[j] << " : " << X2[j] << " " << Y2[j] << std::endl;
+      }
+      boost::geometry::correct(*fObject_rot1);
+      boost::geometry::correct(*fObject_rot2);
+      std::vector<Point> objectPoints1 = fObject_rot1->outer();
+      std::vector<Point> objectPoints2 = fObject_rot2->outer();
+      
+      for(std::vector<Point>::size_type j = 0; j < 4; ++j){
+	double newX1 = boost::geometry::get<0>(objectPoints1[j]);
+        double newY1 = boost::geometry::get<1>(objectPoints1[j]);
+        double newX2 = boost::geometry::get<0>(objectPoints2[j]);
+        double newY2 = boost::geometry::get<1>(objectPoints2[j]);
+	boost::geometry::set<0>(objectPoints1[j], newX1);
+        boost::geometry::set<1>(objectPoints1[j], newY1);   
+        boost::geometry::set<0>(objectPoints2[j], newX2);
+        boost::geometry::set<1>(objectPoints2[j], newY2);
+      
+	// Finding XY box distances from tank center  
+	if(newX1 >= xcent) xdif1 = newX1-xcent;
+	else xdif1 = xcent-newX1;
+	if(newY1 >= ycent) ydif1 = newY1-ycent;
+	else ydif1 = ycent-newY1;
+	if(newX2 >= xcent) xdif2 = newX2-xcent;
+	else xdif2 = xcent-newX2;
+	if(newY2 >= ycent) ydif2 = newY2-ycent;
+	else ydif2 = ycent-newY2;
+
+	// Determine if box moves outside of tank limits. If gantry final position inside tank, must check 
+        if(!tank_height_end.first){
+          if((sqrt(xdif1*xdif1+ydif1*ydif1) < maxval) && (ydifmax > ydif1)) validEndPoint1 = true; 
+	  else validEndPoint1 = false;
+	}
+	if(!tank_height_end.second){
+	  if((sqrt(xdif2*xdif2+ydif2*ydif2) < maxval) && (ydifmax > ydif2)) validEndPoint2 = true;
+	  else validEndPoint2 = false;
+	}
+	std::cout<< "RF DEBUG " << "TANK MEASURING gant1 :  " << sqrt(xdif1*xdif1+ydif1*ydif1) << " " << xdif1 << " " << ydif1 << std::endl;
+	std::cout<< "RF DEBUG " << "TANK MEASURING gant2 :  " << sqrt(xdif2*xdif2+ydif2*ydif2) << " " << xdif2 << " " << ydif2 << std::endl;
+	std::cout<< "RF DEBUG " << "Container crash? :  " << validEndPoint1 << " " << validEndPoint2 << std::endl;  
+	if(!validEndPoint1 || !validEndPoint2) return false;
+      }
+
+      // create new Polygon objects to be analyzed for intersections
+      Polygon *fTestObject1 = new Polygon();
+      Polygon *fTestObject2 = new Polygon();
+      boost::geometry::assign_points(*fTestObject1,objectPoints1);
+      boost::geometry::correct(*fTestObject1);
+      boost::geometry::assign_points(*fTestObject2,objectPoints2);
+      boost::geometry::correct(*fTestObject2);
+      // if two gantries come within eachothers boundaries at any 5 degree rotation increment test false
+      collides_gant = boost::geometry::intersects(*fObject_rot1, *fObject_rot2);
+        std::cout<< "RF DEBUG " << " " << i << " " << collides_gant << std::endl;
+      if(collides_gant) return false;
+
+      // increment the rotation b/c rotation 2 is smaller or equal to rotation 1 need to determine how many increments before at its end rotation value
+      if(i < N2_steps - 1) {
+	// determine if rotation should be increasing or decreasing in value
+	if(tot_rot2 < 0){
+	  rot2 = rot2 + increment*pi/180;
+	} else rot2 = rot2 - increment*pi/180;
+      } else rot2 = rot_end2*pi/180;
+      // determine if rotation should be increasing or decreasing in value
+      if(tot_rot1 < 0){
+	rot1 = rot1 + increment*pi/180;
+      } else rot1 = rot1 - increment*pi/180;
+      
+      boost::geometry::clear(*fObject_rot1);
+      boost::geometry::clear(*fObject_rot2);
+    }
+  } else { // if number of rotation steps in gantry 2 > gantry 1
+    for(int i = 0; i < N2_steps + 1; i ++){
+      
+      // Rounding errors - take to final rotation position on last step 
+      if(i > N2_steps - 1){
+        rot2 = rot_end2*pi/180;
+        rot1 = rot_end1*pi/180;
+      }
+      // determine boundary coordintes for gantry 1 & 2
+      Y1[0] = cos(gant1_tilt)*(-0.070*cos(rot1)-0.200*sin(rot1))+(1-cos(gant1_tilt))*(-0.070*cos(rot1)-0.110*sin(rot1)) + startY1;
+      X1[0] = cos(gant1_tilt)*(-0.200*cos(rot1)+0.070*sin(rot1))+(1-cos(gant1_tilt))*(-0.110*cos(rot1)+0.070*sin(rot1)) + startX1;
+      Y1[1] = cos(gant1_tilt)*(-0.070*cos(rot1)+0.140*sin(rot1))+(1-cos(gant1_tilt))*(-0.070*cos(rot1)+0.110*sin(rot1)) + startY1;
+      X1[1] = cos(gant1_tilt)*(0.140*cos(rot1)+0.070*sin(rot1))+(1-cos(gant1_tilt))*(0.110*cos(rot1)+0.070*sin(rot1)) + startX1;
+      Y1[2] = cos(gant1_tilt)*(0.160*cos(rot1)+0.140*sin(rot1))+(1-cos(gant1_tilt))*(0.160*cos(rot1)+0.110*sin(rot1)) + startY1;
+      X1[2] = cos(gant1_tilt)*(0.140*cos(rot1)-0.160*sin(rot1))+(1-cos(gant1_tilt))*(0.110*cos(rot1)-0.160*sin(rot1)) + startX1;
+      Y1[3] = cos(gant1_tilt)*(0.160*cos(rot1)-0.200*sin(rot1))+(1-cos(gant1_tilt))*(0.160*cos(rot1)-0.110*sin(rot1)) + startY1;
+      X1[3] = cos(gant1_tilt)*(-0.200*cos(rot1)-0.160*sin(rot1))+(1-cos(gant1_tilt))*(-0.110*cos(rot1)-0.160*sin(rot1)) + startX1;
+
+      Y2[0] = cos(gant2_tilt)*(0.070*cos(rot2)+0.200*sin(rot2))+(1-cos(gant2_tilt))*(0.070*cos(rot2)+0.110*sin(rot2)) + startY2;
+      X2[0] = cos(gant2_tilt)*(0.200*cos(rot2)-0.070*sin(rot2))+(1-cos(gant2_tilt))*(0.110*cos(rot2)-0.070*sin(rot2)) + startX2;
+      Y2[1] = cos(gant2_tilt)*(0.070*cos(rot2)-0.140*sin(rot2))+(1-cos(gant2_tilt))*(0.070*cos(rot2)-0.110*sin(rot2)) + startY2;
+      X2[1] = cos(gant2_tilt)*(-0.140*cos(rot2)-0.070*sin(rot2))+(1-cos(gant2_tilt))*(-0.110*cos(rot2)-0.070*sin(rot2)) + startX2;
+      Y2[2] = cos(gant2_tilt)*(-0.160*cos(rot2)-0.140*sin(rot2))+(1-cos(gant2_tilt))*(-0.160*cos(rot2)-0.110*sin(rot2)) + startY2;
+      X2[2] = cos(gant2_tilt)*(-0.140*cos(rot2)+0.160*sin(rot2))+(1-cos(gant2_tilt))*(-0.110*cos(rot2)+0.160*sin(rot2)) + startX2;
+      Y2[3] = cos(gant2_tilt)*(-0.160*cos(rot2)+0.200*sin(rot2))+(1-cos(gant2_tilt))*(-0.160*cos(rot2)+0.110*sin(rot2)) + startY2;
+      X2[3] = cos(gant2_tilt)*(0.200*cos(rot2)+0.160*sin(rot2))+(1-cos(gant2_tilt))*(0.110*cos(rot2)+0.160*sin(rot2)) + startX2;
+
+      for(std::vector<Point>::size_type j = 0; j < 4; ++j){
+        boost::geometry::append(*fObject_rot1, boost::geometry::make<boost::geometry::model::d2::point_xy<double> >(X1[j],Y1[j]));
+        boost::geometry::append(*fObject_rot2, boost::geometry::make<boost::geometry::model::d2::point_xy<double> >(X2[j],Y2[j]));
+	std::cout<< "RF DEBUG " << "Corner values X2 ROT FIRST:  " << X1[j] << " " << Y1[j] << " : " << X2[j] << " " << Y2[j] << std::endl;
+      }
+      boost::geometry::correct(*fObject_rot1);
+      boost::geometry::correct(*fObject_rot2);     
+      std::vector<Point> objectPoints1 = fObject_rot1->outer();
+      std::vector<Point> objectPoints2 = fObject_rot2->outer();
+      
+      for(std::vector<Point>::size_type j = 0; j < 4; ++j){
+        double newX1 = boost::geometry::get<0>(objectPoints1[j]);
+        double newY1 = boost::geometry::get<1>(objectPoints1[j]);
+        double newX2 = boost::geometry::get<0>(objectPoints2[j]);
+        double newY2 = boost::geometry::get<1>(objectPoints2[j]);
+        boost::geometry::set<0>(objectPoints1[j], newX1);
+        boost::geometry::set<1>(objectPoints1[j], newY1);
+        boost::geometry::set<0>(objectPoints2[j], newX2);
+        boost::geometry::set<1>(objectPoints2[j], newY2);
+
+	// Finding XY box distances from tank center
+        if(newX1 >= xcent) xdif1 = newX1-xcent;
+	else xdif1 = xcent-newX1;
+	if(newY1 >= ycent) ydif1 = newY1-ycent;
+	else ydif1 = ycent-newY1;
+	if(newX2 >= xcent) xdif2 = newX2-xcent;
+	else xdif2 = xcent-newX2;
+	if(newY2 >= ycent) ydif2 = newY2-ycent;
+	else ydif2 = ycent-newY2;
+
+	// Determine if box moves outside of tank limits. If gantry final position inside tank, must check 
+        if(!tank_height_end.first){
+          if((sqrt(xdif1*xdif1+ydif1*ydif1) < maxval) && (ydifmax > ydif1)) validEndPoint1 = true;
+          else validEndPoint1 = false;
+        }
+        if(!tank_height_end.second){
+          if((sqrt(xdif2*xdif2+ydif2*ydif2) < maxval) && (ydifmax > ydif2)) validEndPoint2 = true;
+          else validEndPoint2 = false;
+        }
+	std::cout<< "RF DEBUG " << "Container crash? :  " << validEndPoint1 << " " << validEndPoint2 << std::endl;
+	if(!validEndPoint1 || !validEndPoint2) return false;
+      }
+      Polygon *fTestObject1 = new Polygon();
+      Polygon *fTestObject2 = new Polygon();
+      boost::geometry::assign_points(*fTestObject1,objectPoints1);
+      boost::geometry::correct(*fTestObject1);
+      boost::geometry::assign_points(*fTestObject2,objectPoints2);
+      boost::geometry::correct(*fTestObject2);
+      collides_gant = boost::geometry::intersects(*fObject_rot1, *fObject_rot2);
+      if(collides_gant) return false;
+
+      if(i < N1_steps - 1) {
+        if(tot_rot1 < 0){
+          rot1 = rot1 + increment*pi/180;
+        } else rot1 = rot1 - increment*pi/180;
+      } else rot1 = rot_end1*pi/180;
+      if(tot_rot2 < 0){
+        rot2 = rot2 + increment*pi/180;
+      } else rot2 = rot2 - increment*pi/180;
+      
+      boost::geometry::clear(*fObject_rot1);
+      boost::geometry::clear(*fObject_rot2);
+    }
+  }
+  return true;
+
+} 

@@ -1,0 +1,114 @@
+Notes on feMove2:
+
+/************************************COORDINATE FRAME*******************************************/
+The LOCAL coordinate frame of each gantry is defined as follows:
+
+Translation (x,y,z): 
+  Orientation: 
+    The (x,y,z) coordinate frame is chosen such that the x direction is along the gantry mounted 
+    to the PTF frame, the y direction is along the gantry mounted on the x gantry, and the z direction 
+    is along the vertically mounted gantry.
+  Origin: 
+    The origin is chosen to be the point on each axis at which a reference point is at the center 
+    of the tank in the x and y directions, and is at the top edge of the tank in the z direction. The
+    reference point is chosen to be the intersection of the rotary table axis of rotation and the hinge
+    axis of rotation for each gantry.
+  Positive directions:
+    The positive direction for the x-axis is chosen to be the direction towards the other gantry
+    The positive direction for the z-axis is chosen to be vertically downwards
+    The positive direction for the y axis is chosen to complete a right-hand coordinate frame
+
+Rotation (theta, phi):
+  Orientation: 
+    Theta is defined to be rotation around the z axis (i.e. around the rotary table axis)
+    Phi is defined to be rotation around the box tilt axis
+  Origin:
+    The origin in theta is chosen to be the point at which the box tilt axis is along the y axis, with
+    the box on the negative y side of the rotary table axis
+    The origin in phi is chosen to be the point at which the bottom of the box lies parallel to the
+    x-y plane
+  Positive directions:
+    Positive theta rotation is chosen to be positive along the positive z axis
+    Positive phi rotation is chosen to be positive in the direction from the box tilt hinge to the box
+      
+
+/*************************************ODB VARIABLES*********************************************/
+
+The indices of all array variables in Move2 directory refer to the following axes:
+  0 <=> Gantry1 X
+  1 <=> Gantry1 Y
+  2 <=> Gantry1 Z
+  3 <=> Gantry1 Theta (i.e. rotary table)
+  4 <=> Gantry1 Phi (i.e. box tilt)
+  5 <=> Gantry2 X
+  6 <=> Gantry2 Y
+  7 <=> Gantry2 Z
+  8 <=> Gantry2 Theta (i.e. rotary table)
+  9 <=> Gantry2 Phi (i.e. box tilt)
+
+Each variable has the following functionality, units:
+
+"Control":
+  Destination: Desired LOCAL destination for the two gantry arms
+    Units: meters (for translation) and degrees (for rotation)
+    Note 1: While this location is currently defined in the local frame of each gantry, in the
+            future, this will be in terms of the global destinations
+    Note 2: feMove2 may choose to switch which gantry goes to which set of coordinates if 
+            the default configuration is impossible to reach (i.e. gantry 1 will go to the
+            coordinates specified by indices 5-9 and gantry 2 will go to indices 0-4). If this 
+            occurs, the variable: "Move2/Variables/Swapped" will be set to true.
+  
+  Start Move: Setting this to yes will initiate a move to the specified destination.
+    Units: Boolean
+    
+  Stop Move: Setting this to yes will stop all motors immediately.
+    Units: Boolean
+    
+  ReInitialize: Setting this to yes will first recalibrate all axes (i.e. send each axes to 
+                its limit switch) then initiate a move to the specified coordinates.
+    Units: Boolean
+    
+    
+"Settings":
+  NOTE: These variables can only be changed when feMove2 is not running. Changing them while the
+        program is running will have no effect.
+        
+  Axis Channels: This array contains the motor channel associated with each axis. The motor 
+                 channels are labelled as follows:
+                 0 to 7  <=> Controller 1, channels A-H
+                 8 to 15 <=> Controller 2, channels A-H
+                 -1      <=> Axis disabled 
+    Units: integer indices
+    
+  Motor Scaling: This array contains the scaling between motor steps and physical motion (in the
+                 local frame)for each axis
+    Units: meters/motor-step (translation) and degrees/motor-step (for rotation)
+
+
+  Velocity: This array contains the desired velocity (in physical units) of the various axes
+    Units: meters/second (translation) and degrees/second (rotation)
+    
+  Acceleration: This array contains the desired velocity (in physical units) of the various axes
+    Units: meters/second^2 (translation) and degrees/second^2 (rotation)
+  
+  Limit Positions: This array contains the physical location of the limit switch on each axis
+                   in each gantry's local frame (see coordinate system section for details
+                   about where the origin is defined to be)
+    Units: meters (translation) and degrees (rotation)
+  
+"Variables":
+  Position: The current position of each gantry (current implementation: local frame, future
+            implementation: global frame)
+    Units: meters (translation) and degrees (rotation)
+  Initialized: Whether or not the system is initialized
+    Units: Boolean
+  Swapped: Whether or not the gantry destinations have been swapped from the user input
+    Units: Boolean
+  Completed: Whether or not the system has reached the desired destination
+    Units: Boolean
+  Moving: Whether or not the system is moving
+    Units: Boolean
+  Axis Moving: Whether or not each axis is moving
+    Units: Boolean
+  Axis Limit: Whether or not each axis' limit switch has been triggered.
+    Units: Boolean

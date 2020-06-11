@@ -1,0 +1,407 @@
+/********************************************************************\
+
+  Name:         experim.h
+  Created by:   ODBedit program
+
+  Contents:     This file contains C structures for the "Experiment"
+                tree in the ODB and the "/Analyzer/Parameters" tree.
+
+                Additionally, it contains the "Settings" subtree for
+                all items listed under "/Equipment" as well as their
+                event definition.
+
+                It can be used by the frontend and analyzer to work
+                with these information.
+
+                All C structures are accompanied with a string represen-
+                tation which can be used in the db_create_record function
+                to setup an ODB structure which matches the C structure.
+
+  Created on:   Wed Oct 25 13:50:40 2006
+
+\********************************************************************/
+
+#define EXP_PARAM_DEFINED
+
+typedef struct {
+  char      comments[80];
+} EXP_PARAM;
+
+#define EXP_PARAM_STR(_name) char *_name[] = {\
+"[.]",\
+"Comments = STRING : [80] Fixed Setup - pedestal, again",\
+"",\
+NULL }
+
+#define EXP_EDIT_DEFINED
+
+typedef struct {
+  char      operators[32];
+  char      comments[80];
+  float     xpos_start_mm_;
+} EXP_EDIT;
+
+#define EXP_EDIT_STR(_name) char *_name[] = {\
+"[.]",\
+"Operators = STRING : [32] Thomas",\
+"Comments = LINK : [36] /Experiment/Run Parameters/Comments",\
+"Xpos start(mm) = LINK : [51] /Equipment/Scan/Settings/ScanParams/Xpos_start(mm)",\
+"Xpos stop(mm) = LINK : [46] /Equipment/Scan/Settings/ScanParams/Xpos_stop",\
+"Xpos increment(mm) = LINK : [45] /Equipment/Scan/Settings/ScanParams/Xpos_inc",\
+"Ypos start(mm) = LINK : [51] /Equipment/Scan/Settings/ScanParams/Ypos_start(mm)",\
+"",\
+NULL }
+
+#ifndef EXCL_SCAN
+
+#define SCAN_COMMON_DEFINED
+
+typedef struct {
+  WORD      event_id;
+  WORD      trigger_mask;
+  char      buffer[32];
+  INT       type;
+  INT       source;
+  char      format[8];
+  BOOL      enabled;
+  INT       read_on;
+  INT       period;
+  double    event_limit;
+  DWORD     num_subevents;
+  INT       log_history;
+  char      frontend_host[32];
+  char      frontend_name[32];
+  char      frontend_file_name[256];
+} SCAN_COMMON;
+
+#define SCAN_COMMON_STR(_name) char *_name[] = {\
+"[.]",\
+"Event ID = WORD : 1",\
+"Trigger mask = WORD : 1",\
+"Buffer = STRING : [32] SYSTEM",\
+"Type = INT : 1",\
+"Source = INT : 0",\
+"Format = STRING : [8] MIDAS",\
+"Enabled = BOOL : y",\
+"Read on = INT : 257",\
+"Period = INT : 100",\
+"Event limit = DOUBLE : 0",\
+"Num subevents = DWORD : 0",\
+"Log history = INT : 0",\
+"Frontend host = STRING : [32] ladd03.triumf.ca",\
+"Frontend name = STRING : [32] feSCAN",\
+"Frontend file name = STRING : [256] feScan.c",\
+"",\
+NULL }
+
+#define SCAN_SETTINGS_DEFINED
+
+typedef struct {
+  struct {
+    INT       num_cycles_per_supercycle;
+    INT       num_scans;
+    float     xpos_start_mm_;
+    float     xpos_stop_mm_;
+    float     xpos_inc_mm_;
+    float     ypos_start_mm_;
+    float     y_displacement_mm_;
+    float     xpos_park_mm_;
+    float     ypos_park_mm_;
+    INT       settling_time__ms_;
+  } scanparams;
+  struct {
+    INT       value;
+  } meterparams;
+  struct {
+    BOOL      hold;
+  } flags;
+  char      device[32];
+  char      config[7][80];
+  char      scan[32];
+  INT       scanperiod;
+  DWORD     timeout;
+  char      idle[32];
+  DWORD     num_cycles;
+  char      names_cycl[7][32];
+} SCAN_SETTINGS;
+
+#define SCAN_SETTINGS_STR(_name) char *_name[] = {\
+"[ScanParams]",\
+"num_cycles_per_supercycle = INT : 2",\
+"num_scans = INT : 1",\
+"Xpos_start(mm) = FLOAT : 0",\
+"Xpos_stop(mm) = FLOAT : -200",\
+"Xpos_inc(mm) = FLOAT : 20",\
+"Ypos_start(mm) = FLOAT : 0",\
+"Y_displacement(mm) = FLOAT : 5",\
+"Xpos_park(mm) = FLOAT : 0",\
+"Ypos_park(mm) = FLOAT : 0",\
+"settling time (ms) = INT : 100",\
+"",\
+"[MeterParams]",\
+"value = INT : 0",\
+"",\
+"[flags]",\
+"hold = BOOL : n",\
+"",\
+"[.]",\
+"Device = STRING : [32] /dev/ttyS0",\
+"Config = STRING[7] :",\
+"[80] SYST:ZCH OFF",\
+"[80] CURR:RANG:AUTO on",\
+"[80] CURR:NPLC 6",\
+"[80] SYST:TIME:RESET",\
+"[80] ",\
+"[80] ",\
+"[80] ",\
+"Scan = STRING : [32] ",\
+"ScanPeriod = INT : 0",\
+"Timeout = DWORD : 20000",\
+"idle = STRING : [32] ",\
+"num_cycles = DWORD : 22",\
+"Names CYCL = STRING[7] :",\
+"[32] cycle #",\
+"[32] supercycle #",\
+"[32] scan #",\
+"[32] Xpos set (mm)",\
+"[32] Xpos readback (mm)",\
+"[32] Keithley read",\
+"[32] Keithley time",\
+"",\
+NULL }
+
+#endif
+
+#ifndef EXCL_METER
+
+#define METER_COMMON_DEFINED
+
+typedef struct {
+  WORD      event_id;
+  WORD      trigger_mask;
+  char      buffer[32];
+  INT       type;
+  INT       source;
+  char      format[8];
+  BOOL      enabled;
+  INT       read_on;
+  INT       period;
+  double    event_limit;
+  DWORD     num_subevents;
+  INT       log_history;
+  char      frontend_host[32];
+  char      frontend_name[32];
+  char      frontend_file_name[256];
+} METER_COMMON;
+
+#define METER_COMMON_STR(_name) char *_name[] = {\
+"[.]",\
+"Event ID = WORD : 2",\
+"Trigger mask = WORD : 1",\
+"Buffer = STRING : [32] SYSTEM",\
+"Type = INT : 1",\
+"Source = INT : 0",\
+"Format = STRING : [8] MIDAS",\
+"Enabled = BOOL : y",\
+"Read on = INT : 1",\
+"Period = INT : 5000",\
+"Event limit = DOUBLE : 0",\
+"Num subevents = DWORD : 0",\
+"Log history = INT : 5",\
+"Frontend host = STRING : [32] ladd03.triumf.ca",\
+"Frontend name = STRING : [32] feMeter",\
+"Frontend file name = STRING : [256] feMeter.c",\
+"",\
+NULL }
+
+#define METER_SETTINGS_DEFINED
+
+typedef struct {
+  char      device[32];
+  char      config[7][80];
+  char      scan[32];
+  INT       scanperiod;
+  DWORD     timeout;
+  char      idle[32];
+} METER_SETTINGS;
+
+#define METER_SETTINGS_STR(_name) char *_name[] = {\
+"[.]",\
+"Device = STRING : [32] /dev/ttyS0",\
+"Config = STRING[7] :",\
+"[80] SYST:ZCH OFF",\
+"[80] CURR:RANG:AUTO on",\
+"[80] CURR:NPLC 6",\
+"[80] SYST:TIME:RESET",\
+"[80] AVER ON",\
+"[80] DISP:ENABLE OFF",\
+"[80] ",\
+"Scan = STRING : [32] ",\
+"ScanPeriod = INT : 0",\
+"Timeout = DWORD : 20000",\
+"idle = STRING : [32] ",\
+"",\
+NULL }
+
+#endif
+
+#ifndef EXCL_MOTORS
+
+#define MOTORS_COMMON_DEFINED
+
+typedef struct {
+  WORD      event_id;
+  WORD      trigger_mask;
+  char      buffer[32];
+  INT       type;
+  INT       source;
+  char      format[8];
+  BOOL      enabled;
+  INT       read_on;
+  INT       period;
+  double    event_limit;
+  DWORD     num_subevents;
+  INT       log_history;
+  char      frontend_host[32];
+  char      frontend_name[32];
+  char      frontend_file_name[256];
+} MOTORS_COMMON;
+
+#define MOTORS_COMMON_STR(_name) char *_name[] = {\
+"[.]",\
+"Event ID = WORD : 3",\
+"Trigger mask = WORD : 1",\
+"Buffer = STRING : [32] SYSTEM",\
+"Type = INT : 8",\
+"Source = INT : 0",\
+"Format = STRING : [8] MIDAS",\
+"Enabled = BOOL : y",\
+"Read on = INT : 255",\
+"Period = INT : 1000",\
+"Event limit = DOUBLE : 0",\
+"Num subevents = DWORD : 0",\
+"Log history = INT : 10",\
+"Frontend host = STRING : [32] ladd03.triumf.ca",\
+"Frontend name = STRING : [32] feMotor",\
+"Frontend file name = STRING : [256] feMotor.c",\
+"",\
+NULL }
+
+#define MOTORS_SETTINGS_DEFINED
+
+typedef struct {
+  float     destination__mm_[2];
+  float     velocity__mmps_[2];
+  float     acceleration__mmpsps_[2];
+  BOOL      move[2];
+  BOOL      jogpos[2];
+  BOOL      jogneg[2];
+  BOOL      stop[2];
+  BOOL      indexprimary[2];
+  BOOL      indexsecondary[2];
+  float     limitneg__mm_[2];
+  float     limitpos__mm_[2];
+  float     slopeprimary__mmpstep_[2];
+  float     offsetprimary__mm_[2];
+  float     slopesecondary__mmpstep_[2];
+  float     offsetsecondary__mm_[2];
+  char      names[2][32];
+  INT       index[2];
+  float     complexdestination__mm_[2];
+  INT       complexsettletime__s_[2];
+  BOOL      complexmove[2];
+  struct {
+    INT       motors;
+  } channels;
+  struct {
+    struct {
+      struct {
+        char      rs232_port[32];
+        INT       baud;
+        char      parity;
+        INT       data_bit;
+        INT       stop_bit;
+        INT       flow_control;
+      } bd;
+    } motors;
+  } devices;
+} MOTORS_SETTINGS;
+
+#define MOTORS_SETTINGS_STR(_name) char *_name[] = {\
+"[.]",\
+"Destination (mm) = FLOAT[2] :",\
+"[0] 100",\
+"[1] 75",\
+"Velocity (mmps) = FLOAT[2] :",\
+"[0] 5",\
+"[1] 15",\
+"Acceleration (mmpsps) = FLOAT[2] :",\
+"[0] 5",\
+"[1] 15",\
+"Move = BOOL[2] :",\
+"[0] n",\
+"[1] n",\
+"JogPos = BOOL[2] :",\
+"[0] n",\
+"[1] n",\
+"JogNeg = BOOL[2] :",\
+"[0] n",\
+"[1] n",\
+"Stop = BOOL[2] :",\
+"[0] n",\
+"[1] n",\
+"IndexPrimary = BOOL[2] :",\
+"[0] n",\
+"[1] n",\
+"IndexSecondary = BOOL[2] :",\
+"[0] n",\
+"[1] n",\
+"LimitNeg (mm) = FLOAT[2] :",\
+"[0] 0",\
+"[1] 0",\
+"LimitPos (mm) = FLOAT[2] :",\
+"[0] 0",\
+"[1] 0",\
+"SlopePrimary (mmpstep) = FLOAT[2] :",\
+"[0] 0.003048",\
+"[1] 0.000127",\
+"OffsetPrimary (mm) = FLOAT[2] :",\
+"[0] 0",\
+"[1] 0",\
+"SlopeSecondary (mmpstep) = FLOAT[2] :",\
+"[0] 1",\
+"[1] 1",\
+"OffsetSecondary (mm) = FLOAT[2] :",\
+"[0] 0",\
+"[1] 0",\
+"Names = STRING[2] :",\
+"[32] AxisX",\
+"[32] AxisY",\
+"Index = INT[2] :",\
+"[0] 1",\
+"[1] 2",\
+"ComplexDestination (mm) = FLOAT[2] :",\
+"[0] 50",\
+"[1] 0.5",\
+"ComplexSettleTime (s) = INT[2] :",\
+"[0] 0",\
+"[1] 0",\
+"ComplexMove = BOOL[2] :",\
+"[0] n",\
+"[1] n",\
+"",\
+"[Channels]",\
+"Motors = INT : 2",\
+"",\
+"[Devices/Motors/BD]",\
+"RS232 Port = STRING : [32] /dev/ttyUSB0",\
+"Baud = INT : 9600",\
+"Parity = CHAR : N",\
+"Data Bit = INT : 8",\
+"Stop Bit = INT : 1",\
+"Flow control = INT : 0",\
+"",\
+NULL }
+
+#endif
+
