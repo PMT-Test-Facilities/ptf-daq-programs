@@ -67,7 +67,7 @@ gefvme.o: %.o: $(MIDASSYS)/drivers/vme/vmic/%.c
 	$(CC) -c -o $@ $(CFLAGS)  $<
 
 
-feMotor: $(MIDASLIBS) $(MFE) feMotor.o $(DRV_DIR)/tcpip.o cd_Galil.o 
+feMotor: $(MIDASLIBS) $(MFE) feMotor.o $(DRV_DIR)/tcpip.o cd_Galil_Changes-1-25.o 
 	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS)
 
 feMove: $(MIDASLIBS) $(MFE) feMove.o TPathCalculator.o TRotationCalculator.o TGantryConfigCalculator.o

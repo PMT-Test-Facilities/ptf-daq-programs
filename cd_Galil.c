@@ -292,6 +292,7 @@ void galil_read(EQUIPMENT *pequipment, int channel) {
   pInfo = (INFO *) pequipment->cd_info;
   cm_get_experiment_database(&hDB, NULL);
 
+  //printf("doing periodic read of galil status\n");
 
 // Read all channels for channel number -1 (recursive call)
   if (channel == -1) {
@@ -1763,6 +1764,25 @@ INT galil_init(EQUIPMENT *pequipment) {
     cm_msg(MERROR, "galil_init", "Bad response from RS command %s", response);
     return FE_ERR_HW;
   }
+
+  // check encoder status
+  sprintf(command, "CE ?,?,?,? \r");
+  printf("Check encoder status: %s\n",command);
+
+  buffLength = strlen(command);
+  writeCount = DRIVER(0)(CMD_WRITE, pequipment->driver[0].dd_info, command, buffLength);
+  if (writeCount != buffLength) {
+    cm_msg(MERROR, "galil_init", "Error in device driver - CMD_WRITE");
+  }
+  buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 100, ":", 500);
+  response[buffLength] = 0x0;
+
+  printf("Motor encoder response %s\n",response);
+  if ((strchr(response, ':') == NULL) || (strchr(response, '?') != NULL)) {
+    cm_msg(MERROR, "galil_init", "Bad response from MT command %s", response);
+    return FE_ERR_HW;
+  }
+
 
   // define the motor type
   sprintf(command, "MT ");
