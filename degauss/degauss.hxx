@@ -10,10 +10,11 @@
 
 
 #define MIN_V_DIFF 0.01
+#define V_LOW_MARGIN 0.05
 
 
 // For voltage at step i:
-// target_voltage + (-1 if isodd(i) else 1) * c * exp(-ik)
+// target_voltage + (-1)^i * c * exp(-ik)
 // k is chosen so that exp(-ik) goes from 1 to MIN_V_DIFF,
 // and c is as large as possible so that the coil does not
 // exceed voltage limitations
@@ -39,7 +40,13 @@ enum Coil {
 };
 
 
-// which coils correspond to which dimensino
+typedef struct {
+  double c;
+  double k;
+} ExponentialFactors;
+
+
+// which coils correspond to which dimension
 pair<Coil, Coil> coils_for_dimension(Dimension dim);
 
 
@@ -52,17 +59,16 @@ double resistance(Coil coil);
 
 
 // returns c, k (see above)
-pair<double, double> exponential_factors(double target_voltage, Coil coil, uint32_t steps);
+ExponentialFactors exponential_factors(double target_voltage, Coil coil, size_t steps);
 
 
 // returns vector of voltage to approach final value
 // does _not_ include final voltage
-vector<double> degauss_path(double target_voltage, Coil coil, uint32_t steps);
+vector<double> degauss_path(double target_voltage, Coil coil, size_t n_steps);
 
 
 // gets a particular degauss step
-// returns 0 on error
-double degauss_step(double target_voltage, Coil coil, uint32_t step, double c, double k);
+double degauss_step(double target_voltage, Coil coil, size_t step, size_t n_steps);
 
 
 #endif
