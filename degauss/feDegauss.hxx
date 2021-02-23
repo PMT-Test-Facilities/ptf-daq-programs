@@ -6,10 +6,8 @@
 #include <unordered_map>
 #include <string>
 #include <array>
-#include <limits>
 
 #include <boost/variant.hpp>
-#include <boost/optional.hpp>
 
 // #include "experim.h"
 #include "midas.h"
@@ -21,9 +19,7 @@ using namespace boost;
 
 
 // tolerance for voltages reaching target
-#define V_TOLERANCE 0.06
-// lowest voltage we think that we can make reliably
-#define V_RELIABLE_MARGIN 0.5
+#define TOLERANCE 0.05
 
 
 /*
@@ -79,7 +75,7 @@ EQUIPMENT equipment[] = {{
     "FIXED",
     TRUE,
     RO_ALWAYS,
-    2000,
+    1000,
     0,
     0,
     0,
@@ -90,14 +86,14 @@ EQUIPMENT equipment[] = {{
   NULL
 }};
 
-
-} // end extern C
+}
 
 
 static const char* SET_STR = 
+//"[Settings]\n"
 "run = BOOL : 0\n"
-"nsteps = BYTE : 8\n"
-"targets = DOUBLE[6]\n"
+"nsteps = CHAR : 8\n"
+"targets = FLOAT[6]\n"
 "  [0] 0\n"
 "  [1] 0\n"
 "  [2] 0\n"
@@ -107,25 +103,16 @@ static const char* SET_STR =
 
 
 static const char* VAR_STR = 
+//"[Variables]\n"
 "running = BOOL : 0\n"
-"stepn = BYTE : 0\n"
-"targets = DOUBLE[6]\n"
+"stepn = CHAR : 0\n"
+"targets = FLOAT[6]\n"
 "  [0] 0\n"
 "  [1] 0\n"
 "  [2] 0\n"
 "  [3] 0\n"
 "  [4] 0\n"
-"  [5] 0\n"
-"status = BYTE : 0\n";
-
-
-enum VarStatus {
-  Ok = 0,
-  CoilIsNan = 1,
-  CoilIsOob = 2,
-  CoilNearOob = 3,
-  FindingSetsFail = 4
-};
+"  [5] 0\n";
 
 
 static const char
@@ -136,55 +123,57 @@ static const char
 /* Globals */
 
 
-#define RET_OK   1
-#define RET_FAIL 0
+HNDLE
+  hDB=0, hkeyclient=0;
 
 
-HNDLE HDB=0;
+unordered_map<string, HNDLE> SET_KEYS = {
+  {"targets", 0},
+  {"run",     0},
+  {"nsteps",  0},
+};
 
-namespace Keys {
-  // setting keys
-  namespace Set {
-    HNDLE
-      targets = 0,
-      run     = 0,
-      nsteps  = 0;
-  }
-  // variable keys
-  namespace Var {
-    HNDLE
-      targets = 0,
-      running = 0,
-      stepn   = 0,
-      status  = 0;
-  }
-  // other
-  HNDLE
-    coil_read  = 0,
-    coil_write = 0;
-}
+
+unordered_map<string, HNDLE> VAR_KEYS = {
+  {"targets", 0},
+  {"running", 0},
+  {"stepn",   0},
+};
+
+
+HNDLE COIL_READ = 0, COIL_WRITE = 0;
+
 
 // helpful functions
+
+namespace Degauss {
+
+
+enum Keys {
+  SetCoilTargets,
+  SetRun,
+  SetNsteps,
+  VarCoilSet,
+  VarRunning,
+  VarStepn,
+};
+
+
+HNDLE get_key(Keys key);
 
 
 enum Error {
   None,
-  CouldNotFindKey,
-  CouldNotCreateRecord
+  InvalidHandle,
+  InvalidDb,
+  KeyDoesNotExist,
+  CouldNotCreateRecord,
+  Unknown,
 };
 
 
 Error ensure_odb_keys(const HNDLE hDB);
 
-
-template<typename T, size_t N>
-bool all_below_threshold(const array<T, N>& vs, const array<T, N>& targets) {
-  for (size_t i = 0; i < N; ++i) {
-    if (fabs(vs[i] - targets[i]) > V_TOLERANCE) {
-      return false;
-    }
-  }
-  return true;
 }
 
 
