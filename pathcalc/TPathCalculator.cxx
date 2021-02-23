@@ -120,8 +120,6 @@ bool TPathCalculator::CalculatePath(XYPoint start, XYPoint end, std::vector <XYP
 
     // Check PMT collision only if height_OpticalBox >= 0, where 0 represents top of PMT
     // and 1 represents 1cm below the top of PMT, 2 represents 2cm, etc.
-    // Temporarily disabling
-    /*
     if (goodPath && height_OpticalBox0_lo >= 0) {
       goodPath = CheckPathForCollisions(fOpticalBox0_lo, fPMTmultiPoly0.at(height_OpticalBox0_lo), path,
                                         tank_height_start.first, tank_height_end.first);
@@ -130,7 +128,6 @@ bool TPathCalculator::CalculatePath(XYPoint start, XYPoint end, std::vector <XYP
       goodPath = CheckPathForCollisions(fOpticalBox0_up, fPMTmultiPoly0.at(height_OpticalBox0_up), path,
                                         tank_height_start.first, tank_height_end.first);
     }
-    */
 
     /**
     if(!goodPath){ // FOR DEBUGGING
@@ -154,8 +151,6 @@ bool TPathCalculator::CalculatePath(XYPoint start, XYPoint end, std::vector <XYP
       }
       **/
 
-      // Temporarily disabling
-      /*
       if (goodPath && height_OpticalBox0_lo >= 0) {
         goodPath = CheckPathForCollisions(fOpticalBox0_lo, fPMTmultiPoly0.at(height_OpticalBox0_lo), path,
                                           tank_height_start.first, tank_height_end.first);
@@ -164,7 +159,6 @@ bool TPathCalculator::CalculatePath(XYPoint start, XYPoint end, std::vector <XYP
         goodPath = CheckPathForCollisions(fOpticalBox0_up, fPMTmultiPoly0.at(height_OpticalBox0_up), path,
                                           tank_height_start.first, tank_height_end.first);
       }
-      */
     }
     /**
     if(!goodPath){ // FOR DEBUGGING
@@ -193,8 +187,6 @@ bool TPathCalculator::CalculatePath(XYPoint start, XYPoint end, std::vector <XYP
 
     // Check PMT collision only if height_OpticalBox >= 0, where 0 represents top of PMT
     // and 1 represents 1cm below the top of PMT, 2 represents 2cm, etc.
-    // Temporarily disabling
-    /*
     if (goodPath && height_OpticalBox1_lo >= 0) {
       goodPath = CheckPathForCollisions(fOpticalBox1_lo, fPMTmultiPoly1.at(height_OpticalBox1_lo), path,
                                         tank_height_start.second, tank_height_end.second);
@@ -203,7 +195,6 @@ bool TPathCalculator::CalculatePath(XYPoint start, XYPoint end, std::vector <XYP
       goodPath = CheckPathForCollisions(fOpticalBox1_up, fPMTmultiPoly1.at(height_OpticalBox1_up), path,
                                         tank_height_start.second, tank_height_end.second);
     }
-    */
     /**
     if(!goodPath){ // FOR DEBUGGING
         cm_msg(MINFO,"CalculatePath"," Gantry 1 moving in x first will collide.");

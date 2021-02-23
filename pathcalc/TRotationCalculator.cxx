@@ -35,6 +35,9 @@ void TRotationCalculator::InitialisePMT(std::vector <XYPolygon> pmt0, std::vecto
                                         double polygonThickness) {
 //----------------------------------------------------------
 
+  // Remove this next line
+  return;
+
   for (int i = 0; i < pmt0.size(); ++i) {
     if (i >= fPMTmultiPoly0.size()) {
       fPMTmultiPoly0.push_back(new BoostPolygon());
@@ -192,9 +195,8 @@ bool TRotationCalculator::CalculatePath(XYPoint start0, XYPoint start1, std::pai
       return false;
     }
 
-    // Temporarily disabling
-    /*
-    if (Z0_lo >= 0) { // If Z0_lo>=0, lower surface of optical box 0 is lowered to PMT region, therefore check against PMT for collision.
+    if (Z0_lo >=
+        0) { // If Z0_lo>=0, lower surface of optical box 0 is lowered to PMT region, therefore check against PMT for collision.
       collisionFree = CheckPathForCollisions(&fOpticalBox0_lo, fPMTmultiPoly0.at(Z0_lo), tank_height_start.first,
                                              tank_height_end.first);
     }
@@ -210,7 +212,6 @@ bool TRotationCalculator::CalculatePath(XYPoint start0, XYPoint start1, std::pai
       collisionFree = CheckPathForCollisions(&fOpticalBox1_up, fPMTmultiPoly1.at(Z1_up), tank_height_start.second,
                                              tank_height_end.second);
     }
-    */
 
     if (!collisionFree) {
       cm_msg(MINFO, "CalculatePath", "Invalid rotation/tilt path: gantry will collide with PMT.");
@@ -277,6 +278,8 @@ bool TRotationCalculator::CalculatePath(XYPoint start0, XYPoint start1, std::pai
 bool TRotationCalculator::CheckPathForCollisions(BoostPolygon *objectMoving, BoostPolygon *objectStationary,
                                                  bool tank_height_start, bool tank_height_end) {
 //----------------------------------------------------------
+  // Remove me
+  return true;
 
   double Xdif;
   double Ydif;
