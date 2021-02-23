@@ -744,7 +744,7 @@ INT move_next_position(void) {
     finished_moving = TRUE;
   DWORD time_start_move = ss_millitime();
 
-  INT timeout = 60000 * 5; // 3 (5) minute timeout
+  INT timeout = 60000 * 20; // 3 (5) minute timeout //JW 20191128 5->20
 
   // Loop which checks ODB until move to next point is finished
   while (!finished_moving) {
