@@ -12,6 +12,7 @@
 #include "midas.h"
 #include "cd_Galil.h"
 #include "Motors.h"
+#include <unistd.h>
 
 // Should try to control this from command line...
 static int verbose = 1;
@@ -678,7 +679,7 @@ void turn_motors_off(INT hDB, INT hKey, void *info) {
     if ((strchr(response, ':') == NULL) || (strchr(response, '?') != NULL)) {
       cm_msg(MERROR, "galil_init", "Bad response from MO command: \"%s\"", response);
       cm_msg(MINFO, "galil_init", "Waiting 100 ms and trying again.");
-      sleep(100);
+      usleep(100000);
       buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 100, ":", 500);
       response[buffLength] = 0x0;
       if ((strchr(response, ':') == NULL) || (strchr(response, '?') != NULL)) {

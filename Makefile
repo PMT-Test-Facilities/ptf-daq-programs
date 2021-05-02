@@ -22,7 +22,7 @@ CFLAGS   += -I$(MIDASSYS)/include
 CFLAGS   += -I$(MIDASSYS)/drivers/vme
 # CFLAGS   += -I$(HOME)/packages/root
 CFLAGS   += -I$(DRV_DIR)
-
+CXX = g++
 # ROOT library
 
 ROOTLIBS  = $(shell $(ROOTSYS)/bin/root-config --libs) -lThread -Wl,-rpath,$(ROOTSYS)/lib
@@ -64,10 +64,10 @@ all:feMotor feMove feScan fedvm fePhidget fesimdaq.exe feptfwiener.exe testVI fe
 
 
 gefvme.o: %.o: $(MIDASSYS)/drivers/vme/vmic/%.c
-	$(CC) -c -o $@ $(CFLAGS)  $<
+	$(CXX) -c -o $@ $(CFLAGS)  $<
 
 
-feMotor: $(MIDASLIBS) $(MFE) feMotor.o $(DRV_DIR)/tcpip.o cd_Galil_Changes-1-25.o 
+feMotor: $(MIDASLIBS) $(MFE) feMotor.o $(DRV_DIR)/tcpip.o cd_Galil.o 
 	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS)
 
 feMove: $(MIDASLIBS) $(MFE) feMove.o TPathCalculator.o TRotationCalculator.o TGantryConfigCalculator.o
@@ -110,13 +110,13 @@ feDegauss: $(MIDASLIBS) $(MFE) degauss.o feDegauss.o
 
 
 %.o: $(MIDASSYS)/drivers/vme/%.c
-	$(CC) -o $@ -c $< $(CFLAGS)
+	$(CXX) -o $@ -c $< $(CFLAGS)
 
 %.o: $(MIDASSYS)/src/%.c
-	$(CC) -o $@ -c $< $(CFLAGS)
+	$(CXX) -o $@ -c $< $(CFLAGS)
 
 %.o: %.c
-	$(CC) -o $@ -c $< $(CFLAGS)
+	$(CXX) -o $@ -c $< $(CFLAGS)
 
 %.o: %.cxx
 	$(CXX) -o $@ -c $< $(CXXFLAGS)
@@ -125,7 +125,7 @@ feDegauss: $(MIDASLIBS) $(MFE) degauss.o feDegauss.o
 	$(CXX) -o $@ -c $< $(CXXFLAGS)
 
 %.o: $(MIDASSYS)/drivers/vme/%.c
-	$(CC) -o $@ -c $< $(CFLAGS)
+	$(CXX) -o $@ -c $< $(CFLAGS)
 
 
 clean:
