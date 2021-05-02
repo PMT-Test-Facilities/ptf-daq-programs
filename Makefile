@@ -16,8 +16,8 @@ MIDASSYS=$(HOME)/packages/midas
 
 DRV_DIR = $(MIDASSYS)/drivers/bus
 
-MFE       = $(MIDASSYS)/linux/lib/mfe.o
-MIDASLIBS = $(MIDASSYS)/linux/lib/libmidas.a
+MFE       = $(MIDASSYS)/lib/mfe.o
+MIDASLIBS = $(MIDASSYS)/lib/libmidas.a
 CFLAGS   += -I$(MIDASSYS)/include
 CFLAGS   += -I$(MIDASSYS)/drivers/vme
 # CFLAGS   += -I$(HOME)/packages/root
