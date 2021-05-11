@@ -52,7 +52,9 @@
 #include "TPathCalculator.hxx" //Rika: See typedef for XYPoint, XYPolygon, XYLine here.
 #include "TRotationCalculator.hxx"
 #include "TGantryConfigCalculator.hxx" //Rika (27Mar2017): Added as a class shared between feMove & TRotationCalculator.
+
 #include <iostream>
+
 
 /* make frontend functions callable from the C framework            */
 #ifdef __cplusplus
@@ -152,15 +154,18 @@ INT gantry_motor_end = 10;   //TF TODO: get from ODB and make button on gantry_m
 // Gantry dimensions with buffer zones for collision avoidance
 double tiltMotorLength = 0.160;
 double gantryFrontHalfLength = 0.140; //Use 0.140m for safety; measured to be 0.114+/-0.001m (27Apr2017)
-double gantryBackHalfLength = 0.185; //Use 0.200m for safety; measured to be 0.114+0.07(pipelength)=0.184+/-0.002m (27Apr2017)
-double gantryOpticalBoxWidth = 0.150; //Use 0.160m for safety; measured to be 0.135+/-0.002m for optical box 0, 0.145+/-0.001m for optical box 1
+
+double gantryBackHalfLength = 0.25; //0.22 Use 0.200m for safety; measured to be 0.114+0.07(pipelength)=0.184+/-0.002m (27Apr2017) // John (17Oct2019) 0.185 -> 0.22 for safety
+double gantryOpticalBoxWidth = 0.160; //Use 0.160m for safety; measured to be 0.135+/-0.002m for optical box 0, 0.145+/-0.001m for optical box 1 // John (17Oct2019) 0.15 -> 0.2 for safety
+
 double gantryTiltGearWidth = 0.060; //Use 0.070 for safety; measured to be 0.060+/-0.001m
 double gantryOpticalBoxHeight = 0.095; //Use 0.110m for safety; measured to be 0.094 +/- 0.004m (27Apr2017)
 
 // Tank position & dimensions:
 double xtankCentre = 0.366; // Rika (24Apr2017): Updated to estimated new position after tank moved back into coils // Kevin (22Jan2018) estimate change from (0.360, 0.345) -> (0.401, 0.288) -> (0.366, 0.361) Feb21 -> (0.366, 0.371) Feb 23)
 double ytankCentre = 0.371;
-double tankRadius = 0.61; // radius of tank ~0.61
+
+double tankRadius = 0.61; // radius of tank ~0.61 // John (17Oct2019) reduced from 0.61 to 0.58 to prevent collision
 double tankPMTholderRadius = 0.53; // max/min from center where PMT holders sit
 
 // Rika: PMT position for collision avoidance
@@ -1336,6 +1341,10 @@ int generate_path(INFO *pInfo) {
   double tilt_min = -105, tilt_max = 15;
 
   double z_max_value = 0.535; // Rika (23Mar2017): gantry positive z limit switch at z = 0.534m.
+
+  // John (16Oct2019): Reducing z_max from 0.535 to 0.22 for PMT scans because getting too close to acrylic
+
+
   // double safeZheight = 0.260; // Rika (4Apr2017): z height at which any movement (rot & tilt) is PMT collision free.
   // (24Apr2017) updated safeZheight for new PMT position (previously 0.46m)
 
@@ -1656,6 +1665,7 @@ int generate_path(INFO *pInfo) {
                                                                          tankheight_gantend2);
     }
   }
+
   if (!(validDestination_box0 && validDestination_box1)) {
     cm_msg(MERROR, "generate_path", "Invalid destination: gantry will collide with PMT.");
     return GENPATH_BAD_DEST;
@@ -2426,28 +2436,35 @@ void monitor(HNDLE hDB, HNDLE hKey, void *data) {
     // Check if the destination has been reached, otherwise return an error
     for (i = gantry_motor_start; i < gantry_motor_end; i++) {
       if ((pInfo->Channels[i] != -1) && (pInfo->MovePath[i][pInfo->PathIndex] != pInfo->CountPos[i])) {
-        if (pInfo->neg_AxisLimit[i] || pInfo->pos_AxisLimit[i]) { //already at limit OR hit limit after move
-          stoppedDueToLimit = true;
-          cm_msg(MINFO, "monitor", "Stopped moving because LIMIT SWITCH for move %i reached!", i);
-          // Resetting the path to take the current position at the limit (CountPos) as its destination
-          // This will make sure CountDest in move() is zero (after hitting a limit switch) and also
-          // MDest which is basically the same. The code checking why a move did not start will then
-          // cause erroneous behaviour.
 
-          //if moving towards limit and hitting it: stopped due to limit after move, so reset path
-          if (((pInfo->MovePath[i][pInfo->PathIndex] - pInfo->CountPos[i]) < 0 && pInfo->pos_AxisLimit[i]) ||
-              ((pInfo->MovePath[i][pInfo->PathIndex] - pInfo->CountPos[i]) > 0 && pInfo->neg_AxisLimit[i])) {
-            int path_i;
-            for (path_i = 0; path_i < pInfo->PathSize; path_i++) {
-              pInfo->MovePath[i][path_i] = pInfo->CountPos[i];
+        if (abs(pInfo->MovePath[i][pInfo->PathIndex] - pInfo->CountPos[i]) < 20){
+          cm_msg(MINFO, "monitor", "final monitor position %i counts different to destination!", abs(pInfo->MovePath[i][pInfo->PathIndex] - pInfo->CountPos[i]));
+        } 
+        else{
+          if (pInfo->neg_AxisLimit[i] || pInfo->pos_AxisLimit[i]) { //already at limit OR hit limit after move
+            stoppedDueToLimit = true;
+            cm_msg(MINFO, "monitor", "Stopped moving because LIMIT SWITCH for move %i reached!", i);
+            // Resetting the path to take the current position at the limit (CountPos) as its destination
+            // This will make sure CountDest in move() is zero (after hitting a limit switch) and also
+            // MDest which is basically the same. The code checking why a move did not start will then
+            // cause erroneous behaviour.
+
+            //if moving towards limit and hitting it: stopped due to limit after move, so reset path
+            if (((pInfo->MovePath[i][pInfo->PathIndex] - pInfo->CountPos[i]) < 0 && pInfo->pos_AxisLimit[i]) ||
+                ((pInfo->MovePath[i][pInfo->PathIndex] - pInfo->CountPos[i]) > 0 && pInfo->neg_AxisLimit[i])) {
+              int path_i;
+              for (path_i = 0; path_i < pInfo->PathSize; path_i++) {
+                pInfo->MovePath[i][path_i] = pInfo->CountPos[i];
+              }
             }
-          }
-          //break; //no break, because also check for other hit limit switches, and reset their path/destination
-        } else {
-          if (!stoppedDueToLimit) {
-            cm_msg(MERROR, "monitor", "Move failed at i=%d, pathindex=%d : %6.2f, %6.2f", i, pInfo->PathIndex,
-                   pInfo->MovePath[i][pInfo->PathIndex], pInfo->CountPos[i]);
-            return;
+            //break; //no break, because also check for other hit limit switches, and reset their path/destination
+          } else {
+            if (!stoppedDueToLimit) {
+              cm_msg(MERROR, "monitor", "Move failed at i=%d, pathindex=%d : %6.2f, %6.2f", i, pInfo->PathIndex,
+                  pInfo->MovePath[i][pInfo->PathIndex], pInfo->CountPos[i]);
+              return;
+            }
+
           }
         }
       }
