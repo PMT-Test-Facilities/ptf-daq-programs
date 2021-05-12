@@ -415,6 +415,20 @@ INT poll_event(INT source, INT count, BOOL test){
   return FALSE;
 }
 
-INT interrupt_configure(INT cmd, INT source[], PTYPE adr) {
-  return 1;
-};
+
+
+/*-- Interrupt configuration ---------------------------------------*/
+INT interrupt_configure(INT cmd, INT source, POINTER_T adr)
+{
+  switch (cmd) {
+  case CMD_INTERRUPT_ENABLE:
+    break;
+  case CMD_INTERRUPT_DISABLE:
+    break;
+  case CMD_INTERRUPT_ATTACH:
+    break;
+  case CMD_INTERRUPT_DETACH:
+    break;
+  }
+  return SUCCESS;
+}

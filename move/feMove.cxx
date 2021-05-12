@@ -53,13 +53,8 @@
 #include "TRotationCalculator.hxx"
 #include "TGantryConfigCalculator.hxx" //Rika (27Mar2017): Added as a class shared between feMove & TRotationCalculator.
 
-#include <iostream>
+#include "mfe.h"
 
-
-/* make frontend functions callable from the C framework            */
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /*-- Globals -------------------------------------------------------*/
 // The two function-like macros below are used in void channel_rw(INFO *pInfo, HNDLE* hKey, void *values, DWORD type, BOOL rw);
@@ -154,17 +149,14 @@ INT gantry_motor_end = 10;   //TF TODO: get from ODB and make button on gantry_m
 // Gantry dimensions with buffer zones for collision avoidance
 double tiltMotorLength = 0.160;
 double gantryFrontHalfLength = 0.140; //Use 0.140m for safety; measured to be 0.114+/-0.001m (27Apr2017)
-
 double gantryBackHalfLength = 0.25; //0.22 Use 0.200m for safety; measured to be 0.114+0.07(pipelength)=0.184+/-0.002m (27Apr2017) // John (17Oct2019) 0.185 -> 0.22 for safety
 double gantryOpticalBoxWidth = 0.160; //Use 0.160m for safety; measured to be 0.135+/-0.002m for optical box 0, 0.145+/-0.001m for optical box 1 // John (17Oct2019) 0.15 -> 0.2 for safety
-
 double gantryTiltGearWidth = 0.060; //Use 0.070 for safety; measured to be 0.060+/-0.001m
 double gantryOpticalBoxHeight = 0.095; //Use 0.110m for safety; measured to be 0.094 +/- 0.004m (27Apr2017)
 
 // Tank position & dimensions:
 double xtankCentre = 0.366; // Rika (24Apr2017): Updated to estimated new position after tank moved back into coils // Kevin (22Jan2018) estimate change from (0.360, 0.345) -> (0.401, 0.288) -> (0.366, 0.361) Feb21 -> (0.366, 0.371) Feb 23)
 double ytankCentre = 0.371;
-
 double tankRadius = 0.61; // radius of tank ~0.61 // John (17Oct2019) reduced from 0.61 to 0.58 to prevent collision
 double tankPMTholderRadius = 0.53; // max/min from center where PMT holders sit
 
@@ -221,6 +213,8 @@ TRotationCalculator pathCalc_rot_tilt(tiltMotorLength, gantryFrontHalfLength, ga
                                       ytankCentre, tankRadius, tankPMTholderRadius);
 
 /*-- Info structure declaration ------------------------------------*/
+
+BOOL equipment_common_overwrite = FALSE;
 
 typedef struct {
   // Handles for all ODB variables
@@ -303,7 +297,8 @@ INT frontend_loop();
 
 INT poll_trigger_event(INT count, PTYPE test);
 
-INT interrupt_configure(INT cmd, PTYPE adr);
+//INT interrupt_configure(INT cmd, PTYPE adr);
+extern void interrupt_routine(void);
 
 INT read_trigger_event(char *pevent, INT off);
 
@@ -420,11 +415,22 @@ INT poll_event(INT source, INT count, BOOL test)
   return FALSE;
 }
 
-/*-- Interrupt configuration for trigger event ---------------------*/
-
-INT interrupt_configure(INT cmd, PTYPE adr) {
-  return CM_SUCCESS;
+/*-- Interrupt configuration ---------------------------------------*/
+INT interrupt_configure(INT cmd, INT source, POINTER_T adr)
+{
+  switch (cmd) {
+  case CMD_INTERRUPT_ENABLE:
+    break;
+  case CMD_INTERRUPT_DISABLE:
+    break;
+  case CMD_INTERRUPT_ATTACH:
+    break;
+  case CMD_INTERRUPT_DETACH:
+    break;
+  }
+  return SUCCESS;
 }
+
 
 /*-- Event readout -------------------------------------------------*/
 INT read_trigger_event(char *pevent, INT off) {
@@ -438,9 +444,6 @@ INT read_scaler_event(char *pevent, INT off) {
 }
 
 
-#ifdef __cplusplus
-}
-#endif
 
 /********************************************************************\
              USED callback routines for system transitions
@@ -1341,9 +1344,7 @@ int generate_path(INFO *pInfo) {
   double tilt_min = -105, tilt_max = 15;
 
   double z_max_value = 0.535; // Rika (23Mar2017): gantry positive z limit switch at z = 0.534m.
-
   // John (16Oct2019): Reducing z_max from 0.535 to 0.22 for PMT scans because getting too close to acrylic
-
 
   // double safeZheight = 0.260; // Rika (4Apr2017): z height at which any movement (rot & tilt) is PMT collision free.
   // (24Apr2017) updated safeZheight for new PMT position (previously 0.46m)
@@ -1665,11 +1666,13 @@ int generate_path(INFO *pInfo) {
                                                                          tankheight_gantend2);
     }
   }
-
+  // Remove comments
+  /*
   if (!(validDestination_box0 && validDestination_box1)) {
     cm_msg(MERROR, "generate_path", "Invalid destination: gantry will collide with PMT.");
     return GENPATH_BAD_DEST;
   }
+  */
 
   // Define xy plane in terms of z heights at which path will be checked for collision avoidance.
   double gantry1Z = gantry1ZDes;
@@ -2436,7 +2439,6 @@ void monitor(HNDLE hDB, HNDLE hKey, void *data) {
     // Check if the destination has been reached, otherwise return an error
     for (i = gantry_motor_start; i < gantry_motor_end; i++) {
       if ((pInfo->Channels[i] != -1) && (pInfo->MovePath[i][pInfo->PathIndex] != pInfo->CountPos[i])) {
-
         if (abs(pInfo->MovePath[i][pInfo->PathIndex] - pInfo->CountPos[i]) < 20){
           cm_msg(MINFO, "monitor", "final monitor position %i counts different to destination!", abs(pInfo->MovePath[i][pInfo->PathIndex] - pInfo->CountPos[i]));
         } 
@@ -2464,7 +2466,6 @@ void monitor(HNDLE hDB, HNDLE hKey, void *data) {
                   pInfo->MovePath[i][pInfo->PathIndex], pInfo->CountPos[i]);
               return;
             }
-
           }
         }
       }

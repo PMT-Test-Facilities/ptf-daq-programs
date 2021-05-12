@@ -138,7 +138,7 @@ INT frontend_init()
   setbuf(stdout,NULL);
   setbuf(stderr,NULL);
 
-  cm_enable_watchdog(0);
+  //cm_enable_watchdog(0);
 
   // Get the Move settings and keys
   INT status, rstate, size;

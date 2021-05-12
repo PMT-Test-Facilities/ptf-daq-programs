@@ -12,7 +12,7 @@
 // #include "experim.h"
 #include "midas.h"
 #include "degauss.hxx"
-
+#include "mfe.h"
 
 using namespace std;
 using namespace boost;
@@ -31,7 +31,6 @@ using namespace boost;
 
 
 // required by MIDAS
-extern "C" {
 
 
 const char
@@ -57,9 +56,10 @@ INT pause_run(INT run_number, char *error);
 INT resume_run(INT run_number, char *error);
 INT frontend_loop();
 INT poll_event(INT source, INT count, BOOL test);
-INT interrupt_configure(INT cmd, INT source[], PTYPE adr);
+extern void interrupt_routine(void);
 
 
+BOOL equipment_common_overwrite = FALSE;
 INT degauss_readout(char* pevent, INT off);
 void degauss_activate(HNDLE hDB, HNDLE key, void* info);
 
@@ -86,7 +86,7 @@ EQUIPMENT equipment[] = {{
   NULL
 }};
 
-}
+
 
 
 static const char* SET_STR = 
@@ -123,8 +123,7 @@ static const char
 /* Globals */
 
 
-HNDLE
-  hDB=0, hkeyclient=0;
+HNDLE hkeyclient=0;
 
 
 unordered_map<string, HNDLE> SET_KEYS = {

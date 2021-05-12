@@ -35,17 +35,15 @@ the next move_next_position.
 //#include "experim_new.h"
 #include "ScanSequence.hxx"
 #include <vector>
-
+#include "mfe.h"
 
 /* make frontend functions callable from the C framework */
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /*-- Frontend globals ------------------------------------------------*/
 
 /* odb handles */
-HNDLE hDB = 0, hFS = 0;
+extern HNDLE hDB;
+HNDLE hFS = 0;
 HNDLE hMDestination = 0, hMMove = 0;
 HNDLE hMComplexDestination = 0, hMComplexMove = 0;
 HNDLE hMoveVariables = 0;
@@ -168,6 +166,8 @@ const char *frontend_file_name = __FILE__;
 /* frontend_loop is called periodically if this variable is TRUE    */
 BOOL frontend_call_loop = TRUE;
 
+BOOL equipment_common_overwrite = FALSE;
+
 /* a frontend status page is displayed with this frequency in ms    */
 INT display_period = 000;
 
@@ -203,7 +203,7 @@ INT frontend_loop();
 
 INT poll_event(INT source, INT count, BOOL test);
 
-INT interrupt_configure(INT cmd, INT source[], PTYPE adr);
+extern void interrupt_routine(void);
 
 INT scan_read(char *pevent, INT off);
 
@@ -236,14 +236,27 @@ EQUIPMENT equipment[] = {
     {""}
 };
 
-#ifdef __cplusplus
+
+
+
+/*-- Interrupt configuration ---------------------------------------*/
+INT interrupt_configure(INT cmd, INT source, POINTER_T adr)
+{
+  switch (cmd) {
+  case CMD_INTERRUPT_ENABLE:
+    break;
+  case CMD_INTERRUPT_DISABLE:
+    break;
+  case CMD_INTERRUPT_ATTACH:
+    break;
+  case CMD_INTERRUPT_DETACH:
+    break;
+  }
+  return SUCCESS;
 }
-#endif
 
 
-/*-- Dummy routines ------------------------------------------------
-  called by mfe.c                                */
-INT interrupt_configure(INT cmd, INT source[], PTYPE adr) { return 1; };
+
 
 // Get the current Settings parameters from the 
 INT get_settings_parameters(){
