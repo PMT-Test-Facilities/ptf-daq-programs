@@ -51,17 +51,24 @@
 #include <string.h>
 #include "TPathCalculator.hxx" //Rika: See typedef for XYPoint, XYPolygon, XYLine here.
 #include "TRotationCalculator.hxx"
-#include "TGantryConfigCalculator.hxx" //Rika (27Mar2017): Added as a class shared between feMove & TRotationCalculator.
+#include "TGantryConfigCalculator.hxx" //Rika (27Mar2017): Added as a class shared between feMove & TRotationCalculator
+#include <iostream>
 
-#include "mfe.h"
 
+/* make frontend functions callable from the C framework            */
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /*-- Globals -------------------------------------------------------*/
 // The two function-like macros below are used in void channel_rw(INFO *pInfo, HNDLE* hKey, void *values, DWORD type, BOOL rw);
-//Note:: See the funciton channel_rw for more information about these macros
+//Note:: See the funciton channel_rw for more information about these ma
 
 //The below preprocessor macro would only work if the "function like" macro was defined on a single line. An identical version of the marco is put in the comment below below but is properly spaced to make it possible to read the code
 #define READ_VALUES(TYPE){*((TYPE*)(values + 0*size)) = *((TYPE*)(motor00_values+5*size));*((TYPE*)(values + 1*size)) = *((TYPE*)(motor00_values+6*size));*((TYPE*)(values + 2*size)) = *((TYPE*)(motor00_values+7*size));*((TYPE*)(values + 3*size)) = *((TYPE*)(motor00_values+4*size));*((TYPE*)(values + 4*size)) = *((TYPE*)(motor00_values+3*size));*((TYPE*)(values + 5*size)) = *((TYPE*)(motor01_values+6*size));*((TYPE*)(values + 6*size)) = *((TYPE*)(motor01_values+1*size));*((TYPE*)(values + 7*size)) = *((TYPE*)(motor01_values+2*size));*((TYPE*)(values + 8*size)) = *((TYPE*)(motor01_values+4*size));*((TYPE*)(values + 9*size)) = *((TYPE*)(motor01_values+5*size));}
+
+
+  
 
 /*#define READ_VALUES(TYPE){
   *((TYPE*)(values + 0*size)) = *((TYPE*)(motor00_values+5*size));
@@ -149,14 +156,17 @@ INT gantry_motor_end = 10;   //TF TODO: get from ODB and make button on gantry_m
 // Gantry dimensions with buffer zones for collision avoidance
 double tiltMotorLength = 0.160;
 double gantryFrontHalfLength = 0.140; //Use 0.140m for safety; measured to be 0.114+/-0.001m (27Apr2017)
+
 double gantryBackHalfLength = 0.25; //0.22 Use 0.200m for safety; measured to be 0.114+0.07(pipelength)=0.184+/-0.002m (27Apr2017) // John (17Oct2019) 0.185 -> 0.22 for safety
 double gantryOpticalBoxWidth = 0.160; //Use 0.160m for safety; measured to be 0.135+/-0.002m for optical box 0, 0.145+/-0.001m for optical box 1 // John (17Oct2019) 0.15 -> 0.2 for safety
+
 double gantryTiltGearWidth = 0.060; //Use 0.070 for safety; measured to be 0.060+/-0.001m
 double gantryOpticalBoxHeight = 0.095; //Use 0.110m for safety; measured to be 0.094 +/- 0.004m (27Apr2017)
 
 // Tank position & dimensions:
 double xtankCentre = 0.366; // Rika (24Apr2017): Updated to estimated new position after tank moved back into coils // Kevin (22Jan2018) estimate change from (0.360, 0.345) -> (0.401, 0.288) -> (0.366, 0.361) Feb21 -> (0.366, 0.371) Feb 23)
 double ytankCentre = 0.371;
+
 double tankRadius = 0.61; // radius of tank ~0.61 // John (17Oct2019) reduced from 0.61 to 0.58 to prevent collision
 double tankPMTholderRadius = 0.53; // max/min from center where PMT holders sit
 
@@ -213,8 +223,6 @@ TRotationCalculator pathCalc_rot_tilt(tiltMotorLength, gantryFrontHalfLength, ga
                                       ytankCentre, tankRadius, tankPMTholderRadius);
 
 /*-- Info structure declaration ------------------------------------*/
-
-BOOL equipment_common_overwrite = FALSE;
 
 typedef struct {
   // Handles for all ODB variables
@@ -297,8 +305,7 @@ INT frontend_loop();
 
 INT poll_trigger_event(INT count, PTYPE test);
 
-//INT interrupt_configure(INT cmd, PTYPE adr);
-extern void interrupt_routine(void);
+INT interrupt_configure(INT cmd, PTYPE adr);
 
 INT read_trigger_event(char *pevent, INT off);
 
@@ -415,22 +422,11 @@ INT poll_event(INT source, INT count, BOOL test)
   return FALSE;
 }
 
-/*-- Interrupt configuration ---------------------------------------*/
-INT interrupt_configure(INT cmd, INT source, POINTER_T adr)
-{
-  switch (cmd) {
-  case CMD_INTERRUPT_ENABLE:
-    break;
-  case CMD_INTERRUPT_DISABLE:
-    break;
-  case CMD_INTERRUPT_ATTACH:
-    break;
-  case CMD_INTERRUPT_DETACH:
-    break;
-  }
-  return SUCCESS;
-}
+/*-- Interrupt configuration for trigger event ---------------------*/
 
+INT interrupt_configure(INT cmd, PTYPE adr) {
+  return CM_SUCCESS;
+}
 
 /*-- Event readout -------------------------------------------------*/
 INT read_trigger_event(char *pevent, INT off) {
@@ -444,6 +440,16 @@ INT read_scaler_event(char *pevent, INT off) {
 }
 
 
+  channel_rw(pInfo, pInfo->hKeyMVel, (void *) tempV, TID_FLOAT, 1);
+  channel_rw(pInfo, pInfo->hKeyMAcc, (void *) tempA, TID_FLOAT, 1);
+  return CM_SUCCESS;
+}
+
+
+
+#ifdef __cplusplus
+}
+#endif
 
 /********************************************************************\
              USED callback routines for system transitions
@@ -713,12 +719,13 @@ INT phidget_responding(HNDLE hDB) {
   db_get_value(hDB, hPhidgetVars0, "PH00", &phidget_Values_Now, &size_of_array, TID_DOUBLE, FALSE);
 
   //Check that phidget0 is working. The phidget is working if the values change over a set period of time. When a phidget is unplugged there is no fluctuation in the values.
+
   time_at_start_of_check = ss_millitime();
   while ((phidget_Values_Old[0] == phidget_Values_Now[0]) && (phidget_Values_Old[1] == phidget_Values_Now[1]) &&
          (phidget_Values_Old[2] == phidget_Values_Now[2]) && (phidget_Values_Old[3] == phidget_Values_Now[3]) &&
          (phidget_Values_Old[4] == phidget_Values_Now[4]) && (phidget_Values_Old[5] == phidget_Values_Now[5]) &&
          (phidget_Values_Old[6] == phidget_Values_Now[6]) && (phidget_Values_Old[7] == phidget_Values_Now[7]) &&
-         (phidget_Values_Old[8] == phidget_Values_Now[8]) && (phidget_Values_Old[9] == phidget_Values_Now[9])) {
+         (phidget_Values_Old[8] == phidget_Values_Now[8]) && (phidget_Values_Old[9] == phidget_Values_Now[9])
 
     db_get_value(hDB, hPhidgetVars0, "PH00", &phidget_Values_Now, &size_of_array, TID_DOUBLE, FALSE);
 
@@ -766,6 +773,7 @@ INT phidget_responding(HNDLE hDB) {
 
     ss_sleep(1000);
   }
+
 
 
   return 1;
@@ -915,6 +923,9 @@ int initialize_tilt(INFO *pInfo) {
     tilt_end = 1;
   }
 
+
+=======
+
   if (!phidget_responding(pInfo->hDB)) {
     return -1;
   }
@@ -955,6 +966,7 @@ int initialize_tilt(INFO *pInfo) {
       //TF: for running tilt without phidgets:
       //pInfo->Phidget[7] = -10;
     }
+
 
     if (i == 0)
       printf("\n");
@@ -1097,6 +1109,8 @@ void initialize(INFO *pInfo) {
 
   channel_rw(pInfo, pInfo->hKeyMDest, (void *) tempPos, TID_FLOAT, 1);
 
+=======
+
   // Cycle through each pair of motors corresponding to the same axis on each arm.
   // We want to make sure that we initialize the Z-axis first, so that the laser box is
   // fully out of the tank before we move in X and Y.
@@ -1104,6 +1118,7 @@ void initialize(INFO *pInfo) {
   int itmp;
   for (itmp = 0; itmp < 4; itmp++) {
     i = order[itmp];
+
 
     if ((tempNegLimitEnabled[i] == 1) || (tempNegLimitEnabled[i + 5] == 1)) {
       cm_msg(MINFO, "initialize", "Initializing axes %i and %i (enabled = %i %i)", i, i + 5, tempNegLimitEnabled[i],
@@ -1282,6 +1297,7 @@ void reinitialize(HNDLE hDB, HNDLE hKey, void *data) {
   pInfo->Initialized = 0;
   db_set_data(hDB, pInfo->hKeyInit, &pInfo->Initialized, sizeof(BOOL), 1, TID_BOOL);
 
+
   pInfo->Start = 1;
   db_set_data(hDB, pInfo->hKeyStart, &pInfo->Start, sizeof(BOOL), 1, TID_BOOL);
 
@@ -1291,6 +1307,7 @@ void reinitialize(HNDLE hDB, HNDLE hKey, void *data) {
   pInfo->BadDest = 0;
   db_set_data(hDB, pInfo->hKeyBadDest, &pInfo->BadDest, sizeof(BOOL), 1, TID_BOOL);
 }
+
 
 /*-- Generate Path -------------------------------------------------*/
 // Generate collision-free path, put the path data into pInfo->MovePath
@@ -1344,7 +1361,10 @@ int generate_path(INFO *pInfo) {
   double tilt_min = -105, tilt_max = 15;
 
   double z_max_value = 0.535; // Rika (23Mar2017): gantry positive z limit switch at z = 0.534m.
+
+
   // John (16Oct2019): Reducing z_max from 0.535 to 0.22 for PMT scans because getting too close to acrylic
+
 
   // double safeZheight = 0.260; // Rika (4Apr2017): z height at which any movement (rot & tilt) is PMT collision free.
   // (24Apr2017) updated safeZheight for new PMT position (previously 0.46m)
@@ -1666,13 +1686,15 @@ int generate_path(INFO *pInfo) {
                                                                          tankheight_gantend2);
     }
   }
-  // Remove comments
-  /*
+
+
+
   if (!(validDestination_box0 && validDestination_box1)) {
     cm_msg(MERROR, "generate_path", "Invalid destination: gantry will collide with PMT.");
     return GENPATH_BAD_DEST;
   }
-  */
+
+
 
   // Define xy plane in terms of z heights at which path will be checked for collision avoidance.
   double gantry1Z = gantry1ZDes;
@@ -1711,6 +1733,7 @@ int generate_path(INFO *pInfo) {
     opticalBox1_lo_Z[tilt] = (opticalBox1_height[tilt].first - pmtHeight) / pmtPolyLayerHeight;
     opticalBox1_up_Z[tilt] = (opticalBox1_height[tilt].second - pmtHeight) / pmtPolyLayerHeight;
   }
+
 
   // Tilt first
   // Initialise gantries and water tank in path calculator for gantry 1 move first, rotation first2
@@ -2060,6 +2083,8 @@ int generate_path(INFO *pInfo) {
     return GENPATH_BAD_DEST;
   }
 
+
+
   //Initialize path to current position
   for (int i = 0; i < 10; i++) {
     //Why: +3: optional zfirst, then zlast, theta, phi is last move and very first one is initial pos.
@@ -2372,6 +2397,7 @@ void move(INFO *pInfo) {
   cm_msg(MINFO, "move", "Function Move is complete");
 }
 
+
 /*-- Stop_move -----------------------------------------------------*/
 // Aborts a move, and prints the reason for stopping to screen
 void stop_move(HNDLE hDB, HNDLE hKey, void *data) {
@@ -2439,6 +2465,9 @@ void monitor(HNDLE hDB, HNDLE hKey, void *data) {
     // Check if the destination has been reached, otherwise return an error
     for (i = gantry_motor_start; i < gantry_motor_end; i++) {
       if ((pInfo->Channels[i] != -1) && (pInfo->MovePath[i][pInfo->PathIndex] != pInfo->CountPos[i])) {
+
+
+
         if (abs(pInfo->MovePath[i][pInfo->PathIndex] - pInfo->CountPos[i]) < 20){
           cm_msg(MINFO, "monitor", "final monitor position %i counts different to destination!", abs(pInfo->MovePath[i][pInfo->PathIndex] - pInfo->CountPos[i]));
         } 
@@ -2466,6 +2495,7 @@ void monitor(HNDLE hDB, HNDLE hKey, void *data) {
                   pInfo->MovePath[i][pInfo->PathIndex], pInfo->CountPos[i]);
               return;
             }
+
           }
         }
       }
