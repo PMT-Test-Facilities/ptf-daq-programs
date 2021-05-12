@@ -10,7 +10,9 @@
 #include <boost/optional.hpp>
 
 #include "midas.h"
+#include "mfe.h"
 
+//#include <array>
 #include "pathgen.hpp"
 
 // maximum string length for collidable objects
@@ -113,13 +115,14 @@ static const auto
 
 
 // MIDAS requirements
-extern "C" {
 
 const char
   *frontend_name = "feMove",
   *frontend_file_name = __FILE__;
 
 BOOL frontend_call_loop = FALSE;
+
+BOOL equipment_common_overwrite = FALSE;
 
 INT
   display_period      = 0,
@@ -174,8 +177,6 @@ EQUIPMENT equipment[] = {{
   NULL,
   NULL
 }};
-
-} // end extern "C"
 
 
 void move(HNDLE hDB);

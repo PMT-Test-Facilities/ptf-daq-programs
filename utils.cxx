@@ -2,7 +2,7 @@
 //#include <utils.h>
 #include <midas.h>
 
-extern char* frontend_name;
+extern const char* frontend_name;
 extern HNDLE hDB;
 
 static int odbReadAny(const char*name,int index,int tid,void* value,int valueLength = 0)

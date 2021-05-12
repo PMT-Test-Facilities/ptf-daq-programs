@@ -60,7 +60,7 @@ LIBS = -lm -lz -lutil -lnsl -lpthread -lrt
 
 # all: default target for "make"
 
-all:feMotor feMove feScan fedvm fePhidget fesimdaq.exe feptfwiener.exe testVI feDegauss
+all:feMotor feMove feScan fePhidget feptfwiener.exe testVI feDegauss
 
 
 gefvme.o: %.o: $(MIDASSYS)/drivers/vme/vmic/%.c
@@ -70,7 +70,7 @@ gefvme.o: %.o: $(MIDASSYS)/drivers/vme/vmic/%.c
 feMotor: $(MIDASLIBS) $(MFE) feMotor.o $(DRV_DIR)/tcpip.o cd_Galil.o 
 	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS)
 
-feMove: $(MIDASLIBS) $(MFE) feMove.o TPathCalculator.o TRotationCalculator.o TGantryConfigCalculator.o
+feMove: $(MIDASLIBS) $(MFE)  feMove.o TPathCalculator.o TRotationCalculator.o TGantryConfigCalculator.o
 	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS)
 
 #feMoveNew: $(MIDASLIBS) $(MFE) feMove.o TPathCalculator.o TRotationCalculator.o TGantryConfigCalculator.o
