@@ -12,7 +12,7 @@
 \usepackage{textcomp}
 \usepackage{todo}
 \usepackage{graphicx}
-% \usepackage{placeins}
+%\usepackage{placeins}
 \usepackage[section]{placeins}
 \usepackage{hyperref}
 \usepackage{booktabs}
@@ -36,7 +36,7 @@
 \newcommand{\ie}{i.\,e.,}
 \newcommand{\eg}{e.\,g..}
 \DeclareRobustCommand \cs[1]{\texttt{\char`\\#1}}
-%\DeclareUnicodeCharacter{2212}{-} % add unicode minus sign 
+\DeclareUnicodeCharacter{2212}{-} % add unicode minus sign 
 
 \title{Photosensor Test Facility Operations Manual}
 \author{TRIUMF National Laboratory \\
@@ -286,7 +286,7 @@ These channels correspond to data acquisition channels in the recorded ROOT file
 
 The trigger pulse rack contains a counter (left) and a pulse generator (right), which sets the frequency of the laser pulses incident to the PMT.\@ This can be adjusted to achieve desired data acquisition speeds as long as the data can still be read out from the digitizer appropriately. The frequency dial is scaled by about a factor of 10 so the actual trigger frequency should be read from the \textbf{Events[/s]} value close to FEV17300OPTIC on the midptf status page during a run. Currently scans are performed at about 1600 Hz. Scans are performed at a default 3 seconds per point to provide a total of about 5000 waveforms per point.
 
-\clearpage
+
 
 \subsubsection{PMTs}
 
@@ -301,7 +301,7 @@ The PMT located in the water tank under the acrylic cover is the Super Kamiokand
 The multi-PMT (mPMT) is a prototype for the photosensors that will go into Hyper Kamiokande. Instead of a single large PMT, they're made up of many smaller PMTs which sacrifice some detecting area for a large increase in resolution. In addition, the acrylic cover and optical gel were included in the original design to help prevent implosion cascades.
 
 %TODO: include picture
-
+\clearpage
 \subsubsection{Magnetic Field Control}
 
 Magnetic fields can have a large effect on PMTs, especially larger ones such as the 20'' SK PMT\footnote{The magnetic field can affect the path of photoelectrons.}. As the PTF is close to the cyclotron, there is a very large magnetic field present. There are two types of compensation present: passive shielding from the G-Iron mesh surrounding the PMT tank, and active compensation from the six Helmholtz coils seen in Figure~\ref{fig:pmtAndCoils}. Detailed information is provided in Section~\ref{sec:magField}.
@@ -315,9 +315,7 @@ Magnetic fields can have a large effect on PMTs, especially larger ones such as 
 	\caption{PMT and Helmholtz Coils\label{fig:pmtAndCoils}}
 \end{figure}
 
-\FloatBarrier
 
-\clearpage
 
 \subsubsection{Phidgets}
 
@@ -331,6 +329,7 @@ Magnetic fields can have a large effect on PMTs, especially larger ones such as 
 	\caption{A spatial phidget accelerometer/magnetometer\label{fig:phidget}}
 \end{figure}
 
+\FloatBarrier
 
 \clearpage
 
@@ -670,7 +669,8 @@ The process for setting up a scan is as follows
 			
 	\item Choose a sub type:
 	
-			Sub Type 0/Default specifies a regular vertical injection scan of the PMT. Sub Type 1/Monitor Reference Point is the same as Default but will scan a reference point periodically. The point and periodicity are specified in the ODB at /Equipment/Scan/RectangularParams/MonitorPoint. Sub Type 2 specifies a normal incidence (or offset incidence) scan.
+			Sub Type 0/Default specifies a regular vertical injection scan of the PMT. Sub Type 1/Monitor Reference Point is the same as Default but will scan a reference point periodically. The point and periodicity are specified in the ODB at 
+			/Equipment/Scan/RectangularParams/MonitorPoint. Sub Type 2 specifies a normal incidence (or offset incidence) scan.
 	
 	\textbf{AFTER setting all scan settings above, switch ON the feSCAN frontend. If any settings change, you need to reset the frontend to reload the settings.}
 	
