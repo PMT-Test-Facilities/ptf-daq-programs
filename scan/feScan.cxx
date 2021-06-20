@@ -346,8 +346,8 @@ INT frontend_init() {
   sprintf(str[5], "/Equipment/Phidget01/Variables/");
   ODB_Handles[5] = &hPhidgetVars1;
   //Wiener Power Supply
-  sprintf(str[6], "/Equipment/PtfWiener/Variables/");
-  ODB_Handles[6] = &hPtfWiener;
+  //sprintf(str[6], "/Equipment/PtfWiener/Variables/");
+  // ODB_Handles[6] = &hPtfWiener;
   //Motors
   sprintf(str[7], "/Equipment/Motors00/Settings/TurnMotorsOff");
   ODB_Handles[7] = &hMotors00;
@@ -912,18 +912,18 @@ INT scan_read(char *pevent, INT off)
              gGantryPositions[6], gGantryPositions[7]);
 
       size = sizeof(gCoilCurrent);
-      status = db_get_value(hDB, hPtfWiener, "current", &gCoilCurrent, &size, TID_FLOAT, FALSE);
-      if (status != DB_SUCCESS) {
-        cm_msg(MERROR, "scan_read", "cannot get value for Coil Current");
-        return DB_NO_ACCESS;
-      }
+      //status = db_get_value(hDB, hPtfWiener, "current", &gCoilCurrent, &size, TID_FLOAT, FALSE);
+      //if (status != DB_SUCCESS) {
+      //  cm_msg(MERROR, "scan_read", "cannot get value for Coil Current");
+      //  return DB_NO_ACCESS;
+      // }
 
       size = sizeof(gCoilVoltage);
-      status = db_get_value(hDB, hPtfWiener, "senseVoltage", &gCoilVoltage, &size, TID_FLOAT, FALSE);
-      if (status != DB_SUCCESS) {
-        cm_msg(MERROR, "scan_read", "cannot get value for Coil Voltage");
-        return DB_NO_ACCESS;
-      }
+      //status = db_get_value(hDB, hPtfWiener, "senseVoltage", &gCoilVoltage, &size, TID_FLOAT, FALSE);
+      //if (status != DB_SUCCESS) {
+      //  cm_msg(MERROR, "scan_read", "cannot get value for Coil Voltage");
+      //  return DB_NO_ACCESS;
+      // }
 
       //Init bank creation once
       bk_init(pevent);

@@ -611,7 +611,7 @@ void galil_read(EQUIPMENT *pequipment, int channel) {
  * Demand callback for axis move
  */
 void galil_move(INT hDB, INT hKey, void *info) {
-  printf("Time %u\n", ss_millitime());
+  printf("galil move  Time %u\n", ss_millitime());
   INFO *pInfo;
   EQUIPMENT *pequipment;
   INT i;
@@ -625,10 +625,11 @@ void galil_move(INT hDB, INT hKey, void *info) {
     if (pInfo->bMove[i] == TRUE) {
       INT size = sizeof(float);
       db_get_data_index(hDB, pInfo->hKeySetDest, &pInfo->fDestination[i], &size, i, TID_FLOAT);
+      cm_msg(MINFO, "galil_move", "Move request for axis %i, destination=%f ", i, pInfo->fDestination[i]);
       Move(pequipment, i, pInfo->fDestination[i]);
+      printf("move complete\n");
       pInfo->bMove[i] = FALSE;
 
-      //         cm_msg(MINFO, "galil_move", "Move request for %s", pInfo->names + i * NAME_LENGTH);
     }
   }
   if (!bFalse) {  // no channels were true for a move
@@ -2074,7 +2075,7 @@ INT galil_idle(EQUIPMENT *pequipment) {
   pInfo = (INFO *) pequipment->cd_info;
   cm_get_experiment_database(&hDB, NULL);
 
-  //   printf("Idle %ld", ss_time());
+  printf(".", ss_time());
 
   galil_read(pequipment, pInfo->last_channel);
 

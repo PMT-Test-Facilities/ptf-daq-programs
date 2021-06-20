@@ -250,7 +250,7 @@ MovePoint from_pair(const pair<Point, Point>& p, const WhichGantry which_gantry)
 
 } // end namespace PathGeneration
 
-
+/*
 // this could potentially improve the performance of the path generation code dramatically
 // due to less heap allocations and less cache invalidation, I just didn't have time to try it out.
 // See my (Mia) report for more info
@@ -336,6 +336,6 @@ public:
     return storage.data() + i;
   }
 };
-
+*/
 
 #endif // __PATH_GEN__

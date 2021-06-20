@@ -60,7 +60,7 @@ LIBS = -lm -lz -lutil -lnsl -lpthread -lrt
 
 # all: default target for "make"
 
-all:feMotor feMove feScan fePhidget feptfwiener.exe testVI feDegauss
+all:feMotor feMove_Reduced feScan fePhidget feptfwiener.exe testVI feDegauss
 
 
 gefvme.o: %.o: $(MIDASSYS)/drivers/vme/vmic/%.c
@@ -68,6 +68,9 @@ gefvme.o: %.o: $(MIDASSYS)/drivers/vme/vmic/%.c
 
 
 feMotor: $(MIDASLIBS) $(MFE) feMotor.o $(DRV_DIR)/tcpip.o cd_Galil.o 
+	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS)
+
+feMove_Reduced: $(MIDASLIBS) $(MFE)  feMove_Reduced.o TPathCalculator.o TRotationCalculator.o TGantryConfigCalculator.o
 	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS)
 
 feMove: $(MIDASLIBS) $(MFE)  feMove.o TPathCalculator.o TRotationCalculator.o TGantryConfigCalculator.o
@@ -129,6 +132,6 @@ feDegauss: $(MIDASLIBS) $(MFE) degauss.o feDegauss.o
 
 
 clean:
-	rm -f *.o *.gch *.dSYM feMotor feMove feMoveNew feMoveOld feScan testVI fedvm fePhidget fesimdaq.exe feptfwiener.exe
+	rm -f *.o *.gch *.dSYM feMotor feMove_Reduced feMoveNew feMoveOld feScan testVI fedvm fePhidget fesimdaq.exe feptfwiener.exe
 
 # end

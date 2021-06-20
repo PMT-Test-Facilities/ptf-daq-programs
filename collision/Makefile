@@ -14,9 +14,13 @@ endif
 UNAME_S := $(shell uname -s)
 
 ifeq ($(UNAME_S),Linux)
-	CFLAGS += -I/home1/midptf/packages/boost/include/**
+	CFLAGS += -I/home1/midptf/packages/boost_1_61_0/include/**
 	CFLAGS += -lboost_unit_test_framework
+	#/home/midptf/packages/boost_1_61_0/stage/lib
+
 else 
+
+
 	# this is useful for debugging on your own computer if you aren't running Linux
 	CXX = /usr/local/bin/g++-8
 	CFLAGS += -I/Users/Mia/packages/boost-src/ -L/Users/Mia/packages/boost-src/stage/lib
