@@ -12,7 +12,7 @@
 \usepackage{textcomp}
 \usepackage{todo}
 \usepackage{graphicx}
-% \usepackage{placeins}
+%\usepackage{placeins}
 \usepackage[section]{placeins}
 \usepackage{hyperref}
 \usepackage{booktabs}
@@ -36,14 +36,16 @@
 \newcommand{\ie}{i.\,e.,}
 \newcommand{\eg}{e.\,g..}
 \DeclareRobustCommand \cs[1]{\texttt{\char`\\#1}}
+\DeclareUnicodeCharacter{2212}{-} % add unicode minus sign 
 
 \title{Photosensor Test Facility Operations Manual}
 \author{TRIUMF National Laboratory \\
 Alexander Jaffray \\
 Kevin Xie \\
 Mia Kramer \\
+Skylar Wingfelder\\
 % {\today} \\
-Version 4}
+Version 5}
 
 \date{Updated \today}
 \emergencystretch1em %
@@ -64,7 +66,7 @@ Version 4}
 \maketitle
 
 \begin{abstract}
-	This document describes standard operation of the Photosensor Test Facility (PTF) at TRIUMF, and is intended to be a ``living'' document, added to as functionality is implemented.
+	This document describes standard operation of the Photosensor Test Facility (PTF) at TRIUMF, and is intended to be a "living" document, added to as functionality is implemented.
 \end{abstract}
 \tableofcontents
 
@@ -101,13 +103,14 @@ If there is any additional assistance/guidance required, please do not hesitate 
 
 \subsection{Finding the PTF}
 
-The PTF is located on level B2 of the Meson Hall, across from the Proton Therapy facility. Directions to the PTF from the Badge Room are as follows:
+The PTF is located on the first floor of the Meson Hall Extension Service Annex. Directions to the PTF from the Badge Room are as follows:
 
 \begin{enumerate}
 	\item Upon exiting the Badge Room, turn left and walk towards ISAC 1
 	\item Enter the Meson Hall loading bay (on the right), either through the main bay doors or through the small access door on the right side adjacent to the compressed gas tanks
-	\item Once inside the Meson Hall, there should be a set of metal stairs beside the helium recovery area which descend to the bottom floor of the Meson hall
-	\item Proceed down the stairs, and turn left for a few feet then right. There should be a set of doors on the right hand side with a screen adjacent to them displaying the status of the PTF
+	\item Once inside the Meson Hall, turn left towards the helium recovery area and walk down the hallway
+	\item Proceed down the short stairs by the scissor lift, make a right around the clean room and walk to the Meson Hall Extension Service Annex 
+	\item Once in MHESA, the PTF is the first room on the right.
 	\item Check the status screen. If the PMT is on, do not open the curtain, and do not turn on the room lights, use a flashlight when in the room. If the screen indicates that a run is in progress, only enter if really necessary, following the precautions above
 \end{enumerate}
 
@@ -227,7 +230,7 @@ Provides constant voltage output to PMTs and Helmholtz coil system. Power delive
 
 \subsubsection{Galil Motor Controller}
 
-Provides control interface between Gantry Move program in \textbf{Movement Navigation Tab} and the motors controlling the motion of the gantry system itself. Also provides power to the motors. Controlled by the PDU.\@ The Galil Motor Controller is located in the main equipment rack as shown in Figure~\ref{mainEquipmentRack} on the left.
+Provides control interface between Gantry Move program in \textbf{Movement Navigation Tab} and the motors controlling the motion of the gantry system itself. Powers the motors and tracks position by counting the motor's microsteps and the motor encoders quadrature pulses. Controlled by the PDU.\@ The Galil Motor Controller is located in the main equipment rack as shown in Figure~\ref{mainEquipmentRack} on the left.
 
 \subsubsection{Hamamatsu Laser}
 
@@ -283,7 +286,7 @@ These channels correspond to data acquisition channels in the recorded ROOT file
 
 The trigger pulse rack contains a counter (left) and a pulse generator (right), which sets the frequency of the laser pulses incident to the PMT.\@ This can be adjusted to achieve desired data acquisition speeds as long as the data can still be read out from the digitizer appropriately. The frequency dial is scaled by about a factor of 10 so the actual trigger frequency should be read from the \textbf{Events[/s]} value close to FEV17300OPTIC on the midptf status page during a run. Currently scans are performed at about 1600 Hz. Scans are performed at a default 3 seconds per point to provide a total of about 5000 waveforms per point.
 
-\clearpage
+
 
 \subsubsection{PMTs}
 
@@ -298,7 +301,7 @@ The PMT located in the water tank under the acrylic cover is the Super Kamiokand
 The multi-PMT (mPMT) is a prototype for the photosensors that will go into Hyper Kamiokande. Instead of a single large PMT, they're made up of many smaller PMTs which sacrifice some detecting area for a large increase in resolution. In addition, the acrylic cover and optical gel were included in the original design to help prevent implosion cascades.
 
 %TODO: include picture
-
+\clearpage
 \subsubsection{Magnetic Field Control}
 
 Magnetic fields can have a large effect on PMTs, especially larger ones such as the 20'' SK PMT\footnote{The magnetic field can affect the path of photoelectrons.}. As the PTF is close to the cyclotron, there is a very large magnetic field present. There are two types of compensation present: passive shielding from the G-Iron mesh surrounding the PMT tank, and active compensation from the six Helmholtz coils seen in Figure~\ref{fig:pmtAndCoils}. Detailed information is provided in Section~\ref{sec:magField}.
@@ -312,7 +315,6 @@ Magnetic fields can have a large effect on PMTs, especially larger ones such as 
 	\caption{PMT and Helmholtz Coils\label{fig:pmtAndCoils}}
 \end{figure}
 
-\FloatBarrier
 
 
 \subsubsection{Phidgets}
@@ -322,9 +324,12 @@ Magnetic fields can have a large effect on PMTs, especially larger ones such as 
 %TODO: include picture of phidgets with and without covers
 
 \begin{figure}[!htpb]\centering
-	\caption{A phidget\label{fig:phidget}}
+	\includegraphics[width=0.3\textwidth]{images/Phidget_with_Casing.jpg}
+	\includegraphics[width=0.3\textwidth]{images/Phidget_without_Casing.jpg}
+	\caption{A spatial phidget accelerometer/magnetometer\label{fig:phidget}}
 \end{figure}
 
+\FloatBarrier
 
 \clearpage
 
@@ -664,7 +669,8 @@ The process for setting up a scan is as follows
 			
 	\item Choose a sub type:
 	
-			Sub Type 0/Default specifies a regular vertical injection scan of the PMT. Sub Type 1/Monitor Reference Point is the same as Default but will scan a reference point periodically. The point and periodicity are specified in the ODB at /Equipment/Scan/RectangularParams/MonitorPoint. Sub Type 2 specifies a normal incidence (or offset incidence) scan.
+			Sub Type 0/Default specifies a regular vertical injection scan of the PMT. Sub Type 1/Monitor Reference Point is the same as Default but will scan a reference point periodically. The point and periodicity are specified in the ODB at 
+			/Equipment/Scan/RectangularParams/MonitorPoint. Sub Type 2 specifies a normal incidence (or offset incidence) scan.
 	
 	\textbf{AFTER setting all scan settings above, switch ON the feSCAN frontend. If any settings change, you need to reset the frontend to reload the settings.}
 	
@@ -1040,10 +1046,11 @@ As well, if a testing run is being performed, the reason and feature being teste
 Due to the technical nature of the Photosensor Test Facility, there are a variety of precise terms and acronyms that will be frequently used in this reference manual.
 
 \begin{description}
-	\item[\textbf{PTF}] Photosensor Test Facility: A system for automated quantitative measurement of the response of large area (up to 20'') photomultiplier tubes to various environmental and induced conditions.
-	\item[\textbf{PMT}] Photomultiplier Tube: Photons incident to the surface cause emission of photoelectrons, which are accelerated and multiplied using an electron multiplier to produce an output signal.
+	\item[\textbf{Photosensor Test Facility (PTF)}] A system for automated quantitative measurement of the response of large area (up to 20'') photomultiplier tubes to various environmental and induced conditions.
+	\item[\textbf{Photomultiplier Tube (PMT)}] Photons incident to the surface cause emission of photoelectrons, which are accelerated and multiplied using an electron multiplier to produce an output signal.
 	\item[\textbf{Gantry}] Servo-driven system capable of motion in 5 axes (x, y, z, $\theta$ (rotation), $\phi$ (tilt)). There are two independent gantry systems capable of simultaneous motion across the PMT surface (Gantry 0 and Gantry 1) used to control the optical boxes.
 	\item[\textbf{Motors}] The stepper motors used to control the movement of the gantry system. The motors are controlled by a Galil motor controller.
+	\item[\textbf{Encoders}] The built-in encoders on the motors which send information on the motors position to the Galil motor controller.
 	\item[\textbf{Optical Box}] The box which contains both the monitor and receiver PMTs as well as the laser, polarizer, collimator and splitter, as well as the phidget accelerometer and magnetometers. There are two optical boxes, one mounted to each gantry. Optical Box 0 and Optical Box 1 are mounted to Gantry 0 and Gantry 1 respectively.
 	\item[\textbf{Helmholtz Coil}] Six coils of wire arranged in pairs along 3 axes. Allows for active compensation of ambient magnetic fields in the PTF.
 	\item[\textbf{G-Iron}] High magnetic permeability (high $\mu$) material similar to Mu-Metal in functionality. Arranged below and around the PMT to improve homogeneity of the field when active compensation is used.
