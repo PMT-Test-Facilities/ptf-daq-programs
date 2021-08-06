@@ -43,20 +43,21 @@ to accommodate multiple phidgets.
 #include <string.h>
 #include "phidget22.h"
 #include <stdint.h>
+#include <mfe.h>
 /* make frontend functions callable from the C framework            */
-#ifdef __cplusplus
-extern "C" {
-#endif
+//#ifdef __cplusplus
+//extern "C" {
+//#endif
 
 /*-- Globals -------------------------------------------------------*/
 
 
 
 /* The frontend name (client name) as seen by other MIDAS clients   */
-char *frontend_name = "fePhidget";
+const char *frontend_name = "fePhidget";
 
 /* The frontend file name, don't change it                          */
-char *frontend_file_name = __FILE__;
+const char *frontend_file_name = __FILE__;
 
 /* frontend_loop is called periodically if this variable is TRUE    */
 BOOL frontend_call_loop = FALSE;
@@ -87,7 +88,8 @@ INT pause_run(INT run_number, char *error);
 INT resume_run(INT run_number, char *error);
 INT frontend_loop();
 INT poll_trigger_event(INT count, PTYPE test);
-INT interrupt_configure(INT cmd, PTYPE adr);
+int interrupt_configure(INT cmd, INT source, PTYPE adr);
+//INT interrupt_configure(INT cmd, PTYPE adr);
 INT read_trigger_event(char *pevent, INT off);
 
 
@@ -119,9 +121,9 @@ EQUIPMENT equipment[] = {
   { "" }
 };
 
-#ifdef __cplusplus
-}
-#endif
+//#ifdef __cplusplus
+//}
+//#endif
 
 
 // Keep a copy of the last spatial data event.
@@ -262,9 +264,11 @@ int display_properties(PhidgetHandle phid_spatial)
 
 
 
-extern int frontend_index;
+//extern int frontend_index;
+extern HNDLE hDB;
+HNDLE hFS=0;
 
-HNDLE   hDB=0, hFS=0;
+//HNDLE   hDB=0, hFS=0;
 
 /*-- Frontend Init -------------------------------------------------*/
 // Initialize ODB variables and set up hotlinks in this function
@@ -291,7 +295,7 @@ INT frontend_init()
   size = sizeof(serial_number);
   
   char variable_name[100];
-  sprintf(variable_name,"/Equipment/Phidget%02d/Settings/SerialNumber",frontend_index);
+  sprintf(variable_name,"/Equipment/Phidget%02d/Settings/SerialNumber",get_frontend_index());
 
   status = db_get_value(hDB, 0, variable_name, &serial_number, &size, TID_INT, FALSE);
   if(status != DB_SUCCESS)
@@ -336,7 +340,7 @@ INT frontend_init()
   //PhidgetSpatial_set_OnSpatialData_Handler(spatial, SpatialDataHandler, NULL);
     
   //open the spatial object for device connections
-  printf("Frontend index %i\n",frontend_index);
+  printf("Frontend index %i\n",get_frontend_index());
 
   // Use the serial number when opening the device.  This will ensure that this
   // front-end talks to the correct phidget.
@@ -448,11 +452,27 @@ INT poll_event(INT source, INT count, BOOL test)
 
 /*-- Interrupt configuration for trigger event ---------------------*/
 
-INT interrupt_configure(INT cmd, PTYPE adr)
+//INT interrupt_configure(INT cmd, PTYPE adr)
+//{
+//  return CM_SUCCESS;
+//}
+INT interrupt_configure(INT cmd, INT source, POINTER_T adr)
+{
 {
   return CM_SUCCESS;
+  switch (cmd) {
+  case CMD_INTERRUPT_ENABLE:
+    break;
+  case CMD_INTERRUPT_DISABLE:
+    break;
+  case CMD_INTERRUPT_ATTACH:
+    break;
+  case CMD_INTERRUPT_DETACH:
+    break;
+  }
+  return SUCCESS;
 }
-
+}
 /*-- Event readout -------------------------------------------------*/
 INT read_trigger_event(char *pevent, INT off)
 {
@@ -465,9 +485,9 @@ INT read_trigger_event(char *pevent, INT off)
   double *pdata32;
 
   char bank_name[100];
-  sprintf(bank_name,"PH%02d",frontend_index);
+  sprintf(bank_name,"PH%02d",get_frontend_index());
 
-  bk_create(pevent, bank_name, TID_DOUBLE, &pdata32);
+  bk_create(pevent, bank_name, TID_DOUBLE, (void**)&pdata32);
   *pdata32++ = acceleration[0];
   *pdata32++ =  acceleration[1];
   *pdata32++ =  acceleration[2];
