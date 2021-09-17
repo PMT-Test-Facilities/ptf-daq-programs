@@ -78,7 +78,7 @@ INT read_scaler_event(char *pevent, INT off);
 
 
 DEVICE_DRIVER motor_driver[] = {
-  { "Motors",  tcpip, 8},
+  { "Motors",  tcpip, 3},
   { "" }
 };
 

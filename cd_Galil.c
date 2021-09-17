@@ -288,7 +288,7 @@ void galil_read(EQUIPMENT *pequipment, int channel) {
   size_t buffLength;
   char *presponse;
   INT count;
-  unsigned char bits[8];
+  unsigned char bits[3];
 
   pInfo = (INFO *) pequipment->cd_info;
   cm_get_experiment_database(&hDB, NULL);
@@ -351,7 +351,7 @@ void galil_read(EQUIPMENT *pequipment, int channel) {
       goto CompletedTS;
     }
   }
-  if ((count != 3) && (count != 7)) {
+  if ((count != 2) && (count != 7)) {
     cm_msg(MINFO, "galil_read", "Missing comma in TS read - %s", response);
     goto CompletedTS;
   }
@@ -410,7 +410,7 @@ void galil_read(EQUIPMENT *pequipment, int channel) {
       goto CompletedRP;
     }
   }
-  if ((count != 3) && (count != 7)) {
+  if ((count != 2) && (count != 7)) {
     cm_msg(MINFO, "galil_read", "Missing comma in RP read - %s", response);
     goto CompletedRP;
   }
@@ -459,7 +459,7 @@ void galil_read(EQUIPMENT *pequipment, int channel) {
       goto CompletedTP;
     }
   }
-  if ((count != 3) && (count != 7)) {
+  if ((count != 2) && (count != 7)) {
     cm_msg(MINFO, "galil_read", "Missing comma in TP read - %s", response);
     goto CompletedTP;
   }
