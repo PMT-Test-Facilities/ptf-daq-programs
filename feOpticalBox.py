@@ -44,6 +44,37 @@ def onError(self, code, description):
     print("Description: " + str(description))
     print("----------")
 
+def sign(f):
+    """Python doesn't include this function cuz of a dev dissagreement"""
+    if(f<0):
+        return -1
+    else:
+        return 1
+
+def calc_tilt(ax,ay,az):
+    tilt = 90
+    #calculate tilt
+
+    #TODO: these should just be in ODB if this is still an issue when all the screws are in
+    angle_offsets = [-1.01221,0.01563,0.04028]
+    
+    norm = math.sqrt(angle_offsets[0]*angle_offsets[0]+angle_offsets[1]*angle_offsets[1]+angle_offsets[2]*angle_offsets[2])
+    angle_offsets[0]/=norm
+    angle_offsets[1]/=norm
+    angle_offsets[2]/=norm
+    c=angle_offsets[0]
+    s=-angle_offsets[2]
+
+    ax2=c*ax-s*az
+    ay2=ay
+    az2=s*ax+c*az
+
+    if (ax !=0):
+        # phidget_z is defined pointing downwards
+        #tilt=math.atan2(-ax2,-sign(ay2)*math.sqrt(az2*az2 + ay2*ay2))*180/math.pi+90 #if X is aligned with tilt axis!
+        tilt=-math.atan2(ay,sign(ax2)*math.sqrt(az2*az2 + ax2*ax2))*180/math.pi #if X is aligned with tilt axis!
+    return tilt
+
 #create equipment class to 
 class MyPeriodicEquipment(midas.frontend.EquipmentBase):
 
@@ -52,13 +83,15 @@ class MyPeriodicEquipment(midas.frontend.EquipmentBase):
         Event handler for getting the data from the data from the spatial 
         phidget as recomended by the api, if this is using too much bandwidth
         reduce the event frequency"""
-        self.spaPhiData[3] = acceleration[0]
-        self.spaPhiData[4] = acceleration[1]
-        self.spaPhiData[5] = acceleration[2]
+        self.spaPhiData[0] = acceleration[0]
+        self.spaPhiData[1] = acceleration[1]
+        self.spaPhiData[2] = acceleration[2]
         
-        self.spaPhiData[0] = magneticField[0]
-        self.spaPhiData[1] = magneticField[1]
-        self.spaPhiData[2] = magneticField[2]
+        self.spaPhiData[3] = magneticField[0]
+        self.spaPhiData[4] = magneticField[1]
+        self.spaPhiData[5] = magneticField[2]
+
+        self.spaPhiData[6] = timestamp
 
     def __init__(self, client):
         # The name of our equipment. This name will be used on the midas status
@@ -81,10 +114,9 @@ class MyPeriodicEquipment(midas.frontend.EquipmentBase):
 
         # Create the settings directory.
         humNames = ["Temperature", "Humidity"]
-        spatNames = ["X Magnetic Field", 
-            "Y Magnetic Field", "Z Magnetic Field",
-            "Total Magnetic Field","X Acceleration", 
-            "Y Acceleration", "Z Acceleration", "Tilt"]
+        spatNames = ["X Acceleration","Y Acceleration", "Z Acceleration"
+            ,"X Magnetic Field","Y Magnetic Field", "Z Magnetic Field",
+            "Total Magnetic Field", "Tilt","time (sec)","time (usec)"]
             
         HubSerialNumber = [354856]# set to testing value for convenience
         HumidityPhidgetHubPort = [0]
@@ -92,7 +124,7 @@ class MyPeriodicEquipment(midas.frontend.EquipmentBase):
         Spatial_Enable = False
         Humidity_Enable = False
         default_settings = collections.OrderedDict([ 
-            ("Names", humNames+spatNames),
+            ("Names", spatNames+humNames),
             ("Hub Serial Number", HubSerialNumber),
             ("Spatial Phidget Hub Port", SpatialPhidgetHubPort),
             ("Spatial Phidget Enable", Spatial_Enable),
@@ -115,7 +147,7 @@ class MyPeriodicEquipment(midas.frontend.EquipmentBase):
         self.Humidity_Enabled = client.odb_get("Equipment/OpticalBox0%s/Settings/Humidity Phidget Enable" % (midas.frontend.frontend_index,))
 
         #Get Serial Port and Hub Numbers
-        hubSerNum =  self.client.odb_get("Equipment/OpticalBox0%s/Settings/Hub Serial Number" % (midas.frontend.frontend_index,))
+        HubSerialNumber[0] =  self.client.odb_get("Equipment/OpticalBox0%s/Settings/Hub Serial Number" % (midas.frontend.frontend_index,))
         SpatialPhidgetHubPort = self.client.odb_get("Equipment/OpticalBox0%s/Settings/Spatial Phidget Hub Port" % (midas.frontend.frontend_index,))
         HumidityPhidgetHubPort = self.client.odb_get("Equipment/OpticalBox0%s/Settings/Humidity Phidget Hub Port" % (midas.frontend.frontend_index,))
         
@@ -128,7 +160,7 @@ class MyPeriodicEquipment(midas.frontend.EquipmentBase):
         
         if (self.Spatial_Enabled):
            #ax, ay, az, mx, my ,mz
-           self.spaPhiData = [0,0,0 ,0,0,0]
+           self.spaPhiData = [0,0,0 ,0,0,0 ,0]
            self.phidList.append((self.spaPhid,SpatialPhidgetHubPort))
            self.spaPhid.setOnSpatialDataHandler(self.onSpatialData)
             
@@ -137,6 +169,8 @@ class MyPeriodicEquipment(midas.frontend.EquipmentBase):
             Phid=i[0]
             if(i[1]!=-1):
                 Phid.setHubPort(i[1])
+            if(HubSerialNumber[0]!=-1):
+                Phid.setDeviceSerialNumber(HubSerialNumber[0])
             if(not Phid.getAttached()):
                 Phid.openWaitForAttachment(1000)
 
@@ -146,12 +180,11 @@ class MyPeriodicEquipment(midas.frontend.EquipmentBase):
 
             attached = Phid.getAttached()
 
-            
+            print("Device Serial Number:",deviceSerialNumber)
             hubPortNum=i[1]
             Phid.setOnAttachHandler(onAttach)
             Phid.setOnDetachHandler(onDetach)
             Phid.setOnErrorHandler(onError)
-            #Phid.setDeviceSerialNumber(hubSerNum)
         
         # You can set the status of the equipment (appears in the midas status page)
         self.set_status("Initialized")
@@ -178,17 +211,14 @@ class MyPeriodicEquipment(midas.frontend.EquipmentBase):
             Accx=self.spaPhiData[0]
             Accy=self.spaPhiData[1]
             Accz=self.spaPhiData[2]
-            tilt = 90
-            #calculate tilt
-            if (Accz !=0):
-                # phidget_z is defined pointing downwards
-                tilt=math.atan2( math.sqrt(Accx*Accx + Accy*Accy) ,-Accz)*180/math.pi #if X is aligned with tilt axis!
+            time = self.spaPhiData[6]
+            tilt = calc_tilt(Accx,Accy,Accz)
                 
             
-            spatVarList=[Bx,By,Bz,Btot,Accx,Accy,Accz,tilt]
+            spatVarList=[Accx,Accy,Accz,Bx,By,Bz,Btot,tilt,time*1e-3,time*1e3]
             
         if (self.Humidity_Enabled or self.Spatial_Enabled):
-            hub_event.create_bank("OB0%s" % (midas.frontend.frontend_index,), midas.TID_FLOAT, humVarList+spatVarList)
+            hub_event.create_bank("OB1%s" % (midas.frontend.frontend_index,), midas.TID_DOUBLE, spatVarList+humVarList)
             return hub_event
         
         return None
