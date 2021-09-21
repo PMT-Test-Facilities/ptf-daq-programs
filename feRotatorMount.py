@@ -70,6 +70,16 @@ def rx2deg (reply):
     return angle
     
 
+def seiral_move_to(dist):
+        #TODO: we didn't test this yet since we needed power for the usb hub
+        countstr=deg2tx(dist)
+        mvcmd="0ma"+countstr.upper()
+        ser.write(mvcmd.encode())
+        print("command sent: ",mvcmd)
+        time.sleep(1)#wait for reply
+        posreply=ser.readline() #possibly use readline
+        return rx2deg(posreply)
+
 #Define a MIDAS equipment class for the rotation mount
 class MyPeriodicEquipment(midas.frontend.EquipmentBase):    
      
@@ -147,7 +157,8 @@ class MyPeriodicEquipment(midas.frontend.EquipmentBase):
         time.sleep(1)# I found that a 1 second sleep was needed to wait for the reply this is longer thanthe baudrate would suggest
         posreply=ser.readline() #read most recent line in serial port file
         pos=rx2deg(posreply) #convert to a float value
-        
+        dest=self.client.odb_get("/Equipment/RotatorMount0%s/Settings/Destination" % (midas.frontend.frontend_index,))
+        pos=seiral_move_to(dest)
         self.client.odb_set("/Equipment/RotatorMount0%s/Variables/Position[0]" % (midas.frontend.frontend_index,),pos) # set the odb variable
 
         self.set_status("Initialized")
@@ -201,18 +212,12 @@ class MyFrontend(midas.frontend.FrontendBase):
         self.odb_stop_watching("/Equipment/RotatorMount0%s/Settings/Destination" % (midas.frontend.frontend_index,))
         return midas.status_codes["SUCCESS"]
         
-    
+
     #If destination changes move the rotator mount to that position and update the new position in the ODB
     def my_odb_callback(self,client, path, odb_value):
         time.sleep(1) #not disrupt other communications if they are happening
         dest=self.client.odb_get("/Equipment/RotatorMount0%s/Settings/Destination" % (midas.frontend.frontend_index,))
-        countstr=deg2tx(dest)
-        mvcmd="0ma"+countstr.upper()
-        ser.write(mvcmd.encode())
-        print("command sent: ",mvcmd)
-        time.sleep(1)#wait for reply
-        posreply=ser.readline() #possibly use readline
-        pos=rx2deg(posreply)
+        pos=seiral_move_to(dest)
         self.client.odb_set("/Equipment/RotatorMount0%s/Variables/Position[0]" % (midas.frontend.frontend_index,),pos)
 
         
