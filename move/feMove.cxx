@@ -2,6 +2,8 @@
 #include "col.hpp"
 #include "has.hpp"
 
+#define HAS_PHI false
+#define HAS_THETA false
 
 namespace PG = PathGeneration;
 namespace SD = Serialization;
@@ -12,31 +14,6 @@ using PathGeneration::Y;
 using PathGeneration::Z;
 using PathGeneration::Theta;
 using PathGeneration::Phi;
-
-
-// MIDAS interface
-extern "C" {
-// Trivial functions
-INT begin_of_run(INT run_number, char *error) { return CM_SUCCESS; }
-INT end_of_run(  INT run_number, char *error) { return CM_SUCCESS; }
-INT pause_run(   INT run_number, char *error) { return CM_SUCCESS; }
-INT resume_run(  INT run_number, char *error) { return CM_SUCCESS; }
-
-INT frontend_loop() { return SUCCESS; }
-
-INT poll_event(INT source, INT count, BOOL test) { return FALSE; }
-
-INT interrupt_configure(INT cmd, INT source[], PTYPE adr) { return CM_SUCCESS; }
-
-INT read_trigger_event(char *pevent, INT off) { return 0; }
-INT read_scaler_event( char *pevent, INT off) { return 0; }
-
-INT readout_event(char* pevent, INT off) { return CM_SUCCESS; }
-
-
-/*
- *  Frontend initialization
- */ 
 
 
 INT frontend_init() {
@@ -52,23 +29,23 @@ INT frontend_init() {
   State::move_path.clear();
 
   // load the global keys
-  db_find_key(hDB, 0, "/equipment/move/control/destination",  &State::Keys::destination);
-  db_find_key(hDB, 0, "/equipment/move/control/start move",   &State::Keys::start);
-  db_find_key(hDB, 0, "/equipment/move/control/stop move",    &State::Keys::stop);
-  db_find_key(hDB, 0, "/equipment/move/control/reinitialize", &State::Keys::reinitialize);
+  db_find_key(hDB, 0, "/Equipment/Move/Control/Destination",  &State::Keys::destination);
+  db_find_key(hDB, 0, "/Equipment/Move/Control/Start Move",   &State::Keys::start);
+  db_find_key(hDB, 0, "/Equipment/Move/Control/Stop Move",    &State::Keys::stop);
+  db_find_key(hDB, 0, "/Equipment/Move/Control/ReInitialize", &State::Keys::reinitialize);
 
-  db_find_key(hDB, 0, "/equipment/move/variables/position",        &State::Keys::position);
-  db_find_key(hDB, 0, "/equipment/move/variables/initializing",    &State::Keys::initializing);
-  db_find_key(hDB, 0, "/equipment/move/variables/initialized",     &State::Keys::initialized);
-  db_find_key(hDB, 0, "/equipment/move/variables/bad destination", &State::Keys::bad_destination);
-  db_find_key(hDB, 0, "/equipment/move/variables/completed",       &State::Keys::completed);
-  db_find_key(hDB, 0, "/equipment/move/variables/moving",          &State::Keys::moving);
+  db_find_key(hDB, 0, "/Equipment/Move/Variables/Position",        &State::Keys::position);
+  db_find_key(hDB, 0, "/Equipment/Move/Variables/Initializing",    &State::Keys::initializing);
+  db_find_key(hDB, 0, "/Equipment/Move/Variables/Initialized",     &State::Keys::initialized);
+  db_find_key(hDB, 0, "/Equipment/Move/Variables/Bad Destination", &State::Keys::bad_destination);
+  db_find_key(hDB, 0, "/Equipment/Move/Variables/Completed",       &State::Keys::completed);
+  db_find_key(hDB, 0, "/Equipment/Move/Variables/Moving",          &State::Keys::moving);
 
-  db_find_key(hDB, 0, "/equipment/move/variables/axis moving",         &State::Keys::ax_moving);
-  db_find_key(hDB, 0, "/equipment/move/variables/negative axis limit", &State::Keys::ax_limit_neg);
-  db_find_key(hDB, 0, "/equipment/move/variables/positive axis limit", &State::Keys::ax_limit_pos);
+  db_find_key(hDB, 0, "/Equipment/Move/Variables/Axis Moving",         &State::Keys::ax_moving);
+  db_find_key(hDB, 0, "/Equipment/Move/Variables/Negative Axis Limit", &State::Keys::ax_limit_neg);
+  db_find_key(hDB, 0, "/Equipment/Move/Variables/Positive Axis Limit", &State::Keys::ax_limit_pos);
 
-  db_find_key(hDB, 0, "/equipment/move/settings/collision", &State::Keys::collision);
+  db_find_key(hDB, 0, "/Equipment/Move/Settings/Collision", &State::Keys::collision);
 
   // initialize values
   const BOOL tmp = FALSE;
@@ -82,46 +59,46 @@ INT frontend_init() {
 
   // read settings
   INT bufsize = 10 * sizeof(float);
-  db_get_value(hDB, 0, "/equipment/move/settings/velocity",        State::Settings::velocity.data(),     &bufsize, TID_FLOAT, FALSE);
+  db_get_value(hDB, 0, "/Equipment/Move/Settings/Velocity",        State::Settings::velocity.data(),     &bufsize, TID_FLOAT, FALSE);
   bufsize = 10 * sizeof(float);
-  db_get_value(hDB, 0, "/equipment/move/settings/acceleration",    State::Settings::acceleration.data(), &bufsize, TID_FLOAT, FALSE);
+  db_get_value(hDB, 0, "/equipment/move/settings/Acceleration",    State::Settings::acceleration.data(), &bufsize, TID_FLOAT, FALSE);
   bufsize = 10 * sizeof(float);
-  db_get_value(hDB, 0, "/equipment/move/settings/motor scaling",   State::Settings::scale.data(),        &bufsize, TID_FLOAT, FALSE);
+  db_get_value(hDB, 0, "/equipment/move/settings/Motor Scaling",   State::Settings::scale.data(),        &bufsize, TID_FLOAT, FALSE);
   bufsize = 10 * sizeof(float);
-  db_get_value(hDB, 0, "/equipment/move/settings/axis channels",   State::Settings::channels.data(),     &bufsize, TID_FLOAT, FALSE);
+  db_get_value(hDB, 0, "/equipment/move/settings/Axis Channels",   State::Settings::channels.data(),     &bufsize, TID_INT, FALSE);
   bufsize = 10 * sizeof(float);
-  db_get_value(hDB, 0, "/equipment/move/settings/limit positions", State::Settings::limits.data(),       &bufsize, TID_FLOAT, FALSE);
+  db_get_value(hDB, 0, "/equipment/move/settings/Limit Positions", State::Settings::limits.data(),       &bufsize, TID_FLOAT, FALSE);
 
   // load motor & phidget keys
-  db_find_key(hDB, 0, "/equipment/motors00/settings/destination", &get<0>(State::Keys::Motor::destination));
-  db_find_key(hDB, 0, "/equipment/motors01/settings/destination", &get<1>(State::Keys::Motor::destination));
+  db_find_key(hDB, 0, "/Equipment/Motors00/Settings/Destination", &get<0>(State::Keys::Motor::destination));
+  db_find_key(hDB, 0, "/Equipment/Motors01/Settings/Destination", &get<1>(State::Keys::Motor::destination));
 
-  db_find_key(hDB, 0, "/equipment/motors00/settings/move", &get<0>(State::Keys::Motor::move));
-  db_find_key(hDB, 0, "/equipment/motors01/settings/move", &get<1>(State::Keys::Motor::move));
+  db_find_key(hDB, 0, "/Equipment/Motors00/Settings/Move", &get<0>(State::Keys::Motor::move));
+  db_find_key(hDB, 0, "/Equipment/Motors01/Settings/Move", &get<1>(State::Keys::Motor::move));
 
-  db_find_key(hDB, 0, "/equipment/motors00/settings/moving", &get<0>(State::Keys::Motor::moving));
-  db_find_key(hDB, 0, "/equipment/motors01/settings/moving", &get<1>(State::Keys::Motor::moving));
+  db_find_key(hDB, 0, "/Equipment/Motors00/Variables/Moving", &get<0>(State::Keys::Motor::moving));
+  db_find_key(hDB, 0, "/Equipment/Motors01/Variables/Moving", &get<1>(State::Keys::Motor::moving));
 
-  db_find_key(hDB, 0, "/equipment/motors00/settings/stop", &get<0>(State::Keys::Motor::stop));
-  db_find_key(hDB, 0, "/equipment/motors01/settings/stop", &get<1>(State::Keys::Motor::stop));
+  db_find_key(hDB, 0, "/Equipment/Motors00/Settings/Stop", &get<0>(State::Keys::Motor::stop));
+  db_find_key(hDB, 0, "/Equipment/Motors01/Settings/Stop", &get<1>(State::Keys::Motor::stop));
 
-  db_find_key(hDB, 0, "/equipment/motors00/settings/position", &get<0>(State::Keys::Motor::position));
-  db_find_key(hDB, 0, "/equipment/motors01/settings/position", &get<1>(State::Keys::Motor::position));
+  db_find_key(hDB, 0, "/Equipment/Motors00/Variables/Position", &get<0>(State::Keys::Motor::position));
+  db_find_key(hDB, 0, "/Equipment/Motors01/Variables/Position", &get<1>(State::Keys::Motor::position));
 
-  db_find_key(hDB, 0, "/equipment/motors00/settings/limit pos", &get<0>(State::Keys::Motor::limit_pos));
-  db_find_key(hDB, 0, "/equipment/motors01/settings/limit pos", &get<1>(State::Keys::Motor::limit_pos));
+  db_find_key(hDB, 0, "/Equipment/Motors00/Variables/Limit Pos", &get<0>(State::Keys::Motor::limit_pos));
+  db_find_key(hDB, 0, "/Equipment/Motors01/Variables/Limit Pos", &get<1>(State::Keys::Motor::limit_pos));
 
-  db_find_key(hDB, 0, "/equipment/motors00/settings/limit neg", &get<0>(State::Keys::Motor::limit_neg));
-  db_find_key(hDB, 0, "/equipment/motors01/settings/limit neg", &get<1>(State::Keys::Motor::limit_neg));
+  db_find_key(hDB, 0, "/Equipment/Motors00/Variables/Limit Neg", &get<0>(State::Keys::Motor::limit_neg));
+  db_find_key(hDB, 0, "/Equipment/Motors01/Variables/Limit Neg", &get<1>(State::Keys::Motor::limit_neg));
 
-  db_find_key(hDB, 0, "/equipment/motors00/settings/velocity", &get<0>(State::Keys::Motor::velocity));
-  db_find_key(hDB, 0, "/equipment/motors01/settings/velocity", &get<1>(State::Keys::Motor::velocity));
+  db_find_key(hDB, 0, "/Equipment/Motors00/Settings/Velocity", &get<0>(State::Keys::Motor::velocity));
+  db_find_key(hDB, 0, "/Equipment/Motors01/Settings/Velocity", &get<1>(State::Keys::Motor::velocity));
 
-  db_find_key(hDB, 0, "/equipment/motors00/settings/acceleration", &get<0>(State::Keys::Motor::acceleration));
-  db_find_key(hDB, 0, "/equipment/motors01/settings/acceleration", &get<1>(State::Keys::Motor::acceleration));
+  db_find_key(hDB, 0, "/Equipment/Motors00/Settings/Acceleration", &get<0>(State::Keys::Motor::acceleration));
+  db_find_key(hDB, 0, "/Equipment/Motors01/Settings/Acceleration", &get<1>(State::Keys::Motor::acceleration));
 
-  db_find_key(hDB, 0, "/equipment/phidget00/variables", &get<0>(State::Keys::Motor::phidget));
-  db_find_key(hDB, 0, "/equipment/phidget01/variables", &get<1>(State::Keys::Motor::phidget));
+  db_find_key(hDB, 0, "/Equipment/OpticalBox00/Variables", &get<0>(State::Keys::Motor::phidget));
+  db_find_key(hDB, 0, "/Equipment/Phidget01/Variables", &get<1>(State::Keys::Motor::phidget));
 
   // set hotlinks
 
@@ -130,8 +107,8 @@ INT frontend_init() {
 
   db_open_record(hDB, State::Keys::reinitialize, &State::CallbackVars::initialize, sizeof(BOOL), MODE_READ, initialize, nullptr);
 
-  db_open_record(hDB, get<0>(State::Keys::Motor::moving), State::CallbackVars::g0_moving.data(), 8 * sizeof(BOOL), MODE_READ, monitor, (void*) &GANTRY_0);
-  db_open_record(hDB, get<1>(State::Keys::Motor::moving), State::CallbackVars::g1_moving.data(), 8 * sizeof(BOOL), MODE_READ, monitor, (void*) &GANTRY_1);
+  //db_open_record(hDB, get<0>(State::Keys::Motor::moving), State::CallbackVars::g0_moving.data(), 8 * sizeof(BOOL), MODE_READ, monitor, (void*) &GANTRY_0);
+  //db_open_record(hDB, get<1>(State::Keys::Motor::moving), State::CallbackVars::g1_moving.data(), 8 * sizeof(BOOL), MODE_READ, monitor, (void*) &GANTRY_1);
 
   array<float, 10> temp_v, temp_a;
 
@@ -144,7 +121,6 @@ INT frontend_init() {
   channel_write(hDB, State::Keys::Motor::acceleration, temp_a, TID_FLOAT);
 
   State::moving_on_last_check = TEN_FALSE;
-
   cm_msg(MDEBUG, "feMove:frontend_init", "feMove initialized.");
   return CM_SUCCESS;
 }
@@ -218,8 +194,8 @@ void start_move(HNDLE hDB, HNDLE hKey, void* info) {
   bufsize = 10 * sizeof(float);
   db_get_data(hDB, State::Keys::position, position.data(), &bufsize, TID_FLOAT);
   bufsize = 10 * sizeof(float);
-  db_get_data(hDB, State::Keys::position, destination.data(), &bufsize, TID_FLOAT);
-
+  db_get_data(hDB, State::Keys::destination, destination.data(), &bufsize, TID_FLOAT);
+  
   auto start = PG::move_point_from_array(position);
   auto end   = PG::move_point_from_array(destination);
 
@@ -261,6 +237,7 @@ void initialize(HNDLE hDB, HNDLE hKey, void* info) {
   cm_msg(MINFO, "feMove:initialize", "Initializing.");
   BOOL myb = FALSE;
   INT  bsize = sizeof(BOOL);
+  
   db_get_data(hDB, State::Keys::initializing, &myb, &bsize, TID_BOOL);
   if (myb) {
     cm_msg(MERROR, "feMove:initialize", "Cannot initialize since we are already initializing.");
@@ -270,9 +247,7 @@ void initialize(HNDLE hDB, HNDLE hKey, void* info) {
   db_set_data(hDB, State::Keys::initialized, &myb, sizeof(BOOL), 1, TID_BOOL);
   myb = TRUE;
   db_set_data(hDB, State::Keys::initializing, &myb, sizeof(BOOL), 1, TID_BOOL);
-
   // now initialize in known safe order Z, Y, X, Theta, Phi
-
   if (!initialize_axis<Z>(hDB)) {
     cm_msg(MERROR, "feMove:initialize", "Could not initialize axis z.");
     goto failure;
@@ -285,13 +260,15 @@ void initialize(HNDLE hDB, HNDLE hKey, void* info) {
     cm_msg(MERROR, "feMove:initialize", "Could not initialize axis x.");
     goto failure;
   }
-  if (!initialize_axis<Theta>(hDB)) {
+  if (HAS_THETA && !initialize_axis<Theta>(hDB)) {
     cm_msg(MERROR, "feMove:initialize", "Could not initialize azimuthal angle (rotation).");
     goto failure;
   }
-  if (!initialize_tilt(hDB)) {
+  if (HAS_PHI && !initialize_tilt(hDB)) {
     cm_msg(MERROR, "feMove:initialize", "Could not initialize polar angle (tilt).");
     goto failure;
+  }else{
+    goto success;
   }
 
 success:
@@ -382,18 +359,14 @@ void monitor(HNDLE hDB, HNDLE hKey, void* info) {
 }
 
 
-} // end extern C
-
-
 bool phidgets_responding(HNDLE hDB) {
-  std::array<double, 10>
+  std::array<double, 12>
     p0_values_old, p1_values_old,
     p0_values_new, p1_values_new;
-
   struct timespec now;
   const auto init = monotonic_clock();
 
-  INT bufsize = 10 * sizeof(double), status;
+  INT bufsize = 12 * sizeof(double), status;
   status = db_get_value(hDB, get<0>(State::Keys::Motor::phidget), "PH00", p0_values_old.data(), &bufsize, TID_DOUBLE, FALSE);
   if (status != DB_SUCCESS) {
     cm_msg(MERROR, "feMove:phdigets_responding", "Could not read data for phidget 0.");
@@ -409,7 +382,7 @@ bool phidgets_responding(HNDLE hDB) {
   while (true) {
     now = monotonic_clock();
 
-    bufsize = 10 * sizeof(double);
+    bufsize = 12 * sizeof(double);
     db_get_value(hDB, get<0>(State::Keys::Motor::phidget), "PH00", p0_values_new.data(), &bufsize, TID_DOUBLE, FALSE);
     bufsize = 10 * sizeof(double);
     db_get_value(hDB, get<1>(State::Keys::Motor::phidget), "PH01", p1_values_new.data(), &bufsize, TID_DOUBLE, FALSE);
@@ -443,10 +416,9 @@ bool initialize_tilt(HNDLE hDB, size_t n_attemts) {
   }
   else if (n_attemts >= MAX_TILT_RETRIES) return false;
 
-  array<double, 10> phidg0, phidg1;
-
-  INT bufsize = 10 * sizeof(double);
-  db_get_value(hDB, get<0>(State::Keys::Motor::phidget), "PH00", phidg0.data(), &bufsize, TID_DOUBLE, FALSE);
+  array<double, 12> phidg0, phidg1;
+  INT bufsize = 12 * sizeof(double);
+  db_get_value(hDB, get<0>(State::Keys::Motor::phidget), "OB10", phidg0.data(), &bufsize, TID_DOUBLE, FALSE);
   bufsize = 10 * sizeof(double);
   db_get_value(hDB, get<1>(State::Keys::Motor::phidget), "PH01", phidg1.data(), &bufsize, TID_DOUBLE, FALSE);
 
@@ -473,7 +445,7 @@ bool initialize_tilt(HNDLE hDB, size_t n_attemts) {
   array<BOOL, 10> start = TEN_FALSE;
   start[4] = TRUE;
   start[7] = TRUE;
-  channel_write(hDB, State::Keys::Motor::start, start, TID_BOOL);
+  //channel_write(hDB, State::Keys::Motor::start, start, TID_BOOL);
 
   ss_sleep(MOTOR_POLL_TIME);  // let the move start. todo: check how long it really needs
 
@@ -517,12 +489,15 @@ optional<vector<Intersectable>> load_collision_from_odb(HNDLE hDB) {
   auto raw = new array<char, COLLIDE_STR_MAXLEN*COLLIDE_STR_NUM>;
   INT  bufsize = COLLIDE_STR_MAXLEN*COLLIDE_STR_NUM;
   db_get_data(hDB, State::Keys::collision, raw->data(), &bufsize, TID_STRING);
-
+  
   vector<string> strings;
   for (size_t i = 0; i < COLLIDE_STR_NUM; i++) {
     auto ptr = raw->data() + (COLLIDE_STR_MAXLEN * i);
     // ignore empty strings, as well as commented ones
-    if (*ptr != '\0' || *ptr != '!' || *ptr != '#') {
+    cm_msg(MINFO, "what?", ptr);
+    if (std::string(ptr).compare("") != 0 &&
+        std::string(ptr).substr(0,1).compare("#") != 0 &&
+        std::string(ptr).substr(0,1).compare("!") != 0 ){
       strings.push_back(string(ptr));
     }
   }

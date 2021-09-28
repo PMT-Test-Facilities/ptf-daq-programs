@@ -10,6 +10,7 @@
 #include <boost/optional.hpp>
 
 #include "midas.h"
+#include "mfe.h"
 
 #include "pathgen.hpp"
 
@@ -44,6 +45,114 @@
 // if start_move is called, should we call initialize?
 // uncomment next line to turn on
 // #define AUTO_INIT
+// Required functions
+INT frontend_init();
+
+INT frontend_exit();
+
+INT begin_of_run(INT run_number, char *error);
+
+INT end_of_run(INT run_number, char *error);
+
+INT pause_run(INT run_number, char *error);
+
+INT resume_run(INT run_number, char *error);
+
+INT frontend_loop();
+
+INT poll_trigger_event(INT count, PTYPE test);
+
+/*-- Begin of Run --------------------------------------------------*/
+
+INT begin_of_run(INT run_number, char *error) {
+  return CM_SUCCESS;
+}
+
+/*-- End of Run ----------------------------------------------------*/
+
+INT end_of_run(INT run_number, char *error) {
+  return CM_SUCCESS;
+}
+
+/*-- Pause Run -----------------------------------------------------*/
+
+INT pause_run(INT run_number, char *error) {
+  return CM_SUCCESS;
+}
+
+/*-- Resume Run ----------------------------------------------------*/
+
+INT resume_run(INT run_number, char *error) {
+  return CM_SUCCESS;
+}
+
+/*-- Frontend Loop -------------------------------------------------*/
+
+INT frontend_loop() {
+  return SUCCESS;
+}
+
+/*-- Trigger event routines ----------------------------------------*/
+
+INT poll_event(INT source, INT count, BOOL test)
+/* Polling routine for events. Returns TRUE if event
+   is available. If test equals TRUE, don't return. The test
+   flag is used to time the polling */
+{
+  return FALSE;
+}
+
+/*-- Interrupt configuration ---------------------------------------*/
+INT interrupt_configure(INT cmd, INT source, POINTER_T adr)
+{
+  switch (cmd) {
+  case CMD_INTERRUPT_ENABLE:
+    break;
+  case CMD_INTERRUPT_DISABLE:
+    break;
+  case CMD_INTERRUPT_ATTACH:
+    break;
+  case CMD_INTERRUPT_DETACH:
+    break;
+  }
+  return SUCCESS;
+}
+
+
+/*-- Event readout -------------------------------------------------*/
+INT read_trigger_event(char *pevent, INT off) {
+  return 0;
+}
+
+/*-- Scaler event --------------------------------------------------*/
+
+INT read_scaler_event(char *pevent, INT off) {
+  return 0;
+}
+
+EQUIPMENT equipment[] = {
+
+    {"feMove",            // equipment name
+        {5, 0,              // event ID, trigger mask
+            "SYSTEM",           // event buffer
+            EQ_PERIODIC,        // equipment type
+            0,                  // event source
+            "MIDAS",            // format
+            TRUE,               // enabled
+            RO_ALWAYS,          // read x
+            10000,              // read every x millisec
+            0,                  // stop run after this event limit
+            0,                  // number of sub event
+            60,                  // log history every x sec
+            "", "", "",},
+        read_trigger_event, // readout routine
+        NULL,               // class driver main routine
+        NULL,                // device driver list
+        NULL,               // init string
+    },
+
+    {""}
+};
 
 // needed to initialize to all falses because the version of C++ on midptf is too old
 static const array<BOOL, 10>
@@ -67,7 +176,7 @@ namespace State {
     std::array<float, 10> velocity = {{nanf("")}};
     std::array<float, 10> acceleration = {{nanf("")}};
     std::array<float, 10> scale = {{nanf("")}};
-    std::array<float, 10> channels = {{nanf("")}};
+    std::array<int, 10> channels = {{nanf("")}};
     std::array<float, 10> limits = {{nanf("")}};
   }
 
@@ -112,71 +221,30 @@ static const auto
   GANTRY_1 = PathGeneration::Gantry1;
 
 
-// MIDAS requirements
-extern "C" {
+/* The frontend name (client name) as seen by other MIDAS clients   */
+const char *frontend_name = "feMove";
 
-const char
-  *frontend_name = "feMove",
-  *frontend_file_name = __FILE__;
+/* The frontend file name, don't change it                          */
+const char *frontend_file_name = __FILE__;
 
+/* frontend_loop is called periodically if this variable is TRUE    */
 BOOL frontend_call_loop = FALSE;
 
-INT
-  display_period      = 0,
-  max_event_size      = 3000,
-  max_event_size_frag = 5 * 1024 * 1024,
-  event_buffer_size   = 10 * 1000;
+/* a frontend status page is displayed with this frequency in ms    */
+INT display_period = 0;
 
-INT frontend_init();
-INT frontend_exit();
-INT begin_of_run( INT run_number, char *error );
-INT end_of_run(   INT run_number, char *error );
-INT pause_run(    INT run_number, char *error );
-INT resume_run(   INT run_number, char *error );
-INT frontend_loop();
-INT poll_event(INT source, INT count, BOOL test);
-INT interrupt_configure(INT cmd, INT source[], PTYPE adr);
+/* maximum event size produced by this frontend                     */
+INT max_event_size = 3000;
 
-INT readout_event(char* pevent, INT off);
+/* buffer size to hold events                                       */
+INT event_buffer_size = 10 * 3000;
 
-// ODB Callbacks
+/* maximum event size for fragmented events (EQ_FRAGMENTED)         */
+INT max_event_size_frag = 5 * 300 * 300;
 
-// for these when used as a callback, info will be nullptr
-// however if info is not nullptr, the functions will write `true` or `false`
-// when they succeed or fail, respectively. So, only give them a pointer to bool.
-// monitor is the exception, which should get a pointer to either GANTRY_0 or GANTRY_1
+/*-- Info structure declaration ------------------------------------*/
 
-void start_move( HNDLE hDB, HNDLE hKey = 0, void* info = nullptr );
-void stop_move(  HNDLE hDB, HNDLE hKey = 0, void* info = nullptr );
-void initialize( HNDLE hDB, HNDLE hKey = 0, void* info = nullptr );
-void monitor(    HNDLE hDB, HNDLE hKey = 0, void* info = nullptr );
-
-
-EQUIPMENT equipment[] = {{
-  "feMove",
-  {
-    1,
-    0,
-    "USER",
-    EQ_PERIODIC,
-    1,
-    "FIXED",
-    TRUE,
-    RO_ALWAYS,
-    1000,
-    0,
-    0,
-    0,
-    "","","",
-  },
-  readout_event,
-  NULL,
-  NULL,
-  NULL
-}};
-
-} // end extern "C"
-
+BOOL equipment_common_overwrite = FALSE;
 
 void move(HNDLE hDB);
 
@@ -185,7 +253,6 @@ template<typename T>
 void channel_read(HNDLE hDB, State::Keys::GantryPair keys, array<T, 10>& values, DWORD tid) {
   // tid can't be determined automatically because BOOL looks like DWORD to C++
   array<T, 8> m0, m1;
-
   INT buf_size = 8 * sizeof(T);
   db_get_data(hDB, get<0>(keys), m0.data(), &buf_size, tid);
   buf_size = 8 * sizeof(T);
@@ -280,18 +347,22 @@ bool initialize_axis(HNDLE hDB) {
     D == Z ? make_tuple((size_t)2, (size_t)7) :
     make_tuple((size_t)3, (size_t)8); // Theta
   
-  array<float, 10> vals, o_position, n_position;
+  array<float, 10> vals, o_position, n_position,n_limit;
   channel_read(hDB, State::Keys::Motor::destination, vals, TID_FLOAT);
-  vals[get<0>(axes)] = 500 * State::Settings::scale[get<0>(axes)];
-  vals[get<1>(axes)] = 500 * State::Settings::scale[get<1>(axes)];
+  vals[get<0>(axes)] = 500 * fabs(State::Settings::scale[get<0>(axes)]);
+  //vals[get<1>(axes)] = 500 * State::Settings::scale[get<1>(axes)];
+  cm_msg(MDEBUG, "feMove:initialize_axis", "Dest: %f",vals[get<0>(axes)]);
   channel_write(hDB, State::Keys::Motor::destination, vals, TID_FLOAT);
+  channel_read(hDB, State::Keys::Motor::limit_neg, n_limit, TID_BOOL);
 
   channel_read(hDB, State::Keys::Motor::position, o_position, TID_FLOAT);
   
   array<BOOL, 10> start = TEN_FALSE;
   start[4] = TRUE; start[7] = TRUE;
+  start[get<0>(axes)] = TRUE;//TODO setup for other gantry
 
-  channel_write(hDB, State::Keys::Motor::start, start, TID_BOOL);
+  //channel_write(hDB, State::Keys::Motor::start, start, TID_BOOL);
+  channel_write(hDB, State::Keys::Motor::move, start, TID_BOOL);
 
   ss_sleep(MOTOR_POLL_TIME);
 
@@ -313,18 +384,19 @@ bool initialize_axis(HNDLE hDB) {
   snprintf(name, 64, "initialize_axis<%s>", dim_name(D).c_str());
 
   bool no_movement;
-  if ((no_movement = equal(n_position, o_position))) {
-    cm_msg(MERROR, name, "Warning: One or both motors for dimension %s has not moved. Assuming that it's hit the limit switch, but please check that it is working.", dim_name(D).c_str());
+  if ((no_movement = equal(n_position, o_position)) && !n_limit[get<0>(axes)]) {//TODO: adding lim condidtion for other gantry
+    cm_msg(MERROR, name, "Warning: One or both motors for dimension %s has not moved. Failed init", dim_name(D).c_str());
     return false;
   }
-
-  State::Initialization::motor_origin[get<0>(axes)] = n_position[get<0>(axes)];
-  State::Initialization::motor_origin[get<1>(axes)] = n_position[get<1>(axes)];
+  //TODO: check if this is right?
+  State::Initialization::motor_origin[get<0>(axes)] = n_position[get<0>(axes)] = 0;
+  State::Initialization::motor_origin[get<1>(axes)] = n_position[get<1>(axes)] = 0;
   State::Initialization::position[get<0>(axes)] = State::Settings::limits[get<0>(axes)];
   State::Initialization::position[get<1>(axes)] = State::Settings::limits[get<1>(axes)];
 
   db_set_data_index(hDB, State::Keys::position, &(n_position[get<0>(axes)]), sizeof(float), get<0>(axes), TID_FLOAT);
-  db_set_data_index(hDB, State::Keys::position, &(n_position[get<1>(axes)]), sizeof(float), get<1>(axes), TID_FLOAT);
+  //TODO reenable other gantry
+  //db_set_data_index(hDB, State::Keys::position, &(n_position[get<1>(axes)]), sizeof(float), get<1>(axes), TID_FLOAT);
 
   if (no_movement) {
     cm_msg(MINFO, name, "Finished initializing axis %s. Note that the gantry did not move, please verify that this is correct.", dim_name(D).c_str());
@@ -337,6 +409,16 @@ bool initialize_axis(HNDLE hDB) {
 
 bool phidgets_responding(HNDLE hDB);
 bool initialize_tilt(HNDLE hDB, size_t n_attemts = 0);
+
+void monitor(HNDLE hDB, HNDLE hKey, void* info);
+
+void start_move(HNDLE hDB, HNDLE hKey, void* info);
+
+void stop_move(HNDLE hDB, HNDLE hKey, void* info);
+
+void initialize(HNDLE hDB, HNDLE hKey, void* info);
+
+void reinitialize(HNDLE hDB, HNDLE hKey, void *data);
 
 optional<vector<Intersectable>> load_collision_from_odb(HNDLE hDB);
 

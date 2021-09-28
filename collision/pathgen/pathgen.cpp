@@ -72,24 +72,21 @@ bool check_any_collisions(
 variant<MovePath, ErrorType> single_move(const MovePoint& from, const MovePoint& to, const vector<Intersectable>& static_geometry) {
   DEBUG_ENTER(__PRETTY_FUNCTION__);
   DEBUG_COUT("Checking destination and source...");
-
   if (!is_destination_valid(to.gantry0, to.gantry1, static_geometry)) {
     return ErrorType::InvalidDestination;
   }
   else if (!is_destination_valid(from.gantry0, from.gantry1, static_geometry)) {
     return ErrorType::InvalidOrigin;
   }
-
   static const auto all_orders = DimensionOrder::all_orders();
 
   DEBUG_COUT("Attempting to move G0 first.");
-
+  
   // try moving gantry 0 first
   for (size_t i = 0; i < all_orders.size(); i++) {
     auto order0 = all_orders[i];
 
     DEBUG_COUT("Attempting dim order " << C_BOLD << i << ": " << order0 << C_RESET);
-    
     auto path0  = generate_move({from.gantry0, to.gantry0}, from.gantry1, Gantry0, order0);
     if (is_move_valid(path0, Gantry0, static_geometry)) {
       for (size_t j = 0; j < all_orders.size(); j++) {
@@ -163,18 +160,19 @@ bool is_destination_valid(
   const vector<Intersectable>& static_geometry
 ) {
   DEBUG_ENTER(__PRETTY_FUNCTION__);
-
-  if (gantry1.position.y - gantry0.position.y < GANTRY_MIN_Y_SEPARATION) {
+  /*if (false && fabs(gantry1.position.y - gantry0.position.y) < GANTRY_MIN_Y_SEPARATION) {//TODO: why was this condidtion reqiuire, maybe do coordinate tranform between the positions
     DEBUG_COUT("Y diff less than GANTRY_MIN_Y_SEPARATION.");
     DEBUG_LEAVE;
     return false;
   }
-  else if (gantry1.position.y - gantry0.position.y < GANTRY_MIN_Y_SEPARATION_FOR_X_MIN_CHECK
+  else if (fabs(gantry1.position.y - gantry0.position.y) < GANTRY_MIN_Y_SEPARATION_FOR_X_MIN_CHECK
            && fabs(gantry0.position.x - gantry1.position.x) < GANTRY_MIN_X_SEPARATION) {
     DEBUG_COUT("X diff less than GANTRY_MIN_X_SEPARATION.");
     DEBUG_LEAVE;
     return false;
-  }
+  }*/
+  DEBUG_COUT(gantry0.position.x<<" "<<gantry0.position.y<<" "<<gantry0.position.z);
+  DEBUG_COUT(gantry1.position.x<<" "<<gantry1.position.y<<" "<<gantry1.position.z);
   DEBUG_COUT("Distance constraints ok. Checking collisions.");
   if (check_any_collisions(gantry0, gantry1, static_geometry)) {
     DEBUG_COUT("Found collision.");
@@ -555,6 +553,17 @@ inline bool operator==(const MovePoint& l, const MovePoint& r) {
     (l.gantry1.angle == r.gantry1.angle);
 }
 
+bool equal_path_positions(PathGeneration::MovePoint &p1, PathGeneration::MovePoint &p2){
+  if(
+    p1.gantry0.position == p2.gantry0.position &&
+    p1.gantry0.angle == p2.gantry0.angle
+  ){
+    return true;
+  }
+      std::cout << "Push! "<< p1.gantry0.position.x <<" "<< p1.gantry0.position.y <<" "<< p1.gantry0.position.z<<" "<< p1.gantry0.angle.theta <<" "<< p1.gantry0.angle.phi << " " << p1.gantry1.position.x <<" "<< p1.gantry1.position.y <<" "<< p1.gantry1.position.z <<" "<< p1.gantry1.angle.theta <<" "<< p1.gantry1.angle.phi << "\n"
+                         << p2.gantry0.position.x <<" "<< p2.gantry0.position.y <<" "<< p2.gantry0.position.z<<" "<< p2.gantry0.angle.theta <<" "<< p2.gantry0.angle.phi << " " << p2.gantry1.position.x <<" "<< p2.gantry1.position.y <<" "<< p2.gantry1.position.z <<" "<< p2.gantry1.angle.theta <<" "<< p2.gantry1.angle.phi << "\n";
+  return false;
+}
 
 MovePath generate_move(
   const ScanSegment moving,
@@ -563,14 +572,15 @@ MovePath generate_move(
   const DimensionOrder order
 ) {
   DEBUG_ENTER(__PRETTY_FUNCTION__);
-
   if (is_moving == Gantry0) {
-    DEBUG_COUT("Generating move sequence for gantry 0 from " << moving.start << " to " << moving.end);
+    DEBUG_COUT("Generating move sequence for gantry 0 from " << moving.start.position << " to " << moving.end.position);
   } else {
-    DEBUG_COUT("Generating move sequence for gantry 1 from " << moving.start << " to " << moving.end);
+    DEBUG_COUT("Generating move sequence for gantry 1 from " << moving.start.position << " to " << moving.end.position);
   }
 
   MovePath ret;
+  PathGeneration::MovePoint current_path_position;
+  PathGeneration::MovePoint next_path_position;
   ret.reserve(6);
 
   ret.push_back(std::move( (MovePoint){
@@ -582,20 +592,19 @@ MovePath generate_move(
 
   if (is_moving == Gantry0) {
     for (size_t i = 0; i < 5; i++) {
-      ret.push_back(std::move(_generate_move_0(ret[i].gantry0, moving.end, unmoving, order[i])));
-      if (ret[i] == ret[i+1]) {
-        ret.pop_back();
+      next_path_position = std::move(_generate_move_0(ret[i].gantry0, moving.end, unmoving, order[i]));
+      if (!equal_path_positions(ret[i],next_path_position)) {
+        ret.push_back(std::move(next_path_position));
       }
     }
   } else {
     for (size_t i = 0; i < 5; i++) {
       ret.push_back(std::move(_generate_move_1(ret[i].gantry1, moving.end, unmoving, order[i])));
-      if (ret[i] == ret[i+1]) {
+      if (equal_path_positions(ret[i],ret[i+1])) {
         ret.pop_back();
       }
     }
   }
-  
   DEBUG_LEAVE;
   return ret;
 }
