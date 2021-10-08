@@ -1856,6 +1856,25 @@ INT galil_init(EQUIPMENT *pequipment) {
     return FE_ERR_HW;
   }
 
+  // set the limit switch polarity
+
+
+  sprintf(command, "CN 1, 1 ");
+  cm_msg(MINFO, "galil_init", "%s", command);
+  strcat(command, "\r");
+
+  buffLength = strlen(command);
+
+  writeCount = DRIVER(0)(CMD_WRITE, pequipment->driver[0].dd_info, command, buffLength);
+  if (writeCount != buffLength) {
+    cm_msg(MERROR, "galil_init", "Error in device driver - CMD_WRITE");
+  }
+  buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 100, ":", 500);
+  response[buffLength] = 0x0;
+  if ((strchr(response, ':') == NULL) || (strchr(response, '?') != NULL)) {
+    cm_msg(MERROR, "galil_init", "Bad response from  CN command %s", response);
+    return FE_ERR_HW;
+  }
 
   // disable the Off-on-Error command
   sprintf(command, "OE ");
@@ -2227,16 +2246,24 @@ INT Move(EQUIPMENT *pequipment, INT i, float fDestination) {
     cm_msg(MINFO, "galil_idle", "Move of %s to %f will take max %d seconds", pInfo->names + i * NAME_LENGTH,
            fDestination, iMoveTime);
 
+  printf("Are we here?\n");
+
+  printf("What is pinfo_letter = %s\n",pInfo->letter);
+  printf("What is A+i = %c\n",'A'+i);
   command[0] = 0x0;
   sprintf(buff, "CN %d,1,1,0;", pInfo->iLimitPolarity[i]);
   strcat(command, buff);
-  sprintf(buff, "AC%s=%1.0f;", pInfo->letter + i * NAME_LENGTH, fabs(pInfo->fAcceleration[i]));
+  //sprintf(buff, "AC%s=%1.0f;", pInfo->letter + i * NAME_LENGTH, fabs(pInfo->fAcceleration[i]));
+  sprintf(buff, "AC%c=%1.0f;", 'A' + i, fabs(pInfo->fAcceleration[i]));
   strcat(command, buff);
-  sprintf(buff, "DC%s=%1.0f;", pInfo->letter + i * NAME_LENGTH, fabs(pInfo->fDeceleration[i]));
+  //sprintf(buff, "DC%s=%1.0f;", pInfo->letter + i * NAME_LENGTH, fabs(pInfo->fDeceleration[i]));
+  sprintf(buff, "DC%c=%1.0f;", 'A' + i, fabs(pInfo->fDeceleration[i]));
   strcat(command, buff);
-  sprintf(buff, "SP%s=%1.0f;", pInfo->letter + i * NAME_LENGTH, fabs(pInfo->fVelocity[i]));
+  //sprintf(buff, "SP%s=%1.0f;", pInfo->letter + i * NAME_LENGTH, fabs(pInfo->fVelocity[i]));
+  sprintf(buff, "SP%c=%1.0f;", 'A' + i, fabs(pInfo->fVelocity[i]));
   strcat(command, buff);
-  sprintf(buff, "PR%s=%1.0f;", pInfo->letter + i * NAME_LENGTH, fSteps);
+  //  sprintf(buff, "PR%s=%1.0f;", pInfo->letter + i * NAME_LENGTH, fSteps);
+  sprintf(buff, "PR%c=%1.0f;", 'A' + i , fSteps);
   strcat(command, buff);
   sprintf(buff, "SH %c;", 'A' + i);
   strcat(command, buff);
