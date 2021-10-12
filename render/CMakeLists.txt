@@ -9,11 +9,11 @@ find_package(VTK COMPONENTS
   vtkCommonCore
   vtkFiltersSources
   vtkInteractionStyle
-  vtkRenderingContextOpenGL2
+  vtkRenderingContextOpenGL
   vtkRenderingCore
   vtkRenderingFreeType
-  vtkRenderingGL2PSOpenGL2
-  vtkRenderingOpenGL2
+  vtkRenderingGL2PSOpenGL
+  vtkRenderingOpenGL
   vtkInteractionWidgets
   vtkRenderingAnnotation
   QUIET
