@@ -1,6 +1,7 @@
 #include "prism.hpp"
 #include "linesegment.hpp"
 #include "rotations.hpp"
+#include <vtkHexahedron.h>
 
 #include "debug.hpp"
 

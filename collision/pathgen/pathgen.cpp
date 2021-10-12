@@ -46,13 +46,6 @@ bool is_move_valid(
   const vector<Intersectable>& static_geometry
 );
 
-MovePath generate_move(
-  const ScanSegment moving,
-  const Point unmoving,
-  const WhichGantry is_moving,
-  const DimensionOrder order
-);
-
 bool check_any_collisions(
   const Point& gantry0,
   const Point& gantry1,
