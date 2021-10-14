@@ -24,13 +24,16 @@
 #include <vtkCubeSource.h>
 #include <iostream>
 
+#include "col.hpp"
+#include "has.hpp"
+#include "measurements.hpp"
 
 #include <array>
 #include "CollisionObjectsViewer.hpp"
 
 
-vtkNew<vtkNamedColors> colors;
-vtkNew<vtkRenderer> renderer;
+vtkNamedColors* colors;
+vtkRenderer* renderer;
 
 std::vector<std::string> exmaple = {"Vec3[x:-2,y:-2,z:-2]","LineSegment[a: Vec3[x:-1,y:-1,z:-1], b: Vec3[x:-2,y:-2,z:-2]]","Sphere[center: Vec3[x:0,y:0,z:1], r:0.5]","Cylinder[center: Vec3[x:0,y:0, z:0], r: 1, e: 2, orientation: Quaternion[w:1,x:0,y:0,z:0]]"};
 std::vector<std::string> data = {"Cylinder[center: Vec3[x:0.3745,y:0.348, z:0.85], r: 0.305, e: 1.28, orientation: Quaternion[w:1,x:0,y:0,z:0]]",
@@ -38,18 +41,18 @@ std::vector<std::string> data = {"Cylinder[center: Vec3[x:0.3745,y:0.348, z:0.85
 namespace SD = Serialization;
 
 bool render(Vec3 x){
-  vtkNew<vtkPoints> points;
+  vtkPoints* points = vtkPoints::New();
   const double p[3] = {x.x, x.y, x.z};
 
   // Create the topology of the point (a vertex)
-  vtkNew<vtkCellArray> vertices;
+  vtkCellArray* vertices = vtkCellArray::New();
   // We need an an array of point id's for InsertNextCell.
   vtkIdType pid[1];
   pid[0] = points->InsertNextPoint(p);
   vertices->InsertNextCell(1, pid);
 
   // Create a polydata object
-  vtkNew<vtkPolyData> point;
+  vtkPolyData *point = vtkPolyData::New();
 
   // Set the points and vertices we created as the geometry and topology of the
   // polydata
@@ -57,10 +60,10 @@ bool render(Vec3 x){
   point->SetVerts(vertices);
 
   // Visualize
-  vtkNew<vtkPolyDataMapper> mapper;
+  vtkPolyDataMapper* mapper = vtkPolyDataMapper::New();
   mapper->SetInputData(point);
 
-  vtkNew<vtkActor> actor;
+  vtkActor* actor = vtkActor::New();
   actor->SetMapper(mapper);
   actor->GetProperty()->SetColor(colors->GetColor3d("Blue").GetData());
   actor->GetProperty()->SetPointSize(20);
@@ -72,10 +75,10 @@ bool render(Prism y){
   std::vector<std::array<double, 3>> pointCoordinates;
 
   // Create the points.
-  vtkNew<vtkPoints> points;
+  vtkPoints* points = vtkPoints::New();
 
   // Create a hexahedron from the points.
-  vtkNew<vtkHexahedron> hex;
+  vtkHexahedron* hex = vtkHexahedron::New();
 
   for (auto i = 0; i < 8; ++i)
   {
@@ -85,19 +88,19 @@ bool render(Prism y){
   }
 
   // Add the hexahedron to a cell array.
-  vtkNew<vtkCellArray> hexs;
+  vtkCellArray* hexs = vtkCellArray::New();
   hexs->InsertNextCell(hex);
 
   // Add the points and hexahedron to an unstructured grid.
-  vtkNew<vtkUnstructuredGrid> uGrid;
+  vtkUnstructuredGrid* uGrid = vtkUnstructuredGrid::New();
   uGrid->SetPoints(points);
   uGrid->InsertNextCell(hex->GetCellType(), hex->GetPointIds());
 
   // Visualize.
-  vtkNew<vtkDataSetMapper> mapper;
+  vtkDataSetMapper* mapper = vtkDataSetMapper::New();
   mapper->SetInputData(uGrid);
 
-  vtkNew<vtkActor> actor;
+  vtkActor* actor = vtkActor::New();
   actor->GetProperty()->SetColor(colors->GetColor3d("PeachPuff").GetData());
   actor->SetMapper(mapper);
   renderer->AddActor(actor);
@@ -107,25 +110,25 @@ bool render(Prism y){
 bool render(LineSegment x){
   double origin[3] = {x.a.x, x.a.y, x.a.z};
   double p0[3] = {x.b.x, x.b.y, x.b.z};
-  vtkNew<vtkPoints> points;
+  vtkPoints* points = vtkPoints::New();
   points->InsertNextPoint(origin);
   points->InsertNextPoint(p0);
 
-  vtkNew<vtkCellArray> lines;
+  vtkCellArray* lines = vtkCellArray::New();
 
-  vtkNew<vtkLine> line;
+  vtkLine* line = vtkLine::New();
   line->GetPointIds()->SetId(0, 1);
   //line->GetPointIds()->SetId(1, i + 1);
   lines->InsertNextCell(line);
 
-  vtkNew<vtkPolyData> linesPolyData;
+  vtkPolyData* linesPolyData = vtkPolyData::New();
   linesPolyData->SetPoints(points);
 
   linesPolyData->SetLines(lines);
-  vtkNew<vtkPolyDataMapper> mapper;
+  vtkPolyDataMapper* mapper = vtkPolyDataMapper::New();
   mapper->SetInputData(linesPolyData);
 
-  vtkNew<vtkActor> actor;
+  vtkActor* actor;
   actor->SetMapper(mapper);
   renderer->AddActor(actor);
 
@@ -133,20 +136,20 @@ bool render(LineSegment x){
 }
 
 bool render(Sphere y){
-  vtkNew<vtkSphereSource> sphere;
+  vtkSphereSource* sphere = vtkSphereSource::New();
   sphere->SetCenter(0.0, 0.0, 0.0);
   sphere->SetRadius(1.0);
   // Make the surface smooth.
   sphere->SetPhiResolution(100);
   sphere->SetThetaResolution(100);
-  vtkNew<vtkPolyDataMapper> mapper;
+  vtkPolyDataMapper* mapper = vtkPolyDataMapper::New();
   mapper->SetInputConnection(sphere->GetOutputPort());
-  vtkNew<vtkActor> actor;
+  vtkActor* actor = vtkActor::New();
 
   actor->SetMapper(mapper);
   actor->GetProperty()->SetColor(colors->GetColor4d("Yellow").GetData());
 
-  vtkNew<vtkTransform> transform;
+  vtkTransform* transform = vtkTransform::New();
   transform->Identity();
   transform->Scale(y.r,y.r,y.r);
   transform->Translate(y.center.x,y.center.y,y.center.z);
@@ -157,19 +160,19 @@ bool render(Sphere y){
 }
 
 bool render(Cylinder y){
-  vtkNew<vtkCylinderSource> cylinder;
+  vtkCylinderSource* cylinder = vtkCylinderSource::New();
   cylinder->SetResolution(32);
   cylinder->SetCapping(false);
   cylinder->SetHeight(y.e/2);
   cylinder->SetRadius(y.r);
-  vtkNew<vtkPolyDataMapper> cylinderMapper;
+  vtkPolyDataMapper* cylinderMapper = vtkPolyDataMapper::New();
   cylinderMapper->SetInputConnection(cylinder->GetOutputPort());
-  vtkNew<vtkActor> cylinderActor;
+  vtkActor* cylinderActor = vtkActor::New();
 
   cylinderActor->SetMapper(cylinderMapper);
   cylinderActor->GetProperty()->SetColor(colors->GetColor4d("Tomato").GetData());
 
-  vtkNew<vtkTransform> transform;
+  vtkTransform* transform = vtkTransform::New();
   transform->Identity();
   
   transform->Translate(y.center.x,y.center.y,y.center.z);
@@ -207,9 +210,9 @@ Intersectable render(SD::GeomResult res){
 bool render_limit_box(){
   //TODO re these in from ODB
   double lim_neg[3] = {0.0,0.0,0.0};
-  double lim_pos[3] = {0.749,0.696,0.53};
+  double lim_pos[3] = {GANTRY_0_MAX_X,GANTRY_0_MAX_Y,GANTRY_0_MAX_Z};
 
-  vtkNew<vtkCubeSource> cube;
+  vtkCubeSource* cube = vtkCubeSource::New();
   cube->SetXLength(lim_pos[0]-lim_neg[0]);
   cube->SetYLength(lim_pos[1]-lim_neg[1]);
   cube->SetZLength(lim_pos[2]-lim_neg[2]);
@@ -218,7 +221,7 @@ bool render_limit_box(){
                   0.5*(lim_pos[2]+lim_neg[2]));
   cube->Update();
 
-  vtkNew<vtkFeatureEdges> featureEdges;
+  vtkFeatureEdges* featureEdges = vtkFeatureEdges::New();
   featureEdges->SetInputConnection(cube->GetOutputPort());
   featureEdges->BoundaryEdgesOn();
   featureEdges->FeatureEdgesOff();
@@ -228,10 +231,10 @@ bool render_limit_box(){
   featureEdges->Update();
 
   // Visualize
-  vtkNew<vtkPolyDataMapper> edgeMapper;
+  vtkPolyDataMapper* edgeMapper = vtkPolyDataMapper::New();
   edgeMapper->SetInputConnection(featureEdges->GetOutputPort());
   edgeMapper->SetScalarModeToUseCellData();
-  vtkNew<vtkActor> edgeActor;
+  vtkActor* edgeActor = vtkActor::New();
   edgeActor->SetMapper(edgeMapper);
 
   renderer->AddActor(edgeActor);
@@ -240,6 +243,8 @@ bool render_limit_box(){
 int main(int, char*[])
 {
   // Set the background color.
+  colors = vtkNamedColors::New();
+  renderer = vtkRenderer::New();
   std::array<unsigned char, 4> bkg{{26, 51, 102, 255}};
   colors->SetColor("BkgColor", bkg.data());
 
@@ -251,21 +256,34 @@ int main(int, char*[])
   }
   render_limit_box();
 
+  INT  status, i;
+  char host_name[256],exp_name[32];
+  int hns = 256;
+  int eps = 32;
+  // get default values from environment
+  cm_get_environment(host_name, hns, exp_name, eps);
+  status = cm_connect_experiment(host_name, exp_name, "Test", NULL);
+  if (status != CM_SUCCESS)
+    return 1;
   /*
    *Uses odb and creates a fake path to get the grantry collidable box
    */
-  /*cm_get_experiment_database(&State::Keys::hDB, NULL);
+  cm_get_experiment_database(&State::Keys::hDB, NULL);
 
   const auto hDB = State::Keys::hDB;
-  db_find_key(hDB, 0, "/Equipment/Move/Control/Destination", &State::Keys::destination);
-  db_find_key(hDB, 0, "/Equipment/Move/Variables/Position", &State::Keys::position);*/
-  //                           x   y   z    t   p
+  if (hDB == 0) {
+    std::cerr << C_BR_RED << "Could not load database. Got handle: " << hDB << ".\n" << C_RESET;
+    return CM_DB_ERROR;
+  }
   array<float, 10> position ={0.0,0.0,0.0 ,0.0,0.0,   0.0,0.0,0.0 ,0.0,0.0};
   array<float, 10>destination ={1.0,0.0,0.0 ,0.0,0.0,   0.0,0.0,0.0 ,0.0,0.0};
-  auto bufsize = 10 * sizeof(float);
-  //db_get_data(hDB, State::Keys::position, position.data(), &bufsize, TID_FLOAT);
+  db_find_key(hDB, 0, "/Equipment/Move/Control/Destination", &State::Keys::destination);
+  db_find_key(hDB, 0, "/Equipment/Move/Variables/Position", &State::Keys::position);
+  //                           x   y   z    t   p
+  INT bufsize = 10 * sizeof(float);
+  db_get_data(hDB, State::Keys::position, position.data(), &bufsize, TID_FLOAT);
   bufsize = 10 * sizeof(float);
-  //db_get_data(hDB, State::Keys::destination, destination.data(), &bufsize, TID_FLOAT);
+  db_get_data(hDB, State::Keys::destination, destination.data(), &bufsize, TID_FLOAT);
   auto from = PathGeneration::move_point_from_array(position);
   auto to   = PathGeneration::move_point_from_array(destination);
   //auto path = PathGeneration::single_move(from, to, ret);
@@ -285,15 +303,15 @@ int main(int, char*[])
   renderer->GetActiveCamera()->Zoom(1.0);
 
   //Window stuff
-  vtkNew<vtkRenderWindow> renderWindow;
+  vtkRenderWindow *renderWindow = vtkRenderWindow::New();
   renderWindow->SetSize(300, 300);
   renderWindow->AddRenderer(renderer);
   renderWindow->SetWindowName("Collision Model");
-  vtkNew<vtkRenderWindowInteractor> renderWindowInteractor;
+  vtkRenderWindowInteractor* renderWindowInteractor = vtkRenderWindowInteractor::New();
   renderWindowInteractor->SetRenderWindow(renderWindow);
 
-  vtkNew<vtkAxesActor> axes;
-  vtkNew<vtkOrientationMarkerWidget> widget;
+  vtkAxesActor* axes = vtkAxesActor::New();
+  vtkOrientationMarkerWidget* widget = vtkOrientationMarkerWidget::New();
   double rgba[4]{0.0, 0.0, 0.0, 0.0};
   colors->GetColor("Carrot", rgba);
   widget->SetOutlineColor(rgba[0], rgba[1], rgba[2]);

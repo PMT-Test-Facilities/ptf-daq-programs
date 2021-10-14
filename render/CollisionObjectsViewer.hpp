@@ -6,14 +6,11 @@
 #include <valarray>
 #include <algorithm>
 
+#include "midas.h"
 #include "geom.hpp"
 #include "serialization.hpp"
 #include "pathgen.hpp"
-//#include "midas.h"
 
-#define BOOL bool
-#define TRUE true
-#define FALSE false
 
 bool render(Vec3 x);
 bool render(Prism x);
@@ -48,6 +45,32 @@ namespace State {
     BOOL initialize;
     array<BOOL, 8> g0_moving;
     array<BOOL, 8> g1_moving;
+  }
+  namespace Keys {
+    // global keys
+    HNDLE
+      hDB=0,
+      collision=0,
+      destination=0, start=0, stop=0, reinitialize=0, // control
+      position=0, initializing=0, initialized=0, bad_destination=0, completed=0, moving=0,
+      ax_moving=0, ax_limit_neg=0, ax_limit_pos=0;  // variables
+
+    typedef std::tuple<HNDLE, HNDLE> GantryPair;
+
+    namespace Motor {
+      GantryPair
+        destination =  std::make_tuple(0,0),
+        start =        std::make_tuple(0,0),
+        stop =         std::make_tuple(0,0),
+        move =         std::make_tuple(0,0),
+        moving =       std::make_tuple(0,0),
+        position =     std::make_tuple(0,0),
+        limit_neg =    std::make_tuple(0,0),
+        limit_pos =    std::make_tuple(0,0),
+        velocity =     std::make_tuple(0,0),
+        acceleration = std::make_tuple(0,0),
+        phidget =      std::make_tuple(0,0);
+    }
   }
 }
 
