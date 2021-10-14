@@ -655,7 +655,7 @@ Prism point_to_optical_box(const Point& p, bool gantry1) {
 
   return {
     rotate_point(p.position + disp, p.position, q1),
-    GANTRY_X_DIM, GANTRY_Y_DIM, GANTRY_Z_DIM,
+    GANTRY_X_DIM/2, GANTRY_Y_DIM/2, GANTRY_Z_DIM/2,
     q2
   };
 }

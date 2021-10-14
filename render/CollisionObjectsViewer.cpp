@@ -23,6 +23,7 @@
 #include <vtkFeatureEdges.h>
 #include <vtkCubeSource.h>
 #include <iostream>
+#include <math.h>
 
 #include "col.hpp"
 #include "has.hpp"
@@ -83,6 +84,9 @@ bool render(Prism y){
   for (auto i = 0; i < 8; ++i)
   {
     pointCoordinates.push_back({{y.vertexes()[i].x, y.vertexes()[i].y, y.vertexes()[i].z}});
+    std::cout << sqrt((y.vertexes()[i].x-y.vertexes()[i-1].x)*(y.vertexes()[i].x-y.vertexes()[i-1].x)+
+                 (y.vertexes()[i].y-y.vertexes()[i-1].y)*(y.vertexes()[i].y-y.vertexes()[i-1].y)+
+                 (y.vertexes()[i].z-y.vertexes()[i-1].z)*(y.vertexes()[i].z-y.vertexes()[i-1].z) ) << std::endl;
     points->InsertNextPoint(pointCoordinates[i].data());
     hex->GetPointIds()->SetId(i, i);
   }
@@ -293,6 +297,7 @@ int main(int, char*[])
   Prism ob1 = PathGeneration::point_to_optical_box(pt.gantry1, false);
   render(ob0);
   render(ob1);
+  render(Prism(Vec3(0.0,0.0,0.0), GANTRY_X_DIM/2, GANTRY_Y_DIM/2, GANTRY_Z_DIM/2, 0, 0));
 
   renderer->GetActiveCamera()->Yaw(180);
   renderer->GetActiveCamera()->Elevation(-45);
