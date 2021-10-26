@@ -72,7 +72,7 @@ bool check_any_collisions(
 variant<MovePath, ErrorType> single_move(const MovePoint& from, const MovePoint& to, const vector<Intersectable>& static_geometry) {
   DEBUG_ENTER(__PRETTY_FUNCTION__);
   DEBUG_COUT("Checking destination and source...");
-  if (!-(to.gantry0, to.gantry1, static_geometry)) {
+  if (!is_destination_valid(to.gantry0, to.gantry1, static_geometry)) {
     return ErrorType::InvalidDestination;
   }
   else if (!is_destination_valid(from.gantry0, from.gantry1, static_geometry)) {
@@ -714,3 +714,4 @@ MovePoint from_pair(const pair<Point, Point>& p, const WhichGantry which_gantry)
 
 
 } // end namespace PathGeneration
+

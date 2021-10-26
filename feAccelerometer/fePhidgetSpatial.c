@@ -43,25 +43,28 @@ to accommodate multiple phidgets.
 #include <string.h>
 #include <phidget22.h>
 #include <stdint.h>
-#include "vc_vector.h"
+#include <mfe.h>
+//#include "vc_vector.h"
 
 /* make frontend functions callable from the C framework            */
-#ifdef __cplusplus
-extern "C" {
-#endif
+//#ifdef __cplusplus
+//extern "C" {
+//#endif
 
 /*-- Globals -------------------------------------------------------*/
 
 
 
 /* The frontend name (client name) as seen by other MIDAS clients   */
-char *frontend_name = "fePhidget_accelerometer";
+const char*frontend_name = "fePhidget_spatial";
 
 /* The frontend file name, don't change it                          */
-char *frontend_file_name = __FILE__;
+const char *frontend_file_name = __FILE__;
 
 /* frontend_loop is called periodically if this variable is TRUE    */
 BOOL frontend_call_loop = FALSE;
+
+BOOL equipment_common_overwrite = FALSE;
 
 /* a frontend status page is displayed with this frequency in ms    */
 //INT display_period = 3000;
@@ -89,7 +92,8 @@ INT pause_run(INT run_number, char *error);
 INT resume_run(INT run_number, char *error);
 INT frontend_loop();
 INT poll_trigger_event(INT count, PTYPE test);
-INT interrupt_configure(INT cmd, PTYPE adr);
+//INT interrupt_configure(INT cmd, PTYPE adr);
+int interrupt_configure(INT cmd, INT source, PTYPE adr);
 INT read_trigger_event(char *pevent, INT off);
 
 
@@ -99,7 +103,7 @@ INT read_trigger_event(char *pevent, INT off);
 
 EQUIPMENT equipment[] = {
 
-  {"PhidgetAccel" "%02d",       	    // equipment name // TL changed this
+  {"PhidgetSpa" "%02d",       	    // equipment name // TL changed this
   {11, 0,              // event ID, trigger mask 
   "SYSTEM",           // event buffer 
   EQ_PERIODIC,        // equipment type 
@@ -121,11 +125,12 @@ EQUIPMENT equipment[] = {
   { "" }
 };
 
-#ifdef __cplusplus
-}
-#endif
+//#ifdef __cplusplus
+//}
+//#endif
 
 // Keep a copy of the last spatial data event.
+
 double acceleration[3] = {0,0,0};
 double mag[3] = {0,0,0};
 double tilt = 0;
@@ -263,9 +268,10 @@ int display_properties(PhidgetHandle phid_spatial)
 
 
 
-extern int frontend_index;
+//extern int frontend_index;
 
-HNDLE   hDB=0, hFS=0;
+extern HNDLE hDB;
+HNDLE hFS=0;
 
 /*-- Frontend Init -------------------------------------------------*/
 // Initialize ODB variables and set up hotlinks in this function
@@ -292,12 +298,12 @@ INT frontend_init()
   size = sizeof(serial_number);
   
   char variable_name[100];
-  sprintf(variable_name,"/Equipment/PhidgetAccel%02d/Settings/SerialNumber",frontend_index); // TL changed this
+  sprintf(variable_name,"/Equipment/PhidgetAccel%02d/Settings/SerialNumber",get_frontend_index()); // TL changed this
 
   status = db_get_value(hDB, 0, variable_name, &serial_number, &size, TID_INT, TRUE);
   if(status != DB_SUCCESS)
   {
-    cm_msg(MERROR,"frontend_init","cannot GET /Equipment/PhidgetAccelXX/Settings/SerialNumber");
+    cm_msg(MERROR,"frontend_init","cannot GET /Equipment/PhidgetSpaXX/Settings/SerialNumber");
     return FE_ERR_ODB;
   }
   printf("Connected to phidget with serial number %i \n",serial_number);
@@ -338,7 +344,7 @@ INT frontend_init()
   //PhidgetSpatial_set_OnSpatialData_Handler(spatial, SpatialDataHandler, NULL);
     
   //open the spatial object for device connections
-  printf("Frontend index %i\n",frontend_index);
+  printf("Frontend index %i\n",get_frontend_index());
 
   // Use the serial number when opening the device.  This will ensure that this
   // front-end talks to the correct phidget.
@@ -452,9 +458,19 @@ INT poll_event(INT source, INT count, BOOL test)
 
 /*-- Interrupt configuration for trigger event ---------------------*/
 
-INT interrupt_configure(INT cmd, PTYPE adr)
-{
-  return CM_SUCCESS;
+INT interrupt_configure(INT cmd, INT source, POINTER_T adr)
+{ switch (cmd) {
+  case CMD_INTERRUPT_ENABLE:
+    break;
+  case CMD_INTERRUPT_DISABLE:
+    break;
+  case CMD_INTERRUPT_ATTACH:
+    break;
+  case CMD_INTERRUPT_DETACH:
+    break;
+  }
+  return SUCCESS;
+
 }
 
 /*-- Event readout -------------------------------------------------*/
@@ -469,9 +485,9 @@ INT read_trigger_event(char *pevent, INT off)
   double *pdata32;
 
   char bank_name[100];
-  sprintf(bank_name,"PA%02d",frontend_index); // TL changed this
+  sprintf(bank_name,"PA%02d",get_frontend_index()); // TL changed this
 
-  bk_create(pevent, bank_name, TID_DOUBLE, &pdata32);
+  bk_create(pevent, bank_name, TID_DOUBLE,(void**)&pdata32);
   *pdata32++ = acceleration[0];
   *pdata32++ =  acceleration[1];
   *pdata32++ =  acceleration[2];

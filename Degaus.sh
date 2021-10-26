@@ -8,8 +8,8 @@ odbedit -c 'set "/Equipment/PtfWiener/Settings/outputSwitch[9]" 1'
 # Convert desired current to current_user +- X mA and convert to V 
 
 # Set voltages part 1:
-odbedit -c 'set "/Equipment/PtfWiener/Settings/outputVoltage[8]" 1.88'
-odbedit -c 'set "/Equipment/PtfWiener/Settings/outputVoltage[9]" 1.91'
+odbedit -c 'set "/Equipment/PtfWiener/Settings/outputVoltage[8]" 1'
+odbedit -c 'set "/Equipment/PtfWiener/Settings/outputVoltage[9]" 6.76'
 sleep 2
 
 #Degauss in x (coils 3 & 4)
@@ -34,8 +34,8 @@ sleep 2
 odbedit -c 'set "/Equipment/PtfWiener/Settings/outputVoltage[2]" 2.32'
 odbedit -c 'set "/Equipment/PtfWiener/Settings/outputVoltage[4]" 1.71'
 sleep 2
-odbedit -c 'set "/Equipment/PtfWiener/Settings/outputVoltage[2]" 2.36'
-odbedit -c 'set "/Equipment/PtfWiener/Settings/outputVoltage[4]" 1.74'
+odbedit -c 'set "/Equipment/PtfWiener/Settings/outputVoltage[2]" 0'
+odbedit -c 'set "/Equipment/PtfWiener/Settings/outputVoltage[4]" 0'
 
 #Degauss in y (coils 5 & 6)
 odbedit -c 'set "/Equipment/PtfWiener/Settings/outputVoltage[1]" 0'
@@ -62,7 +62,7 @@ sleep 2
 odbedit -c 'set "/Equipment/PtfWiener/Settings/outputVoltage[1]" 1.86'
 odbedit -c 'set "/Equipment/PtfWiener/Settings/outputVoltage[0]" 1.69'
 sleep 2
-odbedit -c 'set "/Equipment/PtfWiener/Settings/outputVoltage[1]" 1.76'
-odbedit -c 'set "/Equipment/PtfWiener/Settings/outputVoltage[0]" 1.63'
+odbedit -c 'set "/Equipment/PtfWiener/Settings/outputVoltage[1]" 0'
+odbedit -c 'set "/Equipment/PtfWiener/Settings/outputVoltage[0]" 0'
 
 echo "Done"

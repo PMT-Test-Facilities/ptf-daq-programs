@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <cstring>
 #include <random>
-#include <variant>
+#include "boost/variant.hpp"
 
 #define BOOST_TEST_MODULE Geometry Tests
 // #define BOOST_TEST_DYN_LINK
@@ -42,7 +42,7 @@ namespace ut = boost::unit_test;
 BOOST_AUTO_TEST_SUITE(geometry);
 
 
-BOOST_AUTO_TEST_CASE(testRotatePoint, _TOL) {
+BOOST_AUTO_TEST_CASE(testRotatePoint) {
   Vec3  centre   = {0.0, 0.0, 0.0};
   Vec3  toRotate = {1.0, 0.0, 0.0};
   Vec3  shouldBe = {0.0, 0.0, 1.0};
@@ -80,7 +80,7 @@ BOOST_AUTO_TEST_CASE(testRotatePoint, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(testRotationDoesNotChangeMagnitude, _TOL) {
+BOOST_AUTO_TEST_CASE(testRotationDoesNotChangeMagnitude) {
   static const Vec3 centre = {0,0,0};
 
   Vec3 points[5] = {
@@ -110,7 +110,7 @@ BOOST_AUTO_TEST_CASE(testRotationDoesNotChangeMagnitude, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(testAntiRot, _TOL) {
+BOOST_AUTO_TEST_CASE(testAntiRot) {
   static const int
     nPoints = 1,
     nTests  = 1;
@@ -135,9 +135,9 @@ BOOST_AUTO_TEST_CASE(testAntiRot, _TOL) {
 
   auto gen_quaternion = [&]() -> Quaternion {
     return Quaternion::from_spherical_angle(
-      ((double) engine()) / ((double) UINT32_MAX) * 2*PI - PI,
-      ((double) engine()) / ((double) UINT32_MAX) * PI
-    );
+					    ((double) engine()) / ((double) UINT32_MAX) * 2*PI - PI,
+					    ((double) engine()) / ((double) UINT32_MAX) * PI
+					    );
   };
 
   for (int i = 0; i < nTests; i++) {
@@ -164,11 +164,11 @@ BOOST_AUTO_TEST_CASE(testAntiRot, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(testPrismPoints, _TOL) {
+BOOST_AUTO_TEST_CASE(testPrismPoints) {
   Prism p = {
-      Vec3(0.0, 0.0, 0.0),
-      0.5, 0.5, 0.5,
-      Quaternion::from_spherical_angle(0.0, 0.0)
+    Vec3(0.0, 0.0, 0.0),
+    0.5, 0.5, 0.5,
+    Quaternion::from_spherical_angle(0.0, 0.0)
   };
 
   Vec3 exp[8] = {
@@ -215,7 +215,7 @@ BOOST_AUTO_TEST_CASE(testPrismPoints, _TOL) {
 }
 
 
-// BOOST_AUTO_TEST_CASE(testPrismLineSegments, _TOL) {
+// BOOST_AUTO_TEST_CASE(testPrismLineSegments) {
 //   // Prism p = {
 //     // Vec3(0.0, 0.0, 0.0),
 //     // 0.5, 0.5, 0.5,
@@ -236,7 +236,7 @@ BOOST_AUTO_TEST_SUITE_END()
 BOOST_AUTO_TEST_SUITE(intersections);
 
 
-BOOST_AUTO_TEST_CASE(testPrismNormals, _TOL) {
+BOOST_AUTO_TEST_CASE(testPrismNormals) {
   Prism p = {
     Vec3(0.0, 0.0, 0.0),
     0.5, 0.5, 0.5,
@@ -246,9 +246,9 @@ BOOST_AUTO_TEST_CASE(testPrismNormals, _TOL) {
   auto ns = p.normals();
 
   Vec3 shouldBe[6] = {
-     Vec3::basis_x(),
-     Vec3::basis_y(),
-     Vec3::basis_z(),
+    Vec3::basis_x(),
+    Vec3::basis_y(),
+    Vec3::basis_z(),
     -Vec3::basis_x(),
     -Vec3::basis_y(),
     -Vec3::basis_z()
@@ -267,7 +267,7 @@ BOOST_AUTO_TEST_CASE(testPrismNormals, _TOL) {
  */
 
 
-BOOST_AUTO_TEST_CASE(testPointPrismIntersection, _TOL) {
+BOOST_AUTO_TEST_CASE(testPointPrismIntersection) {
   Vec3 a = {0.0, 0.0, 0.0};
   Prism b = {
     Vec3(0.0, 0.0, 0.0),
@@ -278,7 +278,7 @@ BOOST_AUTO_TEST_CASE(testPointPrismIntersection, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(testPointPrismNoIntersection, _TOL) {
+BOOST_AUTO_TEST_CASE(testPointPrismNoIntersection) {
   Vec3 a = {0.0, 0.0, 1.0};
   Prism b = {
     Vec3(0.0, 0.0, 0.0),
@@ -289,7 +289,7 @@ BOOST_AUTO_TEST_CASE(testPointPrismNoIntersection, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(testPointPrismRotIntersection, _TOL) {
+BOOST_AUTO_TEST_CASE(testPointPrismRotIntersection) {
   Vec3 a = {4.0, 0.0, 0.0};
   Prism b = {
     Vec3(0.0, 0.0, 0.0),
@@ -305,11 +305,11 @@ BOOST_AUTO_TEST_CASE(testPointPrismRotIntersection, _TOL) {
  */
 
 
-BOOST_AUTO_TEST_CASE(testPrismSphereSurfaceIntersection, _TOL) {
+BOOST_AUTO_TEST_CASE(testPrismSphereSurfaceIntersection) {
   Prism p = {
-      Vec3(1.0, 0.0, 0.0),
-      0.5, 0.5, 0.5,
-      0.0, 0.0
+    Vec3(1.0, 0.0, 0.0),
+    0.5, 0.5, 0.5,
+    0.0, 0.0
   };
 
   Sphere s = {
@@ -321,7 +321,7 @@ BOOST_AUTO_TEST_CASE(testPrismSphereSurfaceIntersection, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(testPrismSphereNoIntersection, _TOL) {
+BOOST_AUTO_TEST_CASE(testPrismSphereNoIntersection) {
   Prism p = {
     Vec3(10.0, 0.0, 0.0),
     0.5, 0.5, 0.5,
@@ -337,7 +337,7 @@ BOOST_AUTO_TEST_CASE(testPrismSphereNoIntersection, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(testPrismSphereInternal, _TOL) {
+BOOST_AUTO_TEST_CASE(testPrismSphereInternal) {
   Prism p = {
     Vec3(0.0, 0.0, 0.0),
     0.1, 0.1, 0.1,
@@ -358,7 +358,7 @@ BOOST_AUTO_TEST_CASE(testPrismSphereInternal, _TOL) {
  */
 
 
-BOOST_AUTO_TEST_CASE(testPrismPrismNoIntersection, _TOL) {
+BOOST_AUTO_TEST_CASE(testPrismPrismNoIntersection) {
   Prism x = {
     Vec3(0.0, 0.0, 0.0),
     0.5, 0.5, 0.5,
@@ -374,7 +374,7 @@ BOOST_AUTO_TEST_CASE(testPrismPrismNoIntersection, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(testPrismPrismNoBoundingIntersection, _TOL) {
+BOOST_AUTO_TEST_CASE(testPrismPrismNoBoundingIntersection) {
   Prism x = {
     Vec3(0.0, 0.0, 0.0),
     0.5, 0.5, 0.5,
@@ -390,7 +390,7 @@ BOOST_AUTO_TEST_CASE(testPrismPrismNoBoundingIntersection, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(testPrismPrismSimpleIntersection, _TOL) {
+BOOST_AUTO_TEST_CASE(testPrismPrismSimpleIntersection) {
   // bounding spheres will intersect
   Prism x = {
     Vec3(0.0, 0.0, 0.0),
@@ -407,7 +407,7 @@ BOOST_AUTO_TEST_CASE(testPrismPrismSimpleIntersection, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(testPrismPrismInternalIntersection, _TOL) {
+BOOST_AUTO_TEST_CASE(testPrismPrismInternalIntersection) {
   // bounding spheres will _not_ intersect
   Prism x = {
     Vec3(0.0, 0.0, 0.0),
@@ -424,7 +424,7 @@ BOOST_AUTO_TEST_CASE(testPrismPrismInternalIntersection, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(testPrismPrismRotatedIntersection, _TOL) {
+BOOST_AUTO_TEST_CASE(testPrismPrismRotatedIntersection) {
   // bounding spheres will intersect
   Prism x = {
     Vec3(0.0, 0.0, 0.0),
@@ -441,7 +441,7 @@ BOOST_AUTO_TEST_CASE(testPrismPrismRotatedIntersection, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(testPrismPrismRotatedNoIntersection, _TOL) {
+BOOST_AUTO_TEST_CASE(testPrismPrismRotatedNoIntersection) {
   // bounding spheres will intersect
   Prism x = {
     Vec3(0.0, 0.0, 0.0),
@@ -463,7 +463,7 @@ BOOST_AUTO_TEST_CASE(testPrismPrismRotatedNoIntersection, _TOL) {
  */
 
 
-BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionRegion0, _TOL) {
+BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionRegion0) {
   Prism x = {
     Vec3(0.0, 0.0, 0.0),
     0.5, 0.5, 0.5,
@@ -476,7 +476,7 @@ BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionRegion0, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionRegion1, _TOL) {
+BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionRegion1) {
   Prism x = {
     Vec3(1.0, 0.0, 0.0),
     0.01, 0.01, 0.01,
@@ -489,7 +489,7 @@ BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionRegion1, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionRegion2, _TOL) {
+BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionRegion2) {
   Prism x = {
     Vec3(0.0, 1.0, 0.0),
     0.01, 0.01, 0.01,
@@ -502,7 +502,7 @@ BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionRegion2, _TOL) {
 }
 
 // regions 3, 4, 14: XY Edge
-BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionXYEdgeVelXY, _TOL) {
+BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionXYEdgeVelXY) {
   Prism x = {
     Vec3(0.0, 0.0, 0.0),
     1, 1, 1,
@@ -513,7 +513,7 @@ BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionXYEdgeVelXY, _TOL) {
 
   BOOST_TEST(intersect(x, s, disp));
 }
-BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionXYEdgeVelZ, _TOL) {
+BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionXYEdgeVelZ) {
   Prism x = {
     Vec3(0.0, 0.0, 0.0),
     1, 1, 1,
@@ -524,7 +524,7 @@ BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionXYEdgeVelZ, _TOL) {
 
   BOOST_TEST(intersect(x, s, disp));
 }
-BOOST_AUTO_TEST_CASE(testMovingPrismSphereNoIntersectionXYEdgeVel, _TOL) {
+BOOST_AUTO_TEST_CASE(testMovingPrismSphereNoIntersectionXYEdgeVel) {
   Prism x = {
     Vec3(0.0, 0.0, 0.0),
     1, 1, 1,
@@ -535,7 +535,7 @@ BOOST_AUTO_TEST_CASE(testMovingPrismSphereNoIntersectionXYEdgeVel, _TOL) {
 
   BOOST_TEST(!intersect(x, s, disp));
 }
-BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionXYEdgeNoVel, _TOL) {
+BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionXYEdgeNoVel) {
   Prism x = {
     Vec3(0.0, 0.0, 0.0),
     1, 1, 1,
@@ -548,7 +548,7 @@ BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionXYEdgeNoVel, _TOL) {
 }
 
 // regions 5, 15: Z face
-BOOST_AUTO_TEST_CASE(testMovingPrismSphereNoIntersectionZFaceNoVel, _TOL) {
+BOOST_AUTO_TEST_CASE(testMovingPrismSphereNoIntersectionZFaceNoVel) {
   Prism x = {
     Vec3(0.0, 0.0, 0.0),
     1, 1, 1,
@@ -559,7 +559,7 @@ BOOST_AUTO_TEST_CASE(testMovingPrismSphereNoIntersectionZFaceNoVel, _TOL) {
 
   BOOST_TEST(!intersect(x, s, disp));
 }
-BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionZFaceNoVelSinglePoint, _TOL) {
+BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionZFaceNoVelSinglePoint) {
   Prism x = {
     Vec3(0.0, 0.0, 0.0),
     1, 1, 1,
@@ -570,7 +570,7 @@ BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionZFaceNoVelSinglePoint, _TO
 
   BOOST_TEST(intersect(x, s, disp));
 }
-BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionZFaceVel, _TOL) {
+BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionZFaceVel) {
   Prism x = {
     Vec3(0.0, 0.0, 0.0),
     1, 1, 1,
@@ -581,7 +581,7 @@ BOOST_AUTO_TEST_CASE(testMovingPrismSphereIntersectionZFaceVel, _TOL) {
 
   BOOST_TEST(intersect(x, s, disp));
 }
-BOOST_AUTO_TEST_CASE(testMovingPrismSphereNoIntersectionZFaceVel, _TOL) {
+BOOST_AUTO_TEST_CASE(testMovingPrismSphereNoIntersectionZFaceVel) {
   Prism x = {
     Vec3(0.0, 0.0, 0.0),
     1, 1, 1,
@@ -594,7 +594,7 @@ BOOST_AUTO_TEST_CASE(testMovingPrismSphereNoIntersectionZFaceVel, _TOL) {
 }
 
 // regions 6, 7, 16: XZ edge
-BOOST_AUTO_TEST_CASE(testMovingPrismSphereXZEdgeOverlap, _TOL) {
+BOOST_AUTO_TEST_CASE(testMovingPrismSphereXZEdgeOverlap) {
   Prism x = {
     Vec3(0.0, 0.0, 0.0),
     1, 1, 1,
@@ -605,7 +605,7 @@ BOOST_AUTO_TEST_CASE(testMovingPrismSphereXZEdgeOverlap, _TOL) {
 
   BOOST_TEST(intersect(x, s, disp));
 }
-BOOST_AUTO_TEST_CASE(testMovingPrismSphereXZEdgeSeparatedNoIntersectionNoVel, _TOL) {
+BOOST_AUTO_TEST_CASE(testMovingPrismSphereXZEdgeSeparatedNoIntersectionNoVel) {
   Prism x = {
     Vec3(0.0, 0.0, 0.0),
     1, 1, 1,
@@ -616,7 +616,7 @@ BOOST_AUTO_TEST_CASE(testMovingPrismSphereXZEdgeSeparatedNoIntersectionNoVel, _T
 
   BOOST_TEST(!intersect(x, s, disp));
 }
-BOOST_AUTO_TEST_CASE(testMovingPrismSphereXZEdgeSeparatedNoIntersectionVel, _TOL) {
+BOOST_AUTO_TEST_CASE(testMovingPrismSphereXZEdgeSeparatedNoIntersectionVel) {
   Prism x = {
     Vec3(0.0, 0.0, 0.0),
     1, 1, 1,
@@ -627,7 +627,7 @@ BOOST_AUTO_TEST_CASE(testMovingPrismSphereXZEdgeSeparatedNoIntersectionVel, _TOL
 
   BOOST_TEST(!intersect(x, s, disp));
 }
-BOOST_AUTO_TEST_CASE(testMovingPrismSphereXZEdgeSeparatedIntersectionVel, _TOL) {
+BOOST_AUTO_TEST_CASE(testMovingPrismSphereXZEdgeSeparatedIntersectionVel) {
   Prism x = {
     Vec3(0.0, 0.0, 0.0),
     1, 1, 1,
@@ -645,7 +645,7 @@ BOOST_AUTO_TEST_CASE(testMovingPrismSphereXZEdgeSeparatedIntersectionVel, _TOL) 
  */
 
 
-BOOST_AUTO_TEST_CASE(testRotatingPrismSphereNoIntersect, _TOL) {
+BOOST_AUTO_TEST_CASE(testRotatingPrismSphereNoIntersect) {
   Prism x = {
     Vec3(2, 2, 2),
     0.5, 0.5, 0.5,
@@ -656,7 +656,7 @@ BOOST_AUTO_TEST_CASE(testRotatingPrismSphereNoIntersect, _TOL) {
 
   BOOST_TEST(!intersect(x, s, rot, x.center));
 }
-BOOST_AUTO_TEST_CASE(testRotatingPrismSphereBoundsIntersect, _TOL) {
+BOOST_AUTO_TEST_CASE(testRotatingPrismSphereBoundsIntersect) {
   Prism x = {
     Vec3(0.5, 0.5, 0.5),
     0.5, 0.5, 0.5,
@@ -667,7 +667,7 @@ BOOST_AUTO_TEST_CASE(testRotatingPrismSphereBoundsIntersect, _TOL) {
 
   BOOST_TEST(intersect(x, s, rot, Vec3(1, 1, 1)));
 }
-BOOST_AUTO_TEST_CASE(testRotatingPrismSphereInitialIntersect, _TOL) {
+BOOST_AUTO_TEST_CASE(testRotatingPrismSphereInitialIntersect) {
   Prism x = {
     Vec3(0.5, 0.5, 0.5),
     0.5, 0.5, 0.5,
@@ -678,7 +678,7 @@ BOOST_AUTO_TEST_CASE(testRotatingPrismSphereInitialIntersect, _TOL) {
 
   BOOST_TEST(intersect(x, s, rot, Vec3(1, 1, 1)));
 }
-BOOST_AUTO_TEST_CASE(testRotatingPrismSphereRotationNoIntersect, _TOL) {
+BOOST_AUTO_TEST_CASE(testRotatingPrismSphereRotationNoIntersect) {
   Prism x = {
     Vec3(0.0, 0.0, 1),
     1, 1, 0.25,
@@ -690,7 +690,7 @@ BOOST_AUTO_TEST_CASE(testRotatingPrismSphereRotationNoIntersect, _TOL) {
 
   BOOST_TEST(!intersect(x, s, rot, about));
 }
-BOOST_AUTO_TEST_CASE(testRotatingPrismSphereRotationIntersectNoInitial, _TOL) {
+BOOST_AUTO_TEST_CASE(testRotatingPrismSphereRotationIntersectNoInitial) {
   Prism x = {
     Vec3(0.0, 0.0, 1),
     1, 1, 0.25,
@@ -702,7 +702,7 @@ BOOST_AUTO_TEST_CASE(testRotatingPrismSphereRotationIntersectNoInitial, _TOL) {
 
   BOOST_TEST(intersect(x, s, rot, about));
 }
-BOOST_AUTO_TEST_CASE(testRotatingPrismSphereRotationIntersectSwingNoInitial, _TOL) {
+BOOST_AUTO_TEST_CASE(testRotatingPrismSphereRotationIntersectSwingNoInitial) {
   Prism x = {
     Vec3(0, 0.7071067811865476, 0),
     0.25, 0.25, 0.25,
@@ -714,7 +714,7 @@ BOOST_AUTO_TEST_CASE(testRotatingPrismSphereRotationIntersectSwingNoInitial, _TO
 
   BOOST_TEST(intersect(x, s, rot, about));
 }
-BOOST_AUTO_TEST_CASE(testRotatingPrismSphereRotationIntersectSpinNoInitial, _TOL) {
+BOOST_AUTO_TEST_CASE(testRotatingPrismSphereRotationIntersectSpinNoInitial) {
   Prism x = {
     Vec3(0, 0.7071067811865476, 0),
     0.25, 0.25, 0.25,
@@ -722,13 +722,13 @@ BOOST_AUTO_TEST_CASE(testRotatingPrismSphereRotationIntersectSpinNoInitial, _TOL
   };
   Sphere s = { Vec3::zero(), 0.5 };
   Quaternion rot = Quaternion::from_spherical_angle(PI, 0)
-                 * Quaternion::from_spherical_angle(PI, 0)
-                 * Quaternion::from_spherical_angle(PI, 0);
+    * Quaternion::from_spherical_angle(PI, 0)
+    * Quaternion::from_spherical_angle(PI, 0);
   Vec3 about = Vec3(2, 0, 0);
 
   BOOST_TEST(intersect(x, s, rot, about));
 }
-BOOST_AUTO_TEST_CASE(testRotatingPrismSphereRotationNoIntersectRotAbout, _TOL) {
+BOOST_AUTO_TEST_CASE(testRotatingPrismSphereRotationNoIntersectRotAbout) {
   Prism x = {
     Vec3(1.1, 0, 0),
     0.5, 2, 2,
@@ -740,7 +740,7 @@ BOOST_AUTO_TEST_CASE(testRotatingPrismSphereRotationNoIntersectRotAbout, _TOL) {
 
   BOOST_TEST(!intersect(x, s, rot, about));
 }
-BOOST_AUTO_TEST_CASE(testRotatingPrismSphereRotationBarelyIntersect, _TOL) {
+BOOST_AUTO_TEST_CASE(testRotatingPrismSphereRotationBarelyIntersect) {
   Prism x = {
     Vec3(1.1, 0, 0),
     0.5, 0.5, 0.5,
@@ -759,7 +759,7 @@ BOOST_AUTO_TEST_CASE(testRotatingPrismSphereRotationBarelyIntersect, _TOL) {
  */
 
 
-BOOST_AUTO_TEST_CASE(testPrismCylinderNoIntersection, _TOL) {
+BOOST_AUTO_TEST_CASE(testPrismCylinderNoIntersection) {
   Prism p = {
     Vec3(2.0, 0.0, 0.0),
     0.5, 0.5, 0.5,
@@ -775,7 +775,7 @@ BOOST_AUTO_TEST_CASE(testPrismCylinderNoIntersection, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(testPrismCylinderNoIntersectionRot, _TOL) {
+BOOST_AUTO_TEST_CASE(testPrismCylinderNoIntersectionRot) {
   Prism p = {
     Vec3(0.0, 2.0, 0.0),
     0.5, 0.5, 0.5,
@@ -791,7 +791,7 @@ BOOST_AUTO_TEST_CASE(testPrismCylinderNoIntersectionRot, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(testPrismCylinderNoIntersectionInternal, _TOL) {
+BOOST_AUTO_TEST_CASE(testPrismCylinderNoIntersectionInternal) {
   Prism p = {
     Vec3(0.0, 0.0, 0.0),
     0.5, 0.5, 0.5,
@@ -807,7 +807,7 @@ BOOST_AUTO_TEST_CASE(testPrismCylinderNoIntersectionInternal, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(testPrismCylinderNoIntersectionExceedExtent, _TOL) {
+BOOST_AUTO_TEST_CASE(testPrismCylinderNoIntersectionExceedExtent) {
   Prism p = {
     Vec3(0.0, 0.0, 3.0),
     1.5, 1.5, 1.5,
@@ -823,7 +823,7 @@ BOOST_AUTO_TEST_CASE(testPrismCylinderNoIntersectionExceedExtent, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(testPrismCylinderIntersectionSimple, _TOL) {
+BOOST_AUTO_TEST_CASE(testPrismCylinderIntersectionSimple) {
   Prism p = {
     Vec3(1.0, 0.0, 0.0),
     0.5, 0.5, 0.5,
@@ -840,7 +840,7 @@ BOOST_AUTO_TEST_CASE(testPrismCylinderIntersectionSimple, _TOL) {
 
 
 // This test will fail. If full collision detection between cylinders and prisms is implemented, uncomment this test.
-// BOOST_AUTO_TEST_CASE(testPrismCylinderIntersectionLarge, _TOL) {
+// BOOST_AUTO_TEST_CASE(testPrismCylinderIntersectionLarge) {
 //   Prism p = {
 //     Vec3(0.0, 0.0, 0.0),
 //     1.5, 1.5, 1.5,
@@ -856,7 +856,7 @@ BOOST_AUTO_TEST_CASE(testPrismCylinderIntersectionSimple, _TOL) {
 // }
 
 
-BOOST_AUTO_TEST_CASE(testPrismCylinderIntersectionRot, _TOL) {
+BOOST_AUTO_TEST_CASE(testPrismCylinderIntersectionRot) {
   Prism p = {
     Vec3(0.0, 0.0, 1.0),
     0.5, 0.5, 0.5,
@@ -873,10 +873,10 @@ BOOST_AUTO_TEST_CASE(testPrismCylinderIntersectionRot, _TOL) {
 
 
 /*
- ***********************
- * Serialization Tests *
- ***********************
- */
+***********************
+* Serialization Tests *
+***********************
+*/
 
 
 BOOST_AUTO_TEST_SUITE_END();
@@ -887,7 +887,7 @@ BOOST_AUTO_TEST_SUITE(serialization);
 
 BOOST_AUTO_TEST_SUITE(find_data_bounds);
 
-BOOST_AUTO_TEST_CASE(find_data_boundsFailure, _TOL) {
+BOOST_AUTO_TEST_CASE(find_data_boundsFailure) {
   string str = "NoDataExistsHere";
   auto res = SD::Internal::find_data_bounds(str);
 
@@ -896,7 +896,7 @@ BOOST_AUTO_TEST_CASE(find_data_boundsFailure, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(find_data_boundsFailureCloseBracketNoOpen, _TOL) {
+BOOST_AUTO_TEST_CASE(find_data_boundsFailureCloseBracketNoOpen) {
   string str = "NoDataExistsHere]";
   auto res = SD::Internal::find_data_bounds(str);
 
@@ -905,7 +905,7 @@ BOOST_AUTO_TEST_CASE(find_data_boundsFailureCloseBracketNoOpen, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(find_data_boundsFailureCloseBracketOpen, _TOL) {
+BOOST_AUTO_TEST_CASE(find_data_boundsFailureCloseBracketOpen) {
   string str = "NoDataExistsHere][";
   auto res = SD::Internal::find_data_bounds(str);
 
@@ -914,7 +914,7 @@ BOOST_AUTO_TEST_CASE(find_data_boundsFailureCloseBracketOpen, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(find_data_boundsSimple, _TOL) {
+BOOST_AUTO_TEST_CASE(find_data_boundsSimple) {
   string str = "Vec3[x:1,y:2,z:3]";
   auto res = SD::Internal::find_data_bounds(str);
 
@@ -923,7 +923,7 @@ BOOST_AUTO_TEST_CASE(find_data_boundsSimple, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(find_data_boundsComplex, _TOL) {
+BOOST_AUTO_TEST_CASE(find_data_boundsComplex) {
   string str = "Sphere[r:1,center:Vec3[1,2,3]]";
   auto res = SD::Internal::find_data_bounds(str);
 
@@ -932,7 +932,7 @@ BOOST_AUTO_TEST_CASE(find_data_boundsComplex, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(find_data_boundsNested, _TOL) {
+BOOST_AUTO_TEST_CASE(find_data_boundsNested) {
   string str = "Sphere[r:1,center:Vec3[1,2,3]]";
   auto res = SD::Internal::find_data_bounds(str, 18);
 
@@ -947,7 +947,7 @@ BOOST_AUTO_TEST_SUITE_END();
 
 BOOST_AUTO_TEST_SUITE(find_geom_type);
 
-BOOST_AUTO_TEST_CASE(find_geom_typeNoneExists, _TOL) {
+BOOST_AUTO_TEST_CASE(find_geom_typeNoneExists) {
   string str = "[]";
   auto res = SD::Internal::find_geom_type(str);
   
@@ -955,7 +955,7 @@ BOOST_AUTO_TEST_CASE(find_geom_typeNoneExists, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(find_geom_typeUnknownType, _TOL) {
+BOOST_AUTO_TEST_CASE(find_geom_typeUnknownType) {
   string str = "awefji1o23awejfk5lsd[]";
   auto res = SD::Internal::find_geom_type(str);
   
@@ -964,7 +964,7 @@ BOOST_AUTO_TEST_CASE(find_geom_typeUnknownType, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(find_geom_typeVec3, _TOL) {
+BOOST_AUTO_TEST_CASE(find_geom_typeVec3) {
   string str = "Vec3[x:1,y:2,z:3]";
   auto res = SD::Internal::find_geom_type(str);
   
@@ -979,7 +979,7 @@ BOOST_AUTO_TEST_SUITE_END();
 
 BOOST_AUTO_TEST_SUITE(find_next_pair);
 
-BOOST_AUTO_TEST_CASE(find_next_pairSyntaxError, _TOL) {
+BOOST_AUTO_TEST_CASE(find_next_pairSyntaxError) {
   string str = ":";
   auto res = SD::Internal::find_next_pair(str,0,1);
 
@@ -987,7 +987,7 @@ BOOST_AUTO_TEST_CASE(find_next_pairSyntaxError, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(find_next_pairEndOfString, _TOL) {
+BOOST_AUTO_TEST_CASE(find_next_pairEndOfString) {
   string str = "]";
   auto res = SD::Internal::find_next_pair(str);
 
@@ -995,7 +995,7 @@ BOOST_AUTO_TEST_CASE(find_next_pairEndOfString, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(find_next_pairMiddle, _TOL) {
+BOOST_AUTO_TEST_CASE(find_next_pairMiddle) {
   string str = "key:value,";
   auto res = SD::Internal::find_next_pair(str);
 
@@ -1003,7 +1003,7 @@ BOOST_AUTO_TEST_CASE(find_next_pairMiddle, _TOL) {
   BOOST_TEST(res.second == "key:value");
 }
 
-BOOST_AUTO_TEST_CASE(find_next_pairEnd, _TOL) {
+BOOST_AUTO_TEST_CASE(find_next_pairEnd) {
   string str = "key:value]";
   auto res = SD::Internal::find_next_pair(str);
 
@@ -1019,7 +1019,7 @@ BOOST_AUTO_TEST_SUITE_END();
 
 BOOST_AUTO_TEST_SUITE(find_pairs);
 
-BOOST_AUTO_TEST_CASE(find_pairsNormal, _TOL) {
+BOOST_AUTO_TEST_CASE(find_pairsNormal) {
   string str = "Vec3[x:1,y:2,z:3]";
   auto res = SD::Internal::find_pairs(str);
   auto map = res.first;
@@ -1034,7 +1034,7 @@ BOOST_AUTO_TEST_CASE(find_pairsNormal, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(find_pairsNone, _TOL) {
+BOOST_AUTO_TEST_CASE(find_pairsNone) {
   string str = "Spoofy[]";
   auto res = SD::Internal::find_pairs(str);
   auto map = res.first;
@@ -1045,7 +1045,7 @@ BOOST_AUTO_TEST_CASE(find_pairsNone, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(find_pairsErr, _TOL) {
+BOOST_AUTO_TEST_CASE(find_pairsErr) {
   string str = "]]]]]";
   auto res = SD::Internal::find_pairs(str);
   
@@ -1053,7 +1053,7 @@ BOOST_AUTO_TEST_CASE(find_pairsErr, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(find_pairsNested, _TOL) {
+BOOST_AUTO_TEST_CASE(find_pairsNested) {
   string str = "Foo[x: Vec3[x: 1, y: 2, z: 3], y: 2]";
 
   auto res = SD::Internal::find_pairs(str);
@@ -1071,34 +1071,34 @@ BOOST_AUTO_TEST_SUITE_END();
 BOOST_AUTO_TEST_SUITE(parse_double);
 
 
-BOOST_AUTO_TEST_CASE(parse_doubleNormal, _TOL) {
+BOOST_AUTO_TEST_CASE(parse_doubleNormal) {
   string str = "12345";
   auto res = SD::Internal::parse_double(str);
   BOOST_TEST(res.first == 4);
   BOOST_TEST(res.second == 12345.0);
 }
 
-BOOST_AUTO_TEST_CASE(parse_doubleEnded, _TOL) {
+BOOST_AUTO_TEST_CASE(parse_doubleEnded) {
   string str = "12.345,";
   auto res = SD::Internal::parse_double(str);
   BOOST_TEST(res.first == 5);
   BOOST_TEST(res.second == 12.345);
 }
 
-BOOST_AUTO_TEST_CASE(parse_doubleTwoDecimal, _TOL) {
+BOOST_AUTO_TEST_CASE(parse_doubleTwoDecimal) {
   string str = "12.345.123";
   auto res = SD::Internal::parse_double(str);
   BOOST_TEST(res.first == -1);
 }
 
-BOOST_AUTO_TEST_CASE(parse_doubleNegative, _TOL) {
+BOOST_AUTO_TEST_CASE(parse_doubleNegative) {
   string str = "-12345";
   auto res = SD::Internal::parse_double(str);
   BOOST_TEST(res.first == 5);
   BOOST_TEST(res.second == -12345.0);
 }
 
-BOOST_AUTO_TEST_CASE(parse_doubleHyphenMiddle, _TOL) {
+BOOST_AUTO_TEST_CASE(parse_doubleHyphenMiddle) {
   string str = "12345-123";
   auto res = SD::Internal::parse_double(str);
   BOOST_TEST(res.first == -1);
@@ -1112,7 +1112,7 @@ BOOST_AUTO_TEST_SUITE_END();
 BOOST_AUTO_TEST_SUITE(reSerialization);
 
 
-BOOST_AUTO_TEST_CASE(testVec3Reserialize, _TOL) {
+BOOST_AUTO_TEST_CASE(testVec3Reserialize) {
   Vec3 test = {1.0, 2.0, 3.0};
   auto serialized   = SD::serialize(test);
   auto deserialized = SD::deserialize(serialized);
@@ -1139,7 +1139,7 @@ BOOST_AUTO_TEST_CASE(testVec3Reserialize, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(testLineSegmentReserialize, _TOL) {
+BOOST_AUTO_TEST_CASE(testLineSegmentReserialize) {
   Vec3 testv1 = {1.5, -2.0, 3.5};
   Vec3 testv2 = {0.0, 0.0, 12345};
   LineSegment test = { testv1, testv2 };
@@ -1172,7 +1172,7 @@ BOOST_AUTO_TEST_CASE(testLineSegmentReserialize, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(testAngleReserialize, _TOL) {
+BOOST_AUTO_TEST_CASE(testAngleReserialize) {
   Quaternion test   = Quaternion::from_spherical_angle(PI, PI/2);
   auto serialized   = SD::serialize(test);
   auto deserialized = SD::deserialize(serialized);
@@ -1200,7 +1200,7 @@ BOOST_AUTO_TEST_CASE(testAngleReserialize, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(testPrismReserialize, _TOL) {
+BOOST_AUTO_TEST_CASE(testPrismReserialize) {
   Prism test = { Vec3(1, 2, 3), 4, 5, 6, Quaternion::from_spherical_angle(-PI, PI/2)};
   auto serialized   = SD::serialize(test);
   auto deserialized = SD::deserialize(serialized);
@@ -1235,7 +1235,7 @@ BOOST_AUTO_TEST_CASE(testPrismReserialize, _TOL) {
 }
 
 
-BOOST_AUTO_TEST_CASE(testSphereReserialize, _TOL) {
+BOOST_AUTO_TEST_CASE(testSphereReserialize) {
   Sphere test = {{9, 9, 9}, 9.25};
   auto serialized   = SD::serialize(test);
   auto deserialized = SD::deserialize(serialized);
@@ -1272,7 +1272,7 @@ BOOST_AUTO_TEST_SUITE(Pathgen);
 
 
 /*
-BOOST_AUTO_TEST_CASE(testPathExistsTrivial, _TOL) {
+BOOST_AUTO_TEST_CASE(testPathExistsTrivial) {
   const PG::MovePoint from = {
     {{0.1,0.1,0.1},{0,0}},
     {{0.4,0.4,0.4},{0,0}},
@@ -1290,12 +1290,12 @@ BOOST_AUTO_TEST_CASE(testPathExistsTrivial, _TOL) {
   BOOST_TEST(!is_err);
 
   if (is_err) {
-    cerr << C_BR_RED << "Pathgen error: " << PG::error_message(get<PG::ErrorType>(p)) << C_RED << "\n" << std::flush;
+  cerr << C_BR_RED << "Pathgen error: " << PG::error_message(get<PG::ErrorType>(p)) << C_RED << "\n" << std::flush;
   }
 }
 
 
-BOOST_AUTO_TEST_CASE(testPathExistsSimpleTrans, _TOL) {
+BOOST_AUTO_TEST_CASE(testPathExistsSimpleTrans) {
   const PG::MovePoint from = {
     {{0.1,0.1,0.1},{0,0}},
     {{0.4,0.4,0.4},{0,0}},
@@ -1313,12 +1313,12 @@ BOOST_AUTO_TEST_CASE(testPathExistsSimpleTrans, _TOL) {
   BOOST_TEST(!is_err);
 
   if (is_err) {
-    cerr << C_BR_RED << "Pathgen error: " << PG::error_message(get<PG::ErrorType>(p)) << C_RED << "\n" << std::flush;
+  cerr << C_BR_RED << "Pathgen error: " << PG::error_message(get<PG::ErrorType>(p)) << C_RED << "\n" << std::flush;
   }
 }
 
 
-BOOST_AUTO_TEST_CASE(testPathExistsSimpleRot, _TOL) {
+BOOST_AUTO_TEST_CASE(testPathExistsSimpleRot) {
   const PG::MovePoint from = {
     {{0.1,0.1,0.1},{0,0}},
     {{0.4,0.4,0.4},{0,0}},
@@ -1336,12 +1336,12 @@ BOOST_AUTO_TEST_CASE(testPathExistsSimpleRot, _TOL) {
   BOOST_TEST(!is_err);
 
   if (is_err) {
-    cerr << C_BR_RED << "Pathgen error: " << PG::error_message(get<PG::ErrorType>(p)) << C_RED << "\n" << std::flush;
+  cerr << C_BR_RED << "Pathgen error: " << PG::error_message(get<PG::ErrorType>(p)) << C_RED << "\n" << std::flush;
   }
 }
 
 
-BOOST_AUTO_TEST_CASE(testPathExistsSingleObstacle, _TOL) {
+BOOST_AUTO_TEST_CASE(testPathExistsSingleObstacle) {
   const PG::MovePoint from = {
     {{0.1,0.1,0.1},{0,0}},
     {{0.35,0.35,0.35},{0,0}},
@@ -1361,36 +1361,36 @@ BOOST_AUTO_TEST_CASE(testPathExistsSingleObstacle, _TOL) {
   BOOST_TEST(!is_err);
 
   if (is_err) {
-    cerr << C_BR_RED << "Pathgen error: " << PG::error_message(get<PG::ErrorType>(p)) << C_RED << "\n" << std::flush;
+  cerr << C_BR_RED << "Pathgen error: " << PG::error_message(get<PG::ErrorType>(p)) << C_RED << "\n" << std::flush;
   }
 }
 */
 
 
-BOOST_AUTO_TEST_CASE(testPathExistsMultiObstacle, _TOL) {
+BOOST_AUTO_TEST_CASE(testPathExistsMultiObstacle) {
   const PG::MovePoint from = {
     {{0.1,0.1,0.1},{0,0}},
     {{0.35,0.35,0.35},{0,0}},
   },
-  to = {
-    {{0.05,0.05,0.05},{0,0}},
-    {{0.35,0.35,0.35},{0,0}},
-  };
+    to = {
+      {{0.05,0.05,0.05},{0,0}},
+      {{0.35,0.35,0.35},{0,0}},
+    };
 
-  vector<Intersectable> geom = {
-    (Sphere){Vec3(0.5,0.5,0.5),0.1},
-    (Sphere){Vec3(0.55,0.55,0.55),0.1},
-    Prism(Vec3(-0.3, -0.3, -0.3), 0.05, 0.05, 0.05, Quaternion::identity()),
-  };
+    vector<Intersectable> geom = {
+      (Sphere){Vec3(0.5,0.5,0.5),0.1},
+      (Sphere){Vec3(0.55,0.55,0.55),0.1},
+      Prism(Vec3(-0.3, -0.3, -0.3), 0.05, 0.05, 0.05, Quaternion::identity()),
+    };
 
-  auto p = PG::single_move(from, to, geom);
-  auto is_err = has<PG::ErrorType>(p);
+    auto p = PG::single_move(from, to, geom);
+    auto is_err = has<PG::ErrorType>(p);
 
-  BOOST_TEST(!is_err);
+    BOOST_TEST(!is_err);
 
-  if (is_err) {
-    cerr << C_BR_RED << "Pathgen error: " << PG::error_message(get<PG::ErrorType>(p)) << C_RED << "\n" << std::flush;
-  }
+    if (is_err) {
+      cerr << C_BR_RED << "Pathgen error: " << PG::error_message(get<PG::ErrorType>(p)) << C_RED << "\n" << std::flush;
+    }
 }
 
 
