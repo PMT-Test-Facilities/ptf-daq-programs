@@ -6,18 +6,20 @@
 #include <valarray>
 #include <algorithm>
 
+#include <vtkActor.h>
+
 #include "midas.h"
 #include "geom.hpp"
 #include "serialization.hpp"
 #include "pathgen.hpp"
 
 
-bool render(Vec3 x);
-bool render(Prism x);
-bool render(LineSegment x);
-bool render(Sphere x);
-bool render(Cylinder x);
-Intersectable render(Serialization::GeomResult res);
+vtkActor* render(Vec3 x);
+vtkActor* render(Prism x);
+vtkActor* render(LineSegment x);
+vtkActor* render(Sphere x);
+vtkActor* render(Cylinder x);
+vtkActor* render(Serialization::GeomResult res);
 
 
 namespace State {
@@ -51,7 +53,7 @@ namespace State {
     HNDLE
       hDB=0,
       collision=0,
-      destination=0, start=0, stop=0, reinitialize=0, // control
+      destination=0, input, start=0, stop=0, reinitialize=0, // control
       position=0, initializing=0, initialized=0, bad_destination=0, completed=0, moving=0,
       ax_moving=0, ax_limit_neg=0, ax_limit_pos=0;  // variables
 
@@ -60,6 +62,7 @@ namespace State {
     namespace Motor {
       GantryPair
         destination =  std::make_tuple(0,0),
+        input =        std::make_tuple(0,0),
         start =        std::make_tuple(0,0),
         stop =         std::make_tuple(0,0),
         move =         std::make_tuple(0,0),

@@ -51,7 +51,7 @@ ConvexPolyhedron _sweep(const Prism p, Vec3 disp) {
   for (size_t i = 0; i < 8; i++) {
     edges.push_back(make_pair(i,i+8));
   }
-  for (size_t i = 0; i < 4; i++) {
+  for (size_t i = 0; i < 8; i++) {
     edges.push_back(make_pair(i,   i+4));
     edges.push_back(make_pair(i,   (i+1)%4));
     edges.push_back(make_pair(i+4, ((i+1)%4)+4));
@@ -72,16 +72,21 @@ ConvexPolyhedron _sweep(const Prism p, Vec3 disp) {
   return { vertexes, edges, normals };
 }
 
+// creates the polyhedron resulting from sweeping a prism
+Prism _sweepPrism(const Prism p, Vec3 disp) {
+  return { p.center+0.5*disp, p.ex+fabs(disp.x), p.ey+fabs(disp.y), p.ez+fabs(disp.z), p.orientation};
+}
+
 // todo: use shape of prisms to reduce checks needed
 bool intersect(Prism x, Prism y, Vec3 disp) {
   return intersect(_sweep(x, disp), polyhedron(y));
 }
 
 bool intersect(Prism x, Cylinder y, Vec3 disp) {
-  auto p = polyhedron(x);
+  //auto p = _sweep(x, disp);
   // if (!intersect(bounding_cylinder(p, disp), bounding_sphere(y))) return false;
-  auto c = polyhedron(y);
-  return intersect(p, c);
+  //auto c = polyhedron(y);
+  return intersect(_sweepPrism(x,disp), y);
 }
 
 
@@ -527,6 +532,13 @@ bool intersect(Prism x, vector<Intersectable> ys, Vec3 disp) {
   auto visitor = disp_intersect_visitor(x, disp);
   for (size_t i = 0; i < ys.size(); i++) {
     if (boost::apply_visitor(visitor, ys[i])) return true;
+  }
+  return false;
+}
+
+bool intersect(std::array<Prism, 3> x, vector<Intersectable> ys, Vec3 disp) {
+  for (size_t i = 0; i < 3; i++) {
+    intersect(x[i],ys,disp);
   }
   return false;
 }

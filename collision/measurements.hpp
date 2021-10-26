@@ -4,8 +4,8 @@
 #define SUPPORT_BEAM_HEIGHT 1.0
 #define SUPPORT_BEAM_WIDTH 0.02
 
-#define GANTRY_X_DIM 0.1
-#define GANTRY_Y_DIM 0.230
+#define GANTRY_X_DIM 0.145
+#define GANTRY_Y_DIM 0.1
 #define GANTRY_Z_DIM 0.15
 
 #define GANTRY_0_MAX_X 0.696

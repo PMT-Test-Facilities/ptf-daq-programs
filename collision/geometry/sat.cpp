@@ -113,7 +113,12 @@ ConvexPolyhedron polyhedron(const Cylinder c) {
       Vec3::zero(),
       c.orientation
     ));
+    auto v = rotate_point(
+      {c.r*cos(i*dtheta), c.r*sin(i*dtheta), c.e},
+      Vec3::zero(), c.orientation
+    ) + c.center;
   }
+  
   return { vertexes, edges, normals };
 }
 

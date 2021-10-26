@@ -124,6 +124,12 @@ bool approxeq(const Vec3& p1, const Vec3& p2) {
     (fabs(p1.z - p2.z) < APPROX);
 }
 
+bool reseq(const Vec3& p1, const Vec3& p2) {
+  return
+    (fabs(p1.x - p2.x) < RES_APPROX) &&
+    (fabs(p1.y - p2.y) < RES_APPROX) &&
+    (fabs(p1.z - p2.z) < RES_APPROX);
+}
 
 std::ostream& operator<<(std::ostream &os, const Vec3& p) {
   return os << "Vec3{" << p.x << ", " << p.y << ", " << p.z << "}";

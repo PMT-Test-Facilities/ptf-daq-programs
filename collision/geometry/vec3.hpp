@@ -108,6 +108,7 @@ double norm2(const Vec3 p);  // norm squared
 Vec3   normalized(const Vec3 p);
 
 bool approxeq(const Vec3& p1, const Vec3& p2);
+bool reseq(const Vec3& p1, const Vec3& p2);
 
 std::ostream &operator<<(std::ostream& os, const Vec3& p);
 

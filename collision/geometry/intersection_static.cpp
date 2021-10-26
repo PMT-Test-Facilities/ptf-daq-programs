@@ -361,8 +361,8 @@ bool intersect(Prism x, Cylinder y) {
     }
     rotate_points_inplace(pts, y.center, y.orientation);
     for (int i = 0; i < 12; i++) {
-      ls[i].a = pts[2*i];
-      ls[i].b = pts[2*i+1];
+      ls[i].a = pts[2*i] - y.center;
+      ls[i].b = pts[2*i+1] - y.center;
     }
   }
 

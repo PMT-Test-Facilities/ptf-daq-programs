@@ -20,5 +20,6 @@
 
 #define APPROX 1e-9
 
+#define RES_APPROX 1e-3
 
 #endif
