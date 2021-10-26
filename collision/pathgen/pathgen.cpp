@@ -72,7 +72,7 @@ bool check_any_collisions(
 variant<MovePath, ErrorType> single_move(const MovePoint& from, const MovePoint& to, const vector<Intersectable>& static_geometry) {
   DEBUG_ENTER(__PRETTY_FUNCTION__);
   DEBUG_COUT("Checking destination and source...");
-  if (!is_destination_valid(to.gantry0, to.gantry1, static_geometry)) {
+  if (!-(to.gantry0, to.gantry1, static_geometry)) {
     return ErrorType::InvalidDestination;
   }
   else if (!is_destination_valid(from.gantry0, from.gantry1, static_geometry)) {
@@ -171,8 +171,6 @@ bool is_destination_valid(
     DEBUG_LEAVE;
     return false;
   }*/
-  DEBUG_COUT(gantry0.position.x<<" "<<gantry0.position.y<<" "<<gantry0.position.z);
-  DEBUG_COUT(gantry1.position.x<<" "<<gantry1.position.y<<" "<<gantry1.position.z);
   DEBUG_COUT("Distance constraints ok. Checking collisions.");
   if (check_any_collisions(gantry0, gantry1, static_geometry)) {
     DEBUG_COUT("Found collision.");
@@ -560,8 +558,6 @@ bool equal_path_positions(PathGeneration::MovePoint &p1, PathGeneration::MovePoi
   ){
     return true;
   }
-      std::cout << "Push! "<< p1.gantry0.position.x <<" "<< p1.gantry0.position.y <<" "<< p1.gantry0.position.z<<" "<< p1.gantry0.angle.theta <<" "<< p1.gantry0.angle.phi << " " << p1.gantry1.position.x <<" "<< p1.gantry1.position.y <<" "<< p1.gantry1.position.z <<" "<< p1.gantry1.angle.theta <<" "<< p1.gantry1.angle.phi << "\n"
-                         << p2.gantry0.position.x <<" "<< p2.gantry0.position.y <<" "<< p2.gantry0.position.z<<" "<< p2.gantry0.angle.theta <<" "<< p2.gantry0.angle.phi << " " << p2.gantry1.position.x <<" "<< p2.gantry1.position.y <<" "<< p2.gantry1.position.z <<" "<< p2.gantry1.angle.theta <<" "<< p2.gantry1.angle.phi << "\n";
   return false;
 }
 
@@ -592,9 +588,9 @@ MovePath generate_move(
 
   if (is_moving == Gantry0) {
     for (size_t i = 0; i < 5; i++) {
-      next_path_position = std::move(_generate_move_0(ret[i].gantry0, moving.end, unmoving, order[i]));
-      if (!equal_path_positions(ret[i],next_path_position)) {
-        ret.push_back(std::move(next_path_position));
+      next_path_position = _generate_move_0(ret.back().gantry0, moving.end, unmoving, order[i]);
+      if (!equal_path_positions(ret.back(),next_path_position)) {
+        ret.push_back(next_path_position);
       }
     }
   } else {

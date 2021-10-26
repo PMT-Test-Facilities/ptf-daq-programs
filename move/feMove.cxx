@@ -65,9 +65,9 @@ INT frontend_init() {
   bufsize = 10 * sizeof(float);
   db_get_value(hDB, 0, "/equipment/move/settings/Motor Scaling",   State::Settings::scale.data(),        &bufsize, TID_FLOAT, FALSE);
   bufsize = 10 * sizeof(float);
-  db_get_value(hDB, 0, "/equipment/move/settings/Axis Channels",   State::Settings::channels.data(),     &bufsize, TID_INT, FALSE);
+  db_get_value(hDB, 0, "/Equipment/Move/Settings/Axis Channels",   State::Settings::channels.data(),     &bufsize, TID_INT, FALSE);
   bufsize = 10 * sizeof(float);
-  db_get_value(hDB, 0, "/equipment/move/settings/Limit Positions", State::Settings::limits.data(),       &bufsize, TID_FLOAT, FALSE);
+  db_get_value(hDB, 0, "/Equipment/Move/Settings/Limit Positions", State::Settings::limits.data(),       &bufsize, TID_FLOAT, FALSE);
 
   // load motor & phidget keys
   db_find_key(hDB, 0, "/Equipment/Motors00/Settings/Destination", &get<0>(State::Keys::Motor::destination));
@@ -107,8 +107,8 @@ INT frontend_init() {
 
   db_open_record(hDB, State::Keys::reinitialize, &State::CallbackVars::initialize, sizeof(BOOL), MODE_READ, initialize, nullptr);
 
-  //db_open_record(hDB, get<0>(State::Keys::Motor::moving), State::CallbackVars::g0_moving.data(), 8 * sizeof(BOOL), MODE_READ, monitor, (void*) &GANTRY_0);
-  //db_open_record(hDB, get<1>(State::Keys::Motor::moving), State::CallbackVars::g1_moving.data(), 8 * sizeof(BOOL), MODE_READ, monitor, (void*) &GANTRY_1);
+  db_open_record(hDB, get<0>(State::Keys::Motor::moving), State::CallbackVars::g0_moving.data(), 8 * sizeof(BOOL), MODE_READ, monitor, (void*) &GANTRY_0);
+  db_open_record(hDB, get<1>(State::Keys::Motor::moving), State::CallbackVars::g1_moving.data(), 8 * sizeof(BOOL), MODE_READ, monitor, (void*) &GANTRY_1);
 
   array<float, 10> temp_v, temp_a;
 
@@ -295,8 +295,14 @@ failure:
 
 
 void monitor(HNDLE hDB, HNDLE hKey, void* info) {
+
+  if (!State::path_index) {  // if we don't have a path, don't know if the path is done
+    //cm_msg(MERROR, "feMove:monitor", "Monitor called without path_index being set. This variable should be set when a path is generated, so something has gone wrong.");
+    //State::moving_on_last_check = false;
+    return;
+  }
 #ifdef DEBUG
-  cout << C_BLUE << "Monitor called." << C_RESET << endl;
+  //cout << C_BLUE << "Monitor called." << C_RESET << endl;
 #endif
 
   array<BOOL, 10> moving;
@@ -310,6 +316,8 @@ void monitor(HNDLE hDB, HNDLE hKey, void* info) {
   channel_read(hDB, State::Keys::Motor::position, position, TID_FLOAT);
   for (size_t i = 0; i < 10; i++){
     position[i] = (position[i] - State::Initialization::motor_origin[i]) / State::Settings::scale[i] + State::Settings::limits[i];
+    //if(i==3 || i==4 || i==8 ||i==9)//TODO: use get axis instead?
+      //position[i]/=RAD2DEG;
   }
   db_set_data(hDB, State::Keys::position, position.data(), 10*sizeof(float), 10, TID_FLOAT);
 
@@ -329,7 +337,8 @@ void monitor(HNDLE hDB, HNDLE hKey, void* info) {
 
   if (any(State::moving_on_last_check) && !any_moving) {
     for (size_t i = 0; i < 10; i++) {
-      if (State::Settings::channels[i] != -1 && *State::move_path[*State::path_index][i] != position[i]) {
+      //TODO: there could be a bug here for something
+    if (State::Settings::channels[i] != -1 && fabs(*State::move_path[*State::path_index][i] - position[i]) > 0.001) {
         if (poslim[i] || neglim[i]) {
           if (stopped_from_limit)
             cm_msg(MINFO, "feMove:monitor", "Limit switch for %s was also triggered.", PG::dim_name(i % 5).c_str());
@@ -557,31 +566,25 @@ void move(HNDLE hDB) {
   const array<BOOL, 10> start_all = TEN_TRUE;
 
   cm_msg(MDEBUG, "feMove:move", "Moving to movement index %zd (step %zd/%zd).", *State::path_index, (*State::path_index)+1, State::move_path.size());
-
   auto pt = State::move_path[*State::path_index];
 
   // read in the current axis positions
-  array<float, 10> positions, deltas;
+  array<float, 10> positions, deltas, dest_cout;
   channel_read(hDB, State::Keys::Motor::position, positions, TID_FLOAT);
 
   for (size_t i = 0; i < 10; ++i) {
-    deltas[i] = *pt[i] - positions[i];
-  }
-
-  // no movement is necessary
-  if (!any(deltas)) {
-    cm_msg(MINFO, "feMove:move", "Note: no move is required.");
-    (*State::path_index)++;
-    if (State::move_path.size() <= *State::path_index) {
-      cm_msg(MINFO, "feMove:move", "This was the last move step, so we're done.");
-      State::moving_on_last_check = TEN_FALSE;
-      State::path_index = boost::none;
-    } else {
-      move(hDB);
+    if(i==3 || i==4 || i >= 5 || i == 8 || i==9){//TODO remove when we add back in tilt
+      deltas[i] = 0;
+      dest_cout[i] = (positions[i] - State::Initialization::motor_origin[i]);
+      continue;
     }
+    deltas[i] = round((*pt[i])*State::Settings::scale[i] - (positions[i] - State::Initialization::motor_origin[i]));
+    dest_cout[i] =  (*pt[i]) * State::Settings::scale[i];
   }
 
-  channel_write(hDB, State::Keys::Motor::destination, deltas, TID_FLOAT);
+  /*for (size_t i = 0; i < 10; ++i) {
+    std::cout << round((*pt[i])*State::Settings::scale[i] - (positions[i] - State::Initialization::motor_origin[i])) << " " << (*pt[i]) <<" "<< positions[i]/State::Settings::scale[i] <<" "<< State::Initialization::motor_origin[i]/State::Settings::scale[i] << std::endl;
+  }*/
 
   // read current positions of motors to see if the movement actually starts
   array<float, 8> m0start, m1start, m0dest, m1dest, m0pos, m1pos;
@@ -594,7 +597,22 @@ void move(HNDLE hDB) {
   bufsize = 8 * sizeof(float);
   db_get_data(hDB, get<1>(State::Keys::Motor::destination), m1dest.data(), &bufsize, TID_FLOAT);
 
-  channel_write(hDB, State::Keys::Motor::move, start_all, TID_BOOL);
+
+  // no movement is necessary
+  if (!any(deltas)) {
+    cm_msg(MINFO, "feMove:move", "Note: no move is required.");
+    (*State::path_index)++;
+    if (State::move_path.size() <= *State::path_index) {
+      cm_msg(MINFO, "feMove:move", "This was the last move step, so we're done.");
+      State::moving_on_last_check = TEN_FALSE;
+      State::path_index = boost::none;
+    } else {
+      move(hDB);
+    }
+  }else{
+    channel_write(hDB, State::Keys::Motor::destination, deltas, TID_FLOAT);
+    channel_write(hDB, State::Keys::Motor::move, start_all, TID_BOOL);
+  }
 
   // track total time
   const auto init   = monotonic_clock();

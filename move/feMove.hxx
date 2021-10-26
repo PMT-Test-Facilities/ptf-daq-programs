@@ -347,7 +347,8 @@ bool initialize_axis(HNDLE hDB) {
     D == Z ? make_tuple((size_t)2, (size_t)7) :
     make_tuple((size_t)3, (size_t)8); // Theta
   
-  array<float, 10> vals, o_position, n_position,n_limit;
+  array<float, 10> vals, o_position, n_position;
+  array<BOOL, 10> n_limit;
   channel_read(hDB, State::Keys::Motor::destination, vals, TID_FLOAT);
   vals[get<0>(axes)] = 500 * fabs(State::Settings::scale[get<0>(axes)]);
   //vals[get<1>(axes)] = 500 * State::Settings::scale[get<1>(axes)];
@@ -388,13 +389,14 @@ bool initialize_axis(HNDLE hDB) {
     cm_msg(MERROR, name, "Warning: One or both motors for dimension %s has not moved. Failed init", dim_name(D).c_str());
     return false;
   }
+
   //TODO: check if this is right?
-  State::Initialization::motor_origin[get<0>(axes)] = n_position[get<0>(axes)] = 0;
-  State::Initialization::motor_origin[get<1>(axes)] = n_position[get<1>(axes)] = 0;
+  State::Initialization::motor_origin[get<0>(axes)] = n_position[get<0>(axes)];
+  State::Initialization::motor_origin[get<1>(axes)] = n_position[get<1>(axes)];
   State::Initialization::position[get<0>(axes)] = State::Settings::limits[get<0>(axes)];
   State::Initialization::position[get<1>(axes)] = State::Settings::limits[get<1>(axes)];
 
-  db_set_data_index(hDB, State::Keys::position, &(n_position[get<0>(axes)]), sizeof(float), get<0>(axes), TID_FLOAT);
+  db_set_data_index(hDB, State::Keys::position, &(State::Initialization::position[get<0>(axes)]), sizeof(float), get<0>(axes), TID_FLOAT);
   //TODO reenable other gantry
   //db_set_data_index(hDB, State::Keys::position, &(n_position[get<1>(axes)]), sizeof(float), get<1>(axes), TID_FLOAT);
 
