@@ -106,14 +106,25 @@ ConvexPolyhedron polyhedron(const Cylinder c) {
       {c.r*cos(i*dtheta), c.r*sin(i*dtheta), -c.e},
       Vec3::zero(), c.orientation
     ) + c.center);
-    edges.push_back(make_pair(i/2, i/2+1));
-    edges.push_back(make_pair(i/2, i/2+2));
+    edges.push_back(make_pair(2*i, 2*i+1));
+    if(i<NUM_NORMALS_FOR_CYLINDER-1){
+      edges.push_back(make_pair(2*i, 2*(i+1)));
+      edges.push_back(make_pair(2*i+1, 2*(i+1)+1));
+    }else{
+      edges.push_back(make_pair(2*i+0, 0));
+      edges.push_back(make_pair(2*i+1, 1));
+    }
     normals.push_back(rotate_point(
       { cos(i*dtheta), sin(i*dtheta), 0.0 },
       Vec3::zero(),
       c.orientation
     ));
+    auto v = rotate_point(
+      {c.r*cos(i*dtheta), c.r*sin(i*dtheta), c.e},
+      Vec3::zero(), c.orientation
+    ) + c.center;
   }
+  
   return { vertexes, edges, normals };
 }
 
@@ -299,16 +310,19 @@ bool intersect(const ConvexPolyhedron& polyh1, const ConvexPolyhedron& polyh2) {
   if (num_axes >= NUM_AXES_FOR_BOUNDS_CHECK && !intersect(bounding_sphere(polyh1), bounding_sphere(polyh2))) {
     return false;
   }
-  else if (num_axes >= NUM_AXES_FOR_PAIRWISE && (
+  else if (num_axes >= NUM_AXES_FOR_PAIRWISE && (//TODO: wtf if one sphere is lager than the other then this breaks 
     !intersect(bounding_sphere(polyh1), polyh2)
-    || !intersect(bounding_sphere(polyh2), polyh1)
+    && !intersect(bounding_sphere(polyh2), polyh1)
   )) {
     return false;
   }
   
   for (size_t i = 0; i < polyh1.normals.size(); i++) {
     auto normal = polyh1.normals[i];
-    if (separated(polyh1.vertexes, polyh2.vertexes, normal)) return false;
+    if (separated(polyh1.vertexes, polyh2.vertexes, normal)){
+      //std::cout << "not seapterated\n";
+       return false;
+    }
   }
   for (size_t i = 0; i < polyh2.normals.size(); i++) {
     auto normal = polyh2.normals[i];
@@ -328,6 +342,104 @@ bool intersect(const ConvexPolyhedron& polyh1, const ConvexPolyhedron& polyh2) {
     }
   }
   return true;
+}
+
+double SignedVolume(Vec3 a,Vec3 b,Vec3 c,Vec3 d){
+  return (1.0/6.0)*dot(cross(b-a,c-a),d-a);
+}
+
+//modified version of this https://en.wikipedia.org/wiki/M%C3%B6ller%E2%80%93Trumbore_intersection_algorithm,
+bool lineIntersectTriangle(Vec3 l0,Vec3 l1,Vec3 v0,Vec3 v1,Vec3 v2,Vec3 &outIntersectionPoint)
+{
+  const double EPSILON = 0.0000001;
+  outIntersectionPoint = Vec3(0, 0, 0);
+
+  Vec3 rayOrigin = l0;
+  Vec3 rayVector = normalized(l1-l0);
+
+  Vec3 edge1 = v1-v0;
+  Vec3 edge2 = v2-v0;
+  Vec3 h =cross(rayVector, edge2);
+
+  //crossing condidtion
+  Vec3 normal = cross(edge1, edge2);
+  if( (dot(l0-v0,normal)<0) == (dot(l1-v0,normal)<0) ){
+    //std::cout << "Same side condidtion\n";
+    return false;
+  }
+
+  double a = dot(edge1, h);
+  if (a > -EPSILON && a < EPSILON)
+  {
+    return false;    // This ray is parallel to this triangle.
+  }
+
+  double f = 1.0 / a;      
+  Vec3 s = rayOrigin-v0;
+
+  double u = f * dot(s, h);
+  if (u < 0.0 || u > 1.0)
+  {
+    return false;
+  }
+  Vec3 q = cross(s, edge1);
+  double v = f * dot(rayVector, q);
+  if (v < 0.0 || u + v > 1.0)
+  {
+    return false;
+  }
+  // At this stage we can compute t to find out where the intersection point is on the line.
+  double t = f * dot(edge2, q);
+  if (t > EPSILON && t < sqrt(dot(rayVector, rayVector))) // ray intersection
+  {
+    outIntersectionPoint = rayOrigin + rayVector * t;
+    return true;
+  }
+  else // This means that there is a line intersection but not a ray intersection.
+  {
+    return false;
+  }
+}
+
+bool intersect2(const ConvexPolyhedron& polyh1, const ConvexPolyhedron& polyh2) {
+  
+  
+  for (size_t i = 0; i < polyh1.edges.size(); i++) {
+     for (size_t j = 0; j < polyh1.edges.size(); j++) {
+       Vec3 a,b,c;
+       if(i==j)
+        continue;
+      
+       a=polyh1.vertexes[std::get<0>(polyh1.edges[i])];
+       b=polyh1.vertexes[std::get<1>(polyh1.edges[i])];
+
+       if(std::get<0>(polyh1.edges[i])==std::get<0>(polyh1.edges[j]) || 
+          std::get<1>(polyh1.edges[i])==std::get<0>(polyh1.edges[j])){//TODO: does this need to be like this?
+         c=polyh1.vertexes[std::get<1>(polyh1.edges[j])];
+       }else if(std::get<1>(polyh1.edges[i])==std::get<1>(polyh1.edges[j]) ||
+                std::get<0>(polyh1.edges[i])==std::get<1>(polyh1.edges[j])){
+         c=polyh1.vertexes[std::get<0>(polyh1.edges[j])];
+       }else{
+         continue;
+       }
+       
+       for (size_t k = 0; k < polyh2.edges.size(); k++) {
+          Vec3 d,e;
+          d = polyh2.vertexes[get<0>(polyh2.edges[k])];
+          e = polyh2.vertexes[get<1>(polyh2.edges[k])];
+          /*bool b1 = SignedVolume(a,b,d,e) < 0;
+          bool b2 = SignedVolume(b,c,d,e) < 0;
+          bool b3 = SignedVolume(c,a,d,e) < 0;
+          if(b1 == b2 && b2 == b3){
+            return true;*/
+          Vec3 out;
+          if(lineIntersectTriangle(d,e,a,b,c,out))
+            return true;
+          
+       }
+     }
+  }
+  return false;
 }
 
 
@@ -495,4 +607,5 @@ Sphere bounding_sphere(const ConvexPolyhedron& p) {
 
 
 // Cylinder bounding_cylinder(const ConvexPolyhedron& p, const Vec3 disp);
+
 

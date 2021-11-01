@@ -1,7 +1,6 @@
 #include "prism.hpp"
 #include "linesegment.hpp"
 #include "rotations.hpp"
-#include <vtkHexahedron.h>
 
 #include "debug.hpp"
 
@@ -64,7 +63,6 @@ inline Vec3 _add_offset(double x, double y, double z, Vec3 center, Quaternion or
 
 array<Vec3, 8> Prism::vertexes() const {
   array<Vec3, 8> points;
-
   points[0] = _add_offset( this->ex, this->ey, this->ez, this->center, this->orientation);
   points[1] = _add_offset(-this->ex, this->ey, this->ez, this->center, this->orientation);
   points[2] = _add_offset(-this->ex,-this->ey, this->ez, this->center, this->orientation);

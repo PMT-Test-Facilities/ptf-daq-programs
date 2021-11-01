@@ -54,10 +54,10 @@ ConvexPolyhedron _sweep(const Prism p, Vec3 disp) {
   for (size_t i = 0; i < 4; i++) {
     edges.push_back(make_pair(i,   i+4));
     edges.push_back(make_pair(i,   (i+1)%4));
-    edges.push_back(make_pair(i+4, ((i+1)%4)+4));
-    edges.push_back(make_pair(i+4,   i+4+4));
-    edges.push_back(make_pair(i+4,   (i+1)%4+4));
-    edges.push_back(make_pair(i+4+4, ((i+1)%4)+4+4));
+    edges.push_back(make_pair(i+4+4+4, ((i+1)%4)+4+4+4));
+    edges.push_back(make_pair(i+4+4+4, ((i)%4)+4+4));
+    edges.push_back(make_pair(i+4,   (i+1)%4+4));//first cube top
+    edges.push_back(make_pair(i+4+4, ((i+1)%4)+4+4));//last cube bottom
   }
 
   const vector<Vec3> normals = {
@@ -72,16 +72,55 @@ ConvexPolyhedron _sweep(const Prism p, Vec3 disp) {
   return { vertexes, edges, normals };
 }
 
+// creates the polyhedron resulting from sweeping a prism
+ConvexPolyhedron _sweep2(const Prism p, Vec3 disp) {
+  vector<IdxPair> edges;
+  edges.reserve(12);
+  auto pts = p.vertexes();
+  vector<Vec3> vertexes = {
+    pts[0], pts[1], pts[2], pts[3], pts[4], pts[5], pts[6], pts[7]
+  };
+  for(int i = 0; i < vertexes.size(); i++)
+    if(angle(pts[i]-p.center,disp)<PI/2)
+      vertexes[i]=vertexes[i]+disp;
+
+  for (size_t i = 0; i < 4; i++) {
+    edges.push_back(make_pair(i,   i+4));
+    edges.push_back(make_pair(i,   (i+1)%4));
+    edges.push_back(make_pair(i+4,   (i+1)%4+4));//first cube top
+  }
+
+  const vector<Vec3> normals = {
+    rotate_point( Vec3::basis_x(), Vec3::zero(), p.orientation),
+    rotate_point( Vec3::basis_y(), Vec3::zero(), p.orientation),
+    rotate_point( Vec3::basis_z(), Vec3::zero(), p.orientation),
+    rotate_point(-Vec3::basis_x(), Vec3::zero(), p.orientation),
+    rotate_point(-Vec3::basis_y(), Vec3::zero(), p.orientation),
+    rotate_point(-Vec3::basis_z(), Vec3::zero(), p.orientation)
+  };
+
+  return { vertexes, edges, normals };
+}
+
+// creates the polyhedron resulting from sweeping a prism
+Prism _sweepPrism(const Prism p, Vec3 disp) {
+  return { p.center+0.5*disp, p.ex+fabs(disp.x)/2, p.ey+fabs(disp.y)/2, p.ez+fabs(disp.z)/2, p.orientation};
+}
+
 // todo: use shape of prisms to reduce checks needed
 bool intersect(Prism x, Prism y, Vec3 disp) {
-  return intersect(_sweep(x, disp), polyhedron(y));
+  // __sweep doesn't work
+  const ConvexPolyhedron p2 = _sweep2(x,disp);
+  return intersect2(p2, polyhedron(y));
 }
 
 bool intersect(Prism x, Cylinder y, Vec3 disp) {
-  auto p = polyhedron(x);
+  std::cout << "DISPLACEMENT" << disp << std::endl;
+  const ConvexPolyhedron p2 = _sweep(x,disp);
+  
   // if (!intersect(bounding_cylinder(p, disp), bounding_sphere(y))) return false;
   auto c = polyhedron(y);
-  return intersect(p, c);
+  return intersect2(p2, c);
 }
 
 
@@ -301,7 +340,7 @@ bool intersect(Prism x, Sphere y, Vec3 disp) {
   //       we only report if there is or isn't an intersection, we don't care about when
 
   // First, transform sphere to frame where prism is centred at origin and oriented along global dimensions
-  y.center = rotate_point(y.center - x.center, Vec3::zero(), inverse(x.orientation));
+  //y.center = y.center - x.center;//rotate_point(y.center - x.center, Vec3::zero(), inverse(x.orientation));//todo add back in when you add roations
   // disp is prism displacement, so to find sphere displacement 
   disp = -disp;
 
@@ -527,6 +566,13 @@ bool intersect(Prism x, vector<Intersectable> ys, Vec3 disp) {
   auto visitor = disp_intersect_visitor(x, disp);
   for (size_t i = 0; i < ys.size(); i++) {
     if (boost::apply_visitor(visitor, ys[i])) return true;
+  }
+  return false;
+}
+
+bool intersect(std::array<Prism, 3> x, vector<Intersectable> ys, Vec3 disp) {
+  for (size_t i = 0; i < 3; i++) {
+    intersect(x[i],ys,disp);
   }
   return false;
 }

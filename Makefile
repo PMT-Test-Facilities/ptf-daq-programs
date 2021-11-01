@@ -5,11 +5,10 @@
 # $Log$
 #
 
-VPATH = degauss:motor:scan:pathcalc:move:collision:collision/serialization:collision/geometry:collision/pathgen:render
+VPATH = degauss:motor:scan:pathcalc:move:collision:collision/serialization:collision/geometry:collision/pathgen
 
 CFLAGS   = -DBOOST_VARIANT_USE_RELAXED_GET_BY_DEFAULT -DOS_LINUX -Dextname -g -O2 -Wall -Wuninitialized -std=gnu++0x -Ipathcalc -Iscan -Imove -Imotor -Idegauss -Icollision -Icollision/serialization -Icollision/geometry -Icollision/pathgen -I. -DDEBUG
 CXXFLAGS = $(CFLAGS)
-VTKFLAGS = -I/usr/local/include/vtk-9.0/
 
 # MIDAS location
 
@@ -30,7 +29,6 @@ CXX = g++
 
 ROOTLIBS  = $(shell $(ROOTSYS)/bin/root-config --libs) -lThread -Wl,-rpath,$(ROOTSYS)/lib
 ROOTGLIBS = $(shell $(ROOTSYS)/bin/root-config --glibs) -lThread -Wl,-rpath,$(ROOTSYS)/lib
-VTKLIBS = -L/home/idwcorni/VTK-9.0.3/build/lib -lvtkCommonColor-9.0 -lvtkCommonCore-9.0 -lvtkFiltersSources-9.0 -lvtkInteractionStyle-9.0 -lvtkRenderingContextOpenGL2-9.0 -lvtkRenderingCore-9.0 -lvtkRenderingFreeType-9.0 -lvtkRenderingGL2PSOpenGL2-9.0 -lvtkRenderingOpenGL2-9.0 -lvtkCommonExecutionModel-9.0 -lvtkInteractionStyle-9.0
 #CXXFLAGS += -DHAVE_ROOT -DUSE_ROOT -I$(ROOTSYS)/include
 
 # VME interface library
@@ -60,14 +58,12 @@ endif
 
 # support libraries
 
-LIBS = -lm -lz -lutil -lnsl -lpthread -lrt -L$(BOOST_DIR)/libs -lboost_regex -lboost_unit_test_framework
+LIBS = -lm -lz -lutil -lnsl -lpthread -lrt -L$(BOOST_DIR)/libs -lboost_regex -lboost_regex-mt -lboost_unit_test_framework
 
 # all: default target for "make"
 
 all:feMotor feMove feScan fedvm fePhidget fesimdaq.exe feptfwiener.exe testVI feDegauss
 
-CollisionObjectsViewer: CollisionObjectsViewer.o bounds.o geom.o intersection_displacement.o intersection_rotation.o intersection_static.o prism.o cyl.o  quaternion.o rotations.o sat.o serialization_internal.o rect.o vec3.o pathgen.o serialization.o
-	$(CXX) -o $@ $(CFLAGS) $(VTKFLAGS) $^ $(LIBS) $(VMELIBS) $(VTKLIBS)
 
 gefvme.o: %.o: $(MIDASSYS)/drivers/vme/vmic/%.c
 	$(CXX) -c -o $@ $(CFLAGS)  $<
@@ -76,7 +72,7 @@ gefvme.o: %.o: $(MIDASSYS)/drivers/vme/vmic/%.c
 feMotor: $(MIDASLIBS) $(MFE) feMotor.o $(DRV_DIR)/tcpip.o cd_Galil.o 
 	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS)
 
-feMove: $(MIDASLIBS) $(MFE) feMove.o TPathCalculator.o TRotationCalculator.o TGantryConfigCalculator.o bounds.o geom.o intersection_displacement.o intersection_rotation.o intersection_static.o prism.o cyl.o  quaternion.o rotations.o sat.o serialization_internal.o rect.o vec3.o pathgen.o serialization.o
+feMove: $(MIDASLIBS) $(MFE) feMove.o bounds.o geom.o intersection_displacement.o intersection_rotation.o intersection_static.o prism.o cyl.o  quaternion.o rotations.o sat.o serialization_internal.o rect.o vec3.o pathgen.o serialization.o
 	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS)
 
 #feMoveNew: $(MIDASLIBS) $(MFE) feMove.o TPathCalculator.o TRotationCalculator.o TGantryConfigCalculator.o
@@ -128,7 +124,7 @@ feDegauss: $(MIDASLIBS) $(MFE) degauss.o feDegauss.o
 	$(CXX) -o $@ -c $< $(CXXFLAGS)
 
 %.o: %.cpp
-	$(CXX) -o $@ -c $< $(CXXFLAGS) $(VTKFLAGS)
+	$(CXX) -o $@ -c $< $(CXXFLAGS)
 
 %.o: $(MIDASSYS)/drivers/vme/%.c
 	$(CXX) -o $@ -c $< $(CFLAGS)
@@ -138,3 +134,4 @@ clean:
 	rm -f *.o *.gch *.dSYM feMotor feMove feMoveNew feMoveOld feScan testVI fedvm fePhidget fesimdaq.exe feptfwiener.exe
 
 # end
+

@@ -59,6 +59,10 @@ ConvexPolyhedron polyhedron(const Cylinder c);
 
 
 ConvexPolyhedron sweep(const ConvexPolygon& p,    const Vec3 disp);
+
+
+ConvexPolyhedron _sweep(const Prism p, Vec3 disp);//TODO: removed, this is added for testing and should only be decalered in geom.cxx
+ConvexPolyhedron _sweep2(const Prism p, Vec3 disp);//TODO: removed, this is added for testing and should only be decalered in geom.cxx
 // ConvexPolyhedron sweep(const ConvexPolyhedron& p, const Vec3 disp);
 
 
@@ -82,6 +86,7 @@ bool separated(const std::vector<Vec3>& points1, const std::vector<Vec3>& points
 
 bool intersect(const ConvexPolygon& poly1, const ConvexPolygon& poly2);
 bool intersect(const ConvexPolyhedron& polyh1, const ConvexPolyhedron& polyh2);
+bool intersect2(const ConvexPolyhedron& polyh1, const ConvexPolyhedron& polyh2);
 bool intersect(const ConvexPolygon& polygon, const ConvexPolyhedron& polyhedron);
 // alias to the latter
 bool intersect(const ConvexPolyhedron& polyhedron, const ConvexPolygon& polygon);

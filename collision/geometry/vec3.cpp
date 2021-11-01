@@ -111,6 +111,9 @@ double norm2(const Vec3 p) {
   return (p.x*p.x) + (p.y*p.y) + (p.z*p.z);
 }
 
+double angle(const Vec3 p1, const Vec3 p2){
+  return acos(dot(p1,p2)/norm(p1)/norm(p2));
+}
 
 Vec3 normalized(const Vec3 p) {
   return p / norm(p);

@@ -153,7 +153,7 @@ bool is_destination_valid(
   const vector<Intersectable>& static_geometry
 ) {
   DEBUG_ENTER(__PRETTY_FUNCTION__);
-  /*if (false && fabs(gantry1.position.y - gantry0.position.y) < GANTRY_MIN_Y_SEPARATION) {//TODO: why was this condidtion reqiuire, maybe do coordinate tranform between the positions
+  if (fabs(gantry1.position.y - gantry0.position.y) < GANTRY_MIN_Y_SEPARATION) {//TODO: why was this condidtion reqiuire, maybe do coordinate tranform between the positions
     DEBUG_COUT("Y diff less than GANTRY_MIN_Y_SEPARATION.");
     DEBUG_LEAVE;
     return false;
@@ -163,9 +163,9 @@ bool is_destination_valid(
     DEBUG_COUT("X diff less than GANTRY_MIN_X_SEPARATION.");
     DEBUG_LEAVE;
     return false;
-  }*/
-  DEBUG_COUT(gantry0.position.x<<" "<<gantry0.position.y<<" "<<gantry0.position.z);
-  DEBUG_COUT(gantry1.position.x<<" "<<gantry1.position.y<<" "<<gantry1.position.z);
+  }
+  //DEBUG_COUT(gantry0.position.x<<" "<<gantry0.position.y<<" "<<gantry0.position.z);
+  //DEBUG_COUT(gantry1.position.x<<" "<<gantry1.position.y<<" "<<gantry1.position.z);
   DEBUG_COUT("Distance constraints ok. Checking collisions.");
   if (check_any_collisions(gantry0, gantry1, static_geometry)) {
     DEBUG_COUT("Found collision.");
@@ -202,8 +202,15 @@ bool is_move_valid(
     
     if (norm2(dp0) > 0) {
       DEBUG_COUT("Found nonzero displacement for gantry 0: " << SD::serialize(dp0));
-      if (intersect(point_to_optical_box(pt.gantry0, false), static_geometry, dp0)
-          || intersect(point_to_optical_box(pt.gantry1, true), static_geometry)) {
+      if (   intersect(point_to_prisms(prev.gantry0, false)[0], static_geometry, dp0)//TODO: not sure why the staic disp function doesn't work
+          || intersect(point_to_prisms(prev.gantry0, false)[1], static_geometry, dp0)
+          || intersect(point_to_prisms(prev.gantry0, false)[2], static_geometry, dp0)
+          || intersect(point_to_optical_box(pt.gantry1, true), static_geometry)
+         ) {
+           std::cout << intersect(point_to_prisms(prev.gantry0, false)[0], static_geometry, dp0)<< " " 
+                     << intersect(point_to_prisms(prev.gantry0, false)[1], static_geometry, dp0)<< " "
+                     << intersect(point_to_prisms(prev.gantry0, false)[2], static_geometry, dp0)<< " "
+                     << intersect(point_to_optical_box(pt.gantry1, true), static_geometry, dp0)<< "\n";
         DEBUG_COUT("Found collision.");
         DEBUG_LEAVE;
         return false;
@@ -212,7 +219,9 @@ bool is_move_valid(
     else if (norm2(dp1) > 0) {
       DEBUG_COUT("Found nonzero displacement for gantry 1: " << SD::serialize(dp1));
       if (intersect(point_to_optical_box(pt.gantry0, false), static_geometry)
-          || intersect(point_to_optical_box(pt.gantry1, true), static_geometry, dp1)) {
+          || intersect(point_to_prisms(prev.gantry1, true)[0], static_geometry, dp1)
+          || intersect(point_to_prisms(prev.gantry1, true)[1], static_geometry, dp1)
+          || intersect(point_to_prisms(prev.gantry1, true)[2], static_geometry, dp1)) {
         DEBUG_COUT("Found collision.");
         DEBUG_LEAVE;
         return false;
@@ -436,7 +445,7 @@ bool check_any_collisions(const Point& gantry0, const Point& gantry1, const vect
       if (intersect(g0[i], static_geometry[gi]) || intersect(g1[i], static_geometry[gi])) {
         DEBUG_COUT(
           "Collision found, with prism " << i
-          << " for gantry " << (intersect(g0[i], static_geometry[gi]) ? 0 : 1)
+          << " for gantry " << (intersect(g0[i], static_geometry[gi]) ? 0 : 1) << " with object " << gi 
         );
         DEBUG_LEAVE;
         return true;
@@ -554,7 +563,7 @@ bool equal_path_positions(PathGeneration::MovePoint &p1, PathGeneration::MovePoi
     return true;
   }
       std::cout << "Push! "<< p1.gantry0.position.x <<" "<< p1.gantry0.position.y <<" "<< p1.gantry0.position.z<<" "<< p1.gantry0.angle.theta <<" "<< p1.gantry0.angle.phi << " " << p1.gantry1.position.x <<" "<< p1.gantry1.position.y <<" "<< p1.gantry1.position.z <<" "<< p1.gantry1.angle.theta <<" "<< p1.gantry1.angle.phi << "\n"
-                         << p2.gantry0.position.x <<" "<< p2.gantry0.position.y <<" "<< p2.gantry0.position.z<<" "<< p2.gantry0.angle.theta <<" "<< p2.gantry0.angle.phi << " " << p2.gantry1.position.x <<" "<< p2.gantry1.position.y <<" "<< p2.gantry1.position.z <<" "<< p2.gantry1.angle.theta <<" "<< p2.gantry1.angle.phi << "\n";
+                   "      "<< p2.gantry0.position.x <<" "<< p2.gantry0.position.y <<" "<< p2.gantry0.position.z<<" "<< p2.gantry0.angle.theta <<" "<< p2.gantry0.angle.phi << " " << p2.gantry1.position.x <<" "<< p2.gantry1.position.y <<" "<< p2.gantry1.position.z <<" "<< p2.gantry1.angle.theta <<" "<< p2.gantry1.angle.phi << "\n";
   return false;
 }
 
@@ -585,16 +594,17 @@ MovePath generate_move(
 
   if (is_moving == Gantry0) {
     for (size_t i = 0; i < 5; i++) {
+      std::cout << "Trying dim in order: " << i << std::endl;
       next_path_position = std::move(_generate_move_0(ret[i].gantry0, moving.end, unmoving, order[i]));
-      if (!equal_path_positions(ret[i],next_path_position)) {
+      if (!equal_path_positions(ret.back(),next_path_position)) {
         ret.push_back(std::move(next_path_position));
       }
     }
   } else {
     for (size_t i = 0; i < 5; i++) {
-      ret.push_back(std::move(_generate_move_1(ret[i].gantry1, moving.end, unmoving, order[i])));
-      if (equal_path_positions(ret[i],ret[i+1])) {
-        ret.pop_back();
+      next_path_position = std::move(_generate_move_1(ret[i].gantry1, moving.end, unmoving, order[i]));
+      if (!equal_path_positions(ret.back(),next_path_position)) {
+        ret.push_back(std::move(next_path_position));
       }
     }
   }
@@ -608,31 +618,34 @@ MovePath generate_move(
 
 array<Prism, 3> point_to_prisms(const Point& p, bool gantry1) {
   array<Prism, 3> ret;
-  Vec3 disp = { GANTRY_X_DIM / 2, GANTRY_Y_DIM / 2 + SUPPORT_BEAM_WIDTH / 2, 0 };
+  Vec3 disp = { GANTRY_X_DIM / 2 + SUPPORT_BEAM_WIDTH / 2, GANTRY_Y_DIM / 2 + SUPPORT_BEAM_WIDTH / 2, 0 };
 
-  Quaternion q1, q2;  
+  Quaternion q1, q2;
+  q1 = Quaternion(1.0,0.0,0.0,0.0);
+  q2 = Quaternion(1.0,0.0,0.0,0.0);
   
+
   if (gantry1) {
     q1 = Quaternion::from_azimuthal(PI) * Quaternion::from_azimuthal(p.angle.theta);
-    q2 = Quaternion::from_azimuthal(PI) * Quaternion::from_spherical_angle(p.angle.theta, 0);
+    q2 = Quaternion::from_spherical_angle(p.angle.theta, 0);//Quaternion::from_azimuthal(PI) * 
   } else { 
     q1 = Quaternion::from_azimuthal(p.angle.theta);
     q2 = Quaternion::from_spherical_angle(p.angle.theta, 0);
   }
   // optical box
   ret[0] = {
-    rotate_point(p.position + disp, p.position, q1),
-    GANTRY_X_DIM, GANTRY_Y_DIM, GANTRY_Z_DIM,
+    p.position+disp,
+    GANTRY_X_DIM/2, GANTRY_Y_DIM/2, GANTRY_Z_DIM/2,
     q2
   };
   // rotary axis
   ret[1] = {
-    p.position,
-    2 * ROTARY_AXIS_L, ROTARY_AXIS_R, ROTARY_AXIS_R,
+    p.position+disp,
+    ROTARY_AXIS_L/2, ROTARY_AXIS_R/2, ROTARY_AXIS_L/4,
     q1
   };
   ret[2] = {
-    p.position + (Vec3){0, 0, SUPPORT_BEAM_HEIGHT},
+    p.position + (Vec3){0, 0, -SUPPORT_BEAM_HEIGHT}+disp,
     SUPPORT_BEAM_WIDTH, SUPPORT_BEAM_WIDTH, SUPPORT_BEAM_HEIGHT,
     q1
   };
@@ -641,17 +654,19 @@ array<Prism, 3> point_to_prisms(const Point& p, bool gantry1) {
 
 
 Prism point_to_optical_box(const Point& p, bool gantry1) {
-  Vec3 disp = { 0, GANTRY_Y_DIM / 2 + SUPPORT_BEAM_WIDTH / 2, 0 };
+  Vec3 disp = { GANTRY_X_DIM / 2 + SUPPORT_BEAM_WIDTH / 2, GANTRY_Y_DIM / 2 + SUPPORT_BEAM_WIDTH / 2,0 };
 
   Quaternion q1, q2;
+  q1 = Quaternion(1.0,0.0,0.0,0.0);
+  q2 = Quaternion(1.0,0.0,0.0,0.0);
 
-  if (gantry1) {
+  /*if (gantry1) {
     q1 = Quaternion::from_azimuthal(PI) * Quaternion::from_azimuthal(p.angle.theta);
     q2 = Quaternion::from_azimuthal(PI) * Quaternion::from_spherical_angle(p.angle.theta, 0);
   } else { 
     q1 = Quaternion::from_azimuthal(p.angle.theta);
     q2 = Quaternion::from_spherical_angle(p.angle.theta, 0);
-  }
+  }*/
 
   return {
     rotate_point(p.position + disp, p.position, q1),
@@ -711,3 +726,4 @@ MovePoint from_pair(const pair<Point, Point>& p, const WhichGantry which_gantry)
 
 
 } // end namespace PathGeneration
+
