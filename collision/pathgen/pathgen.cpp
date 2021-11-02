@@ -202,15 +202,11 @@ bool is_move_valid(
     
     if (norm2(dp0) > 0) {
       DEBUG_COUT("Found nonzero displacement for gantry 0: " << SD::serialize(dp0));
-      if (   intersect(point_to_prisms(prev.gantry0, false)[0], static_geometry, dp0)//TODO: not sure why the staic disp function doesn't work
+      if (   intersect(point_to_prisms(prev.gantry0, false)[0], static_geometry, dp0)
           || intersect(point_to_prisms(prev.gantry0, false)[1], static_geometry, dp0)
           || intersect(point_to_prisms(prev.gantry0, false)[2], static_geometry, dp0)
           || intersect(point_to_optical_box(pt.gantry1, true), static_geometry)
          ) {
-           std::cout << intersect(point_to_prisms(prev.gantry0, false)[0], static_geometry, dp0)<< " " 
-                     << intersect(point_to_prisms(prev.gantry0, false)[1], static_geometry, dp0)<< " "
-                     << intersect(point_to_prisms(prev.gantry0, false)[2], static_geometry, dp0)<< " "
-                     << intersect(point_to_optical_box(pt.gantry1, true), static_geometry, dp0)<< "\n";
         DEBUG_COUT("Found collision.");
         DEBUG_LEAVE;
         return false;
@@ -562,8 +558,6 @@ bool equal_path_positions(PathGeneration::MovePoint &p1, PathGeneration::MovePoi
   ){
     return true;
   }
-      std::cout << "Push! "<< p1.gantry0.position.x <<" "<< p1.gantry0.position.y <<" "<< p1.gantry0.position.z<<" "<< p1.gantry0.angle.theta <<" "<< p1.gantry0.angle.phi << " " << p1.gantry1.position.x <<" "<< p1.gantry1.position.y <<" "<< p1.gantry1.position.z <<" "<< p1.gantry1.angle.theta <<" "<< p1.gantry1.angle.phi << "\n"
-                   "      "<< p2.gantry0.position.x <<" "<< p2.gantry0.position.y <<" "<< p2.gantry0.position.z<<" "<< p2.gantry0.angle.theta <<" "<< p2.gantry0.angle.phi << " " << p2.gantry1.position.x <<" "<< p2.gantry1.position.y <<" "<< p2.gantry1.position.z <<" "<< p2.gantry1.angle.theta <<" "<< p2.gantry1.angle.phi << "\n";
   return false;
 }
 
@@ -634,7 +628,7 @@ array<Prism, 3> point_to_prisms(const Point& p, bool gantry1) {
   }
   // optical box
   ret[0] = {
-    p.position+disp,
+    p.position+disp,//TODO: figure out why this was nessisary: rotate_point(p.position+disp, p.position, q1),
     GANTRY_X_DIM/2, GANTRY_Y_DIM/2, GANTRY_Z_DIM/2,
     q2
   };
@@ -660,16 +654,16 @@ Prism point_to_optical_box(const Point& p, bool gantry1) {
   q1 = Quaternion(1.0,0.0,0.0,0.0);
   q2 = Quaternion(1.0,0.0,0.0,0.0);
 
-  /*if (gantry1) {
+  if (gantry1) {
     q1 = Quaternion::from_azimuthal(PI) * Quaternion::from_azimuthal(p.angle.theta);
-    q2 = Quaternion::from_azimuthal(PI) * Quaternion::from_spherical_angle(p.angle.theta, 0);
+    q2 = Quaternion::from_spherical_angle(p.angle.theta, 0);//Quaternion::from_azimuthal(PI) *
   } else { 
     q1 = Quaternion::from_azimuthal(p.angle.theta);
     q2 = Quaternion::from_spherical_angle(p.angle.theta, 0);
-  }*/
+  }
 
   return {
-    rotate_point(p.position + disp, p.position, q1),
+    p.position + disp,//rotate_point(p.position + disp, p.position, q1),
     GANTRY_X_DIM/2, GANTRY_Y_DIM/2, GANTRY_Z_DIM/2,
     q2
   };

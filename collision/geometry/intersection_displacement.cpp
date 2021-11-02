@@ -51,7 +51,7 @@ ConvexPolyhedron _sweep(const Prism p, Vec3 disp) {
   for (size_t i = 0; i < 8; i++) {
     edges.push_back(make_pair(i,i+8));
   }
-  for (size_t i = 0; i < 4; i++) {
+  for (size_t i = 0; i < 8; i++) {
     edges.push_back(make_pair(i,   i+4));
     edges.push_back(make_pair(i,   (i+1)%4));
     edges.push_back(make_pair(i+4+4+4, ((i+1)%4)+4+4+4));
@@ -115,7 +115,6 @@ bool intersect(Prism x, Prism y, Vec3 disp) {
 }
 
 bool intersect(Prism x, Cylinder y, Vec3 disp) {
-  std::cout << "DISPLACEMENT" << disp << std::endl;
   const ConvexPolyhedron p2 = _sweep(x,disp);
   
   // if (!intersect(bounding_cylinder(p, disp), bounding_sphere(y))) return false;
