@@ -1,5 +1,6 @@
 #include "sat.hpp"
 #include "col.hpp"
+#include <algorithm>
 
 #ifdef DEBUG
 #include "serialization.hpp"
@@ -86,6 +87,87 @@ ConvexPolyhedron polyhedron(const Prism p) {
   return ret;
 }
 
+void push_edge(vector<IdxPair> &edges, IdxPair pair){
+  if(std::find(edges.begin(), edges.end(), pair) == edges.end()) {
+    edges.push_back(pair);
+  }
+}
+
+ConvexPolyhedron polyhedron(const ColStlMesh mesh){
+  vector<Vec3> normals;
+  vector<Vec3> vertexes;
+  vector<IdxPair> edges;
+
+  /*const vector<Vec3> normals = {
+    rotate_point( Vec3::basis_x(), Vec3::zero(), p.orientation),
+    rotate_point( Vec3::basis_y(), Vec3::zero(), p.orientation),
+    rotate_point( Vec3::basis_z(), Vec3::zero(), p.orientation),
+    rotate_point(-Vec3::basis_x(), Vec3::zero(), p.orientation),
+    rotate_point(-Vec3::basis_y(), Vec3::zero(), p.orientation),
+    rotate_point(-Vec3::basis_z(), Vec3::zero(), p.orientation)
+  };*/
+  for(size_t i = 0; i < mesh.num_vrts(); i++){
+    const float* v = mesh.vrt_coords(i);
+    vertexes.push_back(Vec3(v[0],v[1],v[2]));
+  }
+
+  for(size_t i = 0; i < mesh.num_tris(); i++) {
+      const unsigned int* indexes =  mesh.tri_corner_inds(i);
+      push_edge(edges, make_pair(indexes[0],   indexes[1]));
+      push_edge(edges, make_pair(indexes[0],   indexes[2]));
+      push_edge(edges, make_pair(indexes[1],   indexes[2]));
+      const float* n = mesh.tri_normal (i);
+      normals.push_back(Vec3(n[0],n[1],n[2]));
+  }
+
+  const ConvexPolyhedron ret = { vertexes, edges, normals };
+
+  return ret;
+}
+
+ConvexPolyhedron translate(const ConvexPolyhedron mesh,Vec3 disp){
+  const vector<Vec3> pts = mesh.vertexes;
+
+  vector<Vec3> vertices;
+
+  for(Vec3 v:pts){
+    vertices.push_back(v+disp);
+  }
+
+  const ConvexPolyhedron ret = { vertices, mesh.edges, mesh.normals };
+  return ret;
+}
+
+ConvexPolyhedron rotate(const ConvexPolyhedron mesh,Quaternion orientation,Vec3 rotation_point){
+  const vector<Vec3> pts = mesh.vertexes;
+  const vector<Vec3> norms = mesh.normals;
+
+  vector<Vec3> normals;
+  vector<Vec3> vertices;
+
+  for(Vec3 v:pts){
+    vertices.push_back(rotate_point( v, rotation_point, orientation));
+  }
+  for(Vec3 n:norms)
+    normals.push_back(rotate_point( n, Vec3::zero(), orientation));//should this rotate the opposite way?
+
+  const ConvexPolyhedron ret = { vertices, mesh.edges, normals };
+  return ret;
+  
+}
+
+ConvexPolyhedron scale(const ConvexPolyhedron mesh,Vec3 scale_vec,Vec3 scale_point){
+  const vector<Vec3> pts = mesh.vertexes;
+
+  vector<Vec3> vertices;
+
+  for(Vec3 v:pts){
+    vertices.push_back( scale(v-scale_point,scale_vec) + scale_point);
+  }
+
+  const ConvexPolyhedron ret = { vertices, mesh.edges, mesh.normals };
+  return ret;
+}
 
 ConvexPolyhedron polyhedron(const Cylinder c) {
   vector<Vec3> vertexes;

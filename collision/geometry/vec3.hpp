@@ -98,6 +98,7 @@ double operator*(const Vec3& p1, const Vec3& p2);
 double dot(const Vec3& p1, const Vec3& p2);
 Vec3   cross(const Vec3 p1, const Vec3 p2);
 double   angle(const Vec3 p1, const Vec3 p2);
+Vec3 scale(const Vec3 p1, const Vec3 scale);
 
 Vec3 operator-(const Vec3& p);
 Vec3 operator*(const double d, const Vec3& p);

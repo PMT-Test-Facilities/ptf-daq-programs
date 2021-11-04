@@ -530,6 +530,8 @@ optional<vector<Intersectable>> load_collision_from_odb(HNDLE hDB) {
       ret.push_back(get<Sphere>(res));
     } else if (has<Cylinder>(res)) {
       ret.push_back(get<Cylinder>(res));
+    } else if (has<ConvexPolyhedron>(res)) {
+      ret.push_back(get<ConvexPolyhedron>(res));
     } else {
       cm_msg(
         MERROR, "feMove:load_collision_from_odb", "Could not convert type to Intersectable for collidable object %zd (`%s'). "

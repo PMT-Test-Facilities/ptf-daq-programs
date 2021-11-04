@@ -15,6 +15,7 @@
 
 #include "col.hpp"
 #include "debug.hpp"
+#include "stl_reader/stl_reader.h"
 
 #include "vec3.hpp"
 #include "quaternion.hpp"
@@ -32,6 +33,7 @@
 // in principle 1.0 should be fine, but this allows for some error in measurements
 #define ROT_SCALE_EXTRA_FAC 1.02
 
+typedef stl_reader::StlMesh <float, unsigned int> ColStlMesh;
 
 typedef struct {
   Vec3 center;
@@ -46,7 +48,25 @@ typedef struct {
   Quaternion orientation;
 } Cylinder;
 
-typedef boost::variant<Vec3, LineSegment, Prism, Sphere, Cylinder> Intersectable;
+// using IdxPair = std::pair<uint32_t, uint32_t>;
+typedef std::pair<uint32_t, uint32_t> IdxPair;
+
+
+// vertexes should be stored in positive orientation order (such that the cross product of any two successive points
+//    is the normal), the first/last should not be duplicated, and they should be coplanar.
+// these are not enforced, but the test will not work if they are not.
+typedef struct ConvexPolygon {
+  std::vector<Vec3> vertexes;
+} ConvexPolygon;
+
+// convexity and vailidity not enforced
+typedef struct ConvexPolyhedron {
+  std::vector<Vec3>    vertexes;
+  std::vector<IdxPair> edges;  // indexes to vertexes
+  std::vector<Vec3>    normals;
+} ConvexPolyhedron;
+
+typedef boost::variant<Vec3, LineSegment, Prism, Sphere, Cylinder, ConvexPolyhedron> Intersectable;
 
 bool intersect(Vec3 x, Prism y);
 bool intersect(LineSegment x, Sphere y);
@@ -163,7 +183,8 @@ namespace GeomTypes {
     Prism,
     Sphere,
     Cylinder,
-
+    ConvexPolyhedron,
+    String, // not geometry type but used for parsing
     Scalar, // not geometry type but used for parsing
 
     Invalid // invalid geometry
@@ -176,12 +197,16 @@ namespace GeomTypes {
     {"Prism",       Prism},
     {"Sphere",      Sphere},
     {"Cylinder",    Cylinder},
+    {"String",    String},
+    {"ConvexPolyhedron",    ConvexPolyhedron},
     {"vec3",        Vec3},
     {"linesegment", LineSegment},
     {"quaternion",  Quaternion},
     {"prism",       Prism},
     {"sphere",      Sphere},
-    {"cylinder",    Cylinder}
+    {"cylinder",    Cylinder},
+    {"string",    String},
+    {"convexpolyhedron",    ConvexPolyhedron}
   });
 }
 

@@ -44,7 +44,7 @@ typedef ::GeomTypes::GeomType GeomType;
 
 
 // result of parsing geometry text
-typedef boost::variant<Vec3, LineSegment, Quaternion, Prism, Sphere, Cylinder, double, ErrorType> GeomResult;
+typedef boost::variant<Vec3, LineSegment, Quaternion, Prism, Sphere, Cylinder, ConvexPolyhedron, string, double, ErrorType> GeomResult;
 
 
 // Serialization format:
@@ -98,6 +98,7 @@ ErrorType deserialize(const string& s, Quaternion& a);
 ErrorType deserialize(const string& s, Prism& p);
 ErrorType deserialize(const string& s, Sphere& sp);
 ErrorType deserialize(const string& s, Cylinder& c);
+ErrorType deserialize(const string& s, ConvexPolyhedron& p);
 
 
 }

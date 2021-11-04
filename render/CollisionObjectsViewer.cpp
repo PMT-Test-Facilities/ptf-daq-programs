@@ -416,6 +416,8 @@ vtkActor* render(SD::GeomResult res){
     return render(get<Sphere>(res));
   } else if (has<Cylinder>(res)) {
     return render(get<Cylinder>(res));
+  } else if (has<ConvexPolyhedron>(res)) {
+    return render(get<ConvexPolyhedron>(res));
   } else {
     return nullptr;
   }
@@ -499,6 +501,8 @@ bool render_limit_box(){
       ret.push_back(get<Sphere>(res));
     } else if (has<Cylinder>(res)) {
       ret.push_back(get<Cylinder>(res));
+    } else if (has<ConvexPolyhedron>(res)) {
+      ret.push_back(get<ConvexPolyhedron>(res));
     } else {
       cm_msg(
         MERROR, "feMove:load_collision_from_odb", "Could not convert type to Intersectable for collidable object %zd (`%s'). "
@@ -594,6 +598,12 @@ int main(int args, char** argc)
     render(collidable[i]);
   }
   render_limit_box();
+
+  ColStlMesh mesh_monkey("/home/midptf/Documents/Student/Elena/ptf-daq-programs-viz/render/monkey_head.stl");
+  ConvexPolyhedron poly_monkey = polyhedron(mesh_monkey);
+  poly_monkey = scale(poly_monkey, Vec3(0.2,0.2,-0.2));
+  poly_monkey = translate(poly_monkey, Vec3(0.5,0.5,0.0));
+  render( poly_monkey );
 
   /*
    *Uses odb and creates a fake path to get the grantry collidable box

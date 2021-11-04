@@ -127,6 +127,7 @@ pair<unordered_map<string, string>, bool> find_pairs(const string& s) {
 
     if (pair.first == -1) {
       // error!
+      std::cout << "there\n";
       return make_pair(map, true);
     }
     else if (pair.first == -2) {
@@ -137,11 +138,12 @@ pair<unordered_map<string, string>, bool> find_pairs(const string& s) {
     auto idx = str.find(':');
 
     if (idx < 0) {
+      std::cout << "here\n";
       return make_pair(map, true);
     }
     
     auto str1 = str.substr(0, idx), str2 = str.substr(idx+1);
-    // cerr << "The strings are: '" << str1 << "', '" << str2 << "'." << endl;
+    //std::cout << "The strings are: '" << str1 << "', '" << str2 << "'." << std::endl;
     map[str1] = str2;
 
     i = pair.first + 1;
@@ -149,7 +151,6 @@ pair<unordered_map<string, string>, bool> find_pairs(const string& s) {
       break;
     }
   }
-
   return make_pair(map, false);
 }
 
@@ -206,6 +207,7 @@ unordered_map<string, GeomResult> parse_geometry(const string& s, const unordere
   }
 
   if (prop_res.second) {
+    std::cout << prop_res.first.begin()->first << std::endl;
     ret["*"] = UnknownError;
     return ret;
   }
@@ -250,6 +252,7 @@ unordered_map<string, GeomResult> parse_geometry(const string& s, const unordere
     Prism p;
     Sphere s;
     Cylinder c;
+    string string_value;
 
     switch (geom_type) {
       case GeomTypes::Vec3:
@@ -321,6 +324,10 @@ unordered_map<string, GeomResult> parse_geometry(const string& s, const unordere
           ret["*"] = SyntaxError;
           return ret;
         }
+
+      case GeomTypes::String:
+        ret[prop_name] = str;
+        return ret;
 
       default:
         ret["*"] = NoParser;

@@ -1,6 +1,7 @@
 #include "serialization.hpp"
 #include "serialization_internal.hpp"
 #include "has.hpp"
+#include "sat.hpp"
 
 
 namespace Serialization {
@@ -79,6 +80,7 @@ GeomResult deserialize(const string& s) {
   Prism p;
   Sphere sp;
   Cylinder c;
+  ConvexPolyhedron poly;
 
   // todo: is there a better way of doing this?
   ErrorType err;
@@ -112,6 +114,11 @@ GeomResult deserialize(const string& s) {
       err = deserialize(reduced, c);
       if (err != NoError) return GeomResult { err };
       return GeomResult { c };
+
+    case GeomTypes::ConvexPolyhedron:
+      err = deserialize(reduced, poly);
+      if (err != NoError) return GeomResult { err };
+      return GeomResult { poly };
 
     default:
       return GeomResult { NoParser };
@@ -324,5 +331,33 @@ ErrorType deserialize(const string& s, Cylinder& c) {
   return ErrorType::NoError;
 }
 
+ErrorType deserialize(const string& s, ConvexPolyhedron& p) {
+  static const unordered_map<string, GeomType> required_props({
+    {"file", GeomTypes::String},
+    {"center", GeomTypes::Vec3},
+    {"sx",      GeomTypes::Scalar},
+    {"sy",      GeomTypes::Scalar},
+    {"sz",      GeomTypes::Scalar},
+    {"orientation", GeomTypes::Quaternion}
+  });
+  
+  auto res = Internal::parse_geometry(s, required_props);
+  
+  if (res.find("*") != res.end()) {
+    return get<ErrorType>(res["*"]);
+  }
+
+  string file_name = get<string>(res["file"]);
+  std::cout << file_name <<" here\n";
+  Vec3 scale_vec(get<double>(res["sx"]),get<double>(res["sy"]),get<double>(res["sz"]));
+  Vec3 center = get<Vec3>(res["center"]);
+  Quaternion orientation = get<Quaternion>(res["orientation"]);
+
+  ColStlMesh mesh(file_name);
+  ConvexPolyhedron p1 = polyhedron(mesh);
+  p = translate( rotate( scale(p1,scale_vec), orientation ) , center);
+
+  return ErrorType::NoError;
+}
 
 }
