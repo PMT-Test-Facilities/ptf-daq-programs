@@ -2,8 +2,9 @@
 #include "col.hpp"
 #include "has.hpp"
 
-#define HAS_PHI false
-#define HAS_THETA false
+#define HAS_PHI_0 true
+#define HAS_PHI_1 false
+#define HAS_THETA true
 
 namespace PG = PathGeneration;
 namespace SD = Serialization;
@@ -61,13 +62,13 @@ INT frontend_init() {
   INT bufsize = 10 * sizeof(float);
   db_get_value(hDB, 0, "/Equipment/Move/Settings/Velocity",        State::Settings::velocity.data(),     &bufsize, TID_FLOAT, FALSE);
   bufsize = 10 * sizeof(float);
-  db_get_value(hDB, 0, "/equipment/move/settings/Acceleration",    State::Settings::acceleration.data(), &bufsize, TID_FLOAT, FALSE);
+  db_get_value(hDB, 0, "/Equipment/Move/Settings/Acceleration",    State::Settings::acceleration.data(), &bufsize, TID_FLOAT, FALSE);
   bufsize = 10 * sizeof(float);
-  db_get_value(hDB, 0, "/equipment/move/settings/Motor Scaling",   State::Settings::scale.data(),        &bufsize, TID_FLOAT, FALSE);
+  db_get_value(hDB, 0, "/Equipment/Move/Settings/Motor Scaling",   State::Settings::scale.data(),        &bufsize, TID_FLOAT, FALSE);
   bufsize = 10 * sizeof(float);
-  db_get_value(hDB, 0, "/equipment/move/settings/Axis Channels",   State::Settings::channels.data(),     &bufsize, TID_INT, FALSE);
+  db_get_value(hDB, 0, "/Equipment/Move/Settings/Axis Channels",   State::Settings::channels.data(),     &bufsize, TID_INT, FALSE);
   bufsize = 10 * sizeof(float);
-  db_get_value(hDB, 0, "/equipment/move/settings/Limit Positions", State::Settings::limits.data(),       &bufsize, TID_FLOAT, FALSE);
+  db_get_value(hDB, 0, "/Equipment/Move/Settings/Limit Positions", State::Settings::limits.data(),       &bufsize, TID_FLOAT, FALSE);
 
   // load motor & phidget keys
   db_find_key(hDB, 0, "/Equipment/Motors00/Settings/Destination", &get<0>(State::Keys::Motor::destination));
@@ -97,18 +98,18 @@ INT frontend_init() {
   db_find_key(hDB, 0, "/Equipment/Motors00/Settings/Acceleration", &get<0>(State::Keys::Motor::acceleration));
   db_find_key(hDB, 0, "/Equipment/Motors01/Settings/Acceleration", &get<1>(State::Keys::Motor::acceleration));
 
-  db_find_key(hDB, 0, "/Equipment/OpticalBox00/Variables", &get<0>(State::Keys::Motor::phidget));
+  db_find_key(hDB, 0, "/Equipment/OpticalBox09/Variables", &get<0>(State::Keys::Motor::phidget));
   db_find_key(hDB, 0, "/Equipment/Phidget01/Variables", &get<1>(State::Keys::Motor::phidget));
 
   // set hotlinks
 
   db_open_record(hDB, State::Keys::start, &State::CallbackVars::start, sizeof(BOOL), MODE_READ, &start_move, nullptr);
-  db_open_record(hDB, State::Keys::stop,  &State::CallbackVars::stop,  sizeof(BOOL), MODE_READ, &stop_move, nullptr);
+  db_open_record(hDB, State::Keys::stop,  &State::CallbackVars::stop,  sizeof(BOOL), MODE_READ, stop_move, nullptr);
 
   db_open_record(hDB, State::Keys::reinitialize, &State::CallbackVars::initialize, sizeof(BOOL), MODE_READ, initialize, nullptr);
 
-  //db_open_record(hDB, get<0>(State::Keys::Motor::moving), State::CallbackVars::g0_moving.data(), 8 * sizeof(BOOL), MODE_READ, monitor, (void*) &GANTRY_0);
-  //db_open_record(hDB, get<1>(State::Keys::Motor::moving), State::CallbackVars::g1_moving.data(), 8 * sizeof(BOOL), MODE_READ, monitor, (void*) &GANTRY_1);
+  db_open_record(hDB, get<0>(State::Keys::Motor::moving), State::CallbackVars::g0_moving.data(), 8 * sizeof(BOOL), MODE_READ, monitor, (void*) &GANTRY_0);
+  db_open_record(hDB, get<1>(State::Keys::Motor::moving), State::CallbackVars::g1_moving.data(), 8 * sizeof(BOOL), MODE_READ, monitor, (void*) &GANTRY_1);
 
   array<float, 10> temp_v, temp_a;
 
@@ -195,16 +196,18 @@ void start_move(HNDLE hDB, HNDLE hKey, void* info) {
   db_get_data(hDB, State::Keys::position, position.data(), &bufsize, TID_FLOAT);
   bufsize = 10 * sizeof(float);
   db_get_data(hDB, State::Keys::destination, destination.data(), &bufsize, TID_FLOAT);
-  
+
   auto start = PG::move_point_from_array(position);
   auto end   = PG::move_point_from_array(destination);
-
+  
   auto path = PG::single_move(start, end, collidable);
-  if (has<SD::ErrorType>(path)) {
-    cm_msg(MERROR, "feMove:start_move", "Could not generate path. Error message: \"%s\".", PathGeneration::error_message(get<PG::ErrorType>(path)).c_str());
+  std::cout << "Varrient type" << path.which() << std::endl;
+  if (path.which()==1) {//TODO reimplment error message
+    cm_msg(MERROR, "feMove:start_move", "Could not generate path. Error message:\"%s\".", PathGeneration::error_message(get<PG::ErrorType>(path)).c_str());
     return;
   } else {
     State::move_path  = get<PG::MovePath>(path);
+
     State::path_index = 0;
     cm_msg(MINFO, "feMove:start_move", "Path generation successful. Move split into %zd steps.", State::move_path.size());
     move(hDB);
@@ -264,7 +267,7 @@ void initialize(HNDLE hDB, HNDLE hKey, void* info) {
     cm_msg(MERROR, "feMove:initialize", "Could not initialize azimuthal angle (rotation).");
     goto failure;
   }
-  if (HAS_PHI && !initialize_tilt(hDB)) {
+  if ((HAS_PHI_0 || HAS_PHI_1) && !initialize_tilt(hDB)) {
     cm_msg(MERROR, "feMove:initialize", "Could not initialize polar angle (tilt).");
     goto failure;
   }else{
@@ -295,8 +298,14 @@ failure:
 
 
 void monitor(HNDLE hDB, HNDLE hKey, void* info) {
+
+  if (!State::path_index) {  // if we don't have a path, don't know if the path is done
+    //cm_msg(MERROR, "feMove:monitor", "Monitor called without path_index being set. This variable should be set when a path is generated, so something has gone wrong.");
+    //State::moving_on_last_check = false;
+    return;
+  }
 #ifdef DEBUG
-  cout << C_BLUE << "Monitor called." << C_RESET << endl;
+  //cout << C_BLUE << "Monitor called." << C_RESET << endl;
 #endif
 
   array<BOOL, 10> moving;
@@ -309,7 +318,9 @@ void monitor(HNDLE hDB, HNDLE hKey, void* info) {
   array<float, 10> position;
   channel_read(hDB, State::Keys::Motor::position, position, TID_FLOAT);
   for (size_t i = 0; i < 10; i++){
-    position[i] = (position[i] - State::Initialization::motor_origin[i]) / State::Settings::scale[i] + State::Settings::limits[i];
+    position[i] = (position[i] - State::Initialization::motor_origin[i]) / State::Settings::scale[i] + State::Initialization::position[i];
+    if(i == 3 || i == 8)
+      position[i]*=180/PI;
   }
   db_set_data(hDB, State::Keys::position, position.data(), 10*sizeof(float), 10, TID_FLOAT);
 
@@ -329,7 +340,13 @@ void monitor(HNDLE hDB, HNDLE hKey, void* info) {
 
   if (any(State::moving_on_last_check) && !any_moving) {
     for (size_t i = 0; i < 10; i++) {
-      if (State::Settings::channels[i] != -1 && *State::move_path[*State::path_index][i] != position[i]) {
+      if(i == 8 || i == 9)
+        continue;
+      //TODO: there could be a bug here for something
+      double pos = position[i];
+      if(i == 3 || i == 4 || i == 8 || i == 9)
+        pos*=PI/180;
+      if (State::Settings::channels[i] != -1 && fabs(*State::move_path[*State::path_index][i] - pos) > 0.001) {
         if (poslim[i] || neglim[i]) {
           if (stopped_from_limit)
             cm_msg(MINFO, "feMove:monitor", "Limit switch for %s was also triggered.", PG::dim_name(i % 5).c_str());
@@ -350,6 +367,8 @@ void monitor(HNDLE hDB, HNDLE hKey, void* info) {
       move(hDB);
     } else {
       State::path_index = boost::none;
+      const BOOL tmp = TRUE;
+      db_set_data(hDB, State::Keys::completed,       &tmp, sizeof(BOOL), 1, TID_BOOL);
       cm_msg(MINFO, "feMove:monitor", "Move path complete.");
     }
   
@@ -367,14 +386,14 @@ bool phidgets_responding(HNDLE hDB) {
   const auto init = monotonic_clock();
 
   INT bufsize = 12 * sizeof(double), status;
-  status = db_get_value(hDB, get<0>(State::Keys::Motor::phidget), "PH00", p0_values_old.data(), &bufsize, TID_DOUBLE, FALSE);
-  if (status != DB_SUCCESS) {
+  status = db_get_value(hDB, get<0>(State::Keys::Motor::phidget), "OB19", p0_values_old.data(), &bufsize, TID_DOUBLE, FALSE);
+  if (HAS_PHI_0 && status != DB_SUCCESS) {
     cm_msg(MERROR, "feMove:phdigets_responding", "Could not read data for phidget 0.");
     return false;
   }
   bufsize = 10 * sizeof(double);
   status = db_get_value(hDB, get<1>(State::Keys::Motor::phidget), "PH01", p1_values_old.data(), &bufsize, TID_DOUBLE, FALSE);
-  if (status != DB_SUCCESS) {
+  if (HAS_PHI_1 && status != DB_SUCCESS) {
     cm_msg(MERROR, "feMove:phdigets_responding", "Could not read data for phidget 1.");
     return false;
   }
@@ -383,7 +402,7 @@ bool phidgets_responding(HNDLE hDB) {
     now = monotonic_clock();
 
     bufsize = 12 * sizeof(double);
-    db_get_value(hDB, get<0>(State::Keys::Motor::phidget), "PH00", p0_values_new.data(), &bufsize, TID_DOUBLE, FALSE);
+    db_get_value(hDB, get<0>(State::Keys::Motor::phidget), "OB19", p0_values_new.data(), &bufsize, TID_DOUBLE, FALSE);
     bufsize = 10 * sizeof(double);
     db_get_value(hDB, get<1>(State::Keys::Motor::phidget), "PH01", p1_values_new.data(), &bufsize, TID_DOUBLE, FALSE);
 
@@ -391,7 +410,7 @@ bool phidgets_responding(HNDLE hDB) {
       p0eq = equal(p0_values_old, p0_values_new),
       p1eq = equal(p1_values_old, p1_values_new);
 
-    if (!p0eq && !p1eq) {
+    if ((!p0eq || !HAS_PHI_0) && (!p1eq || !HAS_PHI_1)) {
       break;
     }
     else if (timespec_to_d_sec(now - init) > (PHIDGET_TIMEOUT)) {
@@ -418,25 +437,26 @@ bool initialize_tilt(HNDLE hDB, size_t n_attemts) {
 
   array<double, 12> phidg0, phidg1;
   INT bufsize = 12 * sizeof(double);
-  db_get_value(hDB, get<0>(State::Keys::Motor::phidget), "OB10", phidg0.data(), &bufsize, TID_DOUBLE, FALSE);
+  db_get_value(hDB, get<0>(State::Keys::Motor::phidget), "OB19", phidg0.data(), &bufsize, TID_DOUBLE, FALSE);
   bufsize = 10 * sizeof(double);
   db_get_value(hDB, get<1>(State::Keys::Motor::phidget), "PH01", phidg1.data(), &bufsize, TID_DOUBLE, FALSE);
 
-  if (phidg0[7] < TILT_MIN || phidg0[7] > TILT_MAX) {
+  if (HAS_PHI_0 && (phidg0[7] < TILT_MIN || phidg0[7] > TILT_MAX)) {
     cm_msg(MERROR, "feMove:initialize_tilt", "Tilt reading (%.2f deg) for phidget 0 is outside of normal bounds [%i, %i].", phidg0[7], TILT_MIN, TILT_MAX);
-    return false;
+    //return false;
   }
-  else if (phidg1[7] < TILT_MIN || phidg1[7] > TILT_MAX) {
+  else if (HAS_PHI_1 && (phidg1[7] < TILT_MIN || phidg1[7] > TILT_MAX)) {
     cm_msg(MERROR, "feMove:initialize_tilt", "Tilt reading (%.2f deg) for phidget 1 is outside of normal bounds [%i, %i].", phidg1[7], TILT_MIN, TILT_MAX);
     return false;
   }
-
   // read in old destination
-  array<double, 10> destination;
-  channel_read(hDB, State::Keys::Motor::destination, destination, TID_DOUBLE);
+  array<float, 10> destination;
+  for(int i = 0; i < 10;i++)
+    destination[i]=0;
+  //channel_read(hDB, State::Keys::Motor::destination, destination, TID_FLOAT);
   destination[4] = -(phidg0[7] * State::Settings::scale[4]);
   destination[7] = -(phidg1[7] * State::Settings::scale[7]);
-  channel_write(hDB, State::Keys::Motor::destination, destination, TID_DOUBLE);
+  channel_write(hDB, State::Keys::Motor::destination, destination, TID_FLOAT);
 
   // track original tilts to see if we've moved
   double tilt0_0 = phidg0[7], tilt0_1 = phidg1[7];
@@ -445,35 +465,37 @@ bool initialize_tilt(HNDLE hDB, size_t n_attemts) {
   array<BOOL, 10> start = TEN_FALSE;
   start[4] = TRUE;
   start[7] = TRUE;
-  //channel_write(hDB, State::Keys::Motor::start, start, TID_BOOL);
+  channel_write(hDB, State::Keys::Motor::move, start, TID_BOOL);
 
   ss_sleep(MOTOR_POLL_TIME);  // let the move start. todo: check how long it really needs
 
   array<BOOL, 10> moving = TEN_TRUE;
   do {
     channel_read(hDB, State::Keys::Motor::moving, moving, TID_BOOL);
-    ss_sleep(100);
+    ss_sleep(MOTOR_POLL_TIME);
   } while (any(moving));
 
-  bufsize = 10 * sizeof(double);
-  db_get_value(hDB, get<0>(State::Keys::Motor::phidget), "PH00", phidg0.data(), &bufsize, TID_DOUBLE, FALSE);
-  bufsize = 10 * sizeof(double);
+  bufsize = 12 * sizeof(double);
+  db_get_value(hDB, get<0>(State::Keys::Motor::phidget), "OB19", phidg0.data(), &bufsize, TID_DOUBLE, FALSE);
+  bufsize = 12 * sizeof(double);
   db_get_value(hDB, get<1>(State::Keys::Motor::phidget), "PH01", phidg1.data(), &bufsize, TID_DOUBLE, FALSE);
 
   if (phidg0[7] != phidg0[7] || phidg1[7] != phidg1[7]) {
     cm_msg(MERROR, "feMove:initialize_tilt", "Read NaN from tilt.");
     return false;
   }
-  else if (fabs(phidg0[7]) < TILT_TOLERANCE && fabs(phidg1[7] < TILT_TOLERANCE)) {
+  else if ( (fabs(phidg0[7]) < TILT_TOLERANCE  || !HAS_PHI_0) && (fabs(phidg1[7] < TILT_TOLERANCE) || !HAS_PHI_1)) {
     array<float, 10> position;
-    channel_read(hDB, State::Keys::Motor::position, position, TID_FLOAT);
-    State::Initialization::position[4] = State::Settings::limits[4];
-    State::Initialization::position[7] = State::Settings::limits[7];
+    channel_read(hDB, State::Keys::Motor::position, position, TID_FLOAT);//TODO: this part may be wrong
+    State::Initialization::position[4] = State::Settings::limits[4]*PI/180;
+    State::Initialization::position[7] = State::Settings::limits[7]*PI/180;
     State::Initialization::motor_origin[4] = position[4] - State::Settings::limits[4] * State::Settings::scale[4];
     State::Initialization::motor_origin[7] = position[7] - State::Settings::limits[7] * State::Settings::scale[7];
+    db_set_data_index(hDB, State::Keys::position, &(State::Settings::limits[4]), sizeof(float), 4, TID_FLOAT);
+    db_set_data_index(hDB, State::Keys::position, &(State::Settings::limits[7]), sizeof(float), 7, TID_FLOAT);
     return true;
   }
-  else if (fabs(phidg0[7] - tilt0_0) < TILT_TOLERANCE && fabs(phidg1[7] - tilt0_1) < TILT_TOLERANCE) {
+  else if ((fabs(phidg0[7] - tilt0_0) < TILT_TOLERANCE && HAS_PHI_0) || (fabs(phidg1[7] - tilt0_1) < TILT_TOLERANCE && HAS_PHI_1)) {
     cm_msg(MERROR, "feMove:initialize_tilt", "One or both motors is not moving and we are not at the desired tilt.");
     return false;
   }
@@ -567,23 +589,16 @@ void move(HNDLE hDB) {
   channel_read(hDB, State::Keys::Motor::position, positions, TID_FLOAT);
 
   for (size_t i = 0; i < 10; ++i) {
-    deltas[i] = *pt[i] - positions[i];
-  }
+    double s = 1.0;
+    if(i==4 || i==9)
+      s=180/PI;
+    deltas[i] = round((*pt[i]-State::Initialization::position[i])*State::Settings::scale[i]*s - (positions[i] - State::Initialization::motor_origin[i]));
+    
+    if(i == 8 || i == 9)
+      deltas[i] = 0;
 
-  // no movement is necessary
-  if (!any(deltas)) {
-    cm_msg(MINFO, "feMove:move", "Note: no move is required.");
-    (*State::path_index)++;
-    if (State::move_path.size() <= *State::path_index) {
-      cm_msg(MINFO, "feMove:move", "This was the last move step, so we're done.");
-      State::moving_on_last_check = TEN_FALSE;
-      State::path_index = boost::none;
-    } else {
-      move(hDB);
-    }
+    std::cout << deltas[i] <<  std::endl;
   }
-
-  channel_write(hDB, State::Keys::Motor::destination, deltas, TID_FLOAT);
 
   // read current positions of motors to see if the movement actually starts
   array<float, 8> m0start, m1start, m0dest, m1dest, m0pos, m1pos;
@@ -596,7 +611,22 @@ void move(HNDLE hDB) {
   bufsize = 8 * sizeof(float);
   db_get_data(hDB, get<1>(State::Keys::Motor::destination), m1dest.data(), &bufsize, TID_FLOAT);
 
+
+  // no movement is necessary
+  if (!any(deltas)) {
+    cm_msg(MINFO, "feMove:move", "Note: no move is required.");
+    (*State::path_index)++;
+    if (State::move_path.size() <= *State::path_index) {
+      cm_msg(MINFO, "feMove:move", "This was the last move step, so we're done.");
+      State::moving_on_last_check = TEN_FALSE;
+      State::path_index = boost::none;
+    } else {
+      move(hDB);
+    }
+  }else{
+  channel_write(hDB, State::Keys::Motor::destination, deltas, TID_FLOAT);
   channel_write(hDB, State::Keys::Motor::move, start_all, TID_BOOL);
+  }
 
   // track total time
   const auto init   = monotonic_clock();

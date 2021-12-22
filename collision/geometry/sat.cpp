@@ -485,7 +485,7 @@ bool lineIntersectTriangle(Vec3 l0,Vec3 l1,Vec3 v0,Vec3 v1,Vec3 v2,Vec3 &outInte
 
 bool intersect2(const ConvexPolyhedron& polyh1, const ConvexPolyhedron& polyh2) {
   
-  
+  //TODO bounding box check
   for (size_t i = 0; i < polyh1.edges.size(); i++) {
      for (size_t j = 0; j < polyh1.edges.size(); j++) {
        Vec3 a,b,c;
@@ -523,7 +523,6 @@ bool intersect2(const ConvexPolyhedron& polyh1, const ConvexPolyhedron& polyh2) 
   }
   return false;
 }
-
 
 bool intersect(const ConvexPolygon& polygon, const ConvexPolyhedron& polyhedron) {
   auto n = normal(polygon);

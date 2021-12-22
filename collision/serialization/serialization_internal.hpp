@@ -14,7 +14,6 @@ namespace Serialization { namespace Internal {
   // Finds the next geom type in the string, if one exists
   pair<GeomType, ErrorType> find_geom_type(const string& s, uint32_t idx = 0);
 
-  // Finds the next key:value pair in the string.
   // Returns <last character index of pair, key:value>
   // On error, returns <-1, "">
   // If no next pair exists but no syntax error is present, returns <-2, "">

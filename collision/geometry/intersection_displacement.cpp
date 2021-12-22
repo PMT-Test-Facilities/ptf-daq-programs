@@ -51,13 +51,15 @@ ConvexPolyhedron _sweep(const Prism p, Vec3 disp) {
   for (size_t i = 0; i < 8; i++) {
     edges.push_back(make_pair(i,i+8));
   }
-  for (size_t i = 0; i < 8; i++) {
+  for (size_t i = 0; i < 4; i++) {
+    //cube 1
+    edges.push_back(make_pair(i%4,   (i+1)%4));//bottom
+    edges.push_back(make_pair(i%4+4,   (i+1)%4+4));//top
     edges.push_back(make_pair(i,   i+4));
-    edges.push_back(make_pair(i,   (i+1)%4));
-    edges.push_back(make_pair(i+4+4+4, ((i+1)%4)+4+4+4));
-    edges.push_back(make_pair(i+4+4+4, ((i)%4)+4+4));
-    edges.push_back(make_pair(i+4,   (i+1)%4+4));//first cube top
-    edges.push_back(make_pair(i+4+4, ((i+1)%4)+4+4));//last cube bottom
+    //cube 2
+    edges.push_back(make_pair(i%4+8,   (i+1)%4+8));//bottom
+    edges.push_back(make_pair(i%4+4+8,   (i+1)%4+4+8));//top
+    edges.push_back(make_pair(i+8,   i+4+8));
   }
 
   const vector<Vec3> normals = {
@@ -102,15 +104,11 @@ ConvexPolyhedron _sweep2(const Prism p, Vec3 disp) {
   return { vertexes, edges, normals };
 }
 
-// creates the polyhedron resulting from sweeping a prism
-Prism _sweepPrism(const Prism p, Vec3 disp) {
-  return { p.center+0.5*disp, p.ex+fabs(disp.x)/2, p.ey+fabs(disp.y)/2, p.ez+fabs(disp.z)/2, p.orientation};
-}
 
 // todo: use shape of prisms to reduce checks needed
 bool intersect(Prism x, Prism y, Vec3 disp) {
   // __sweep doesn't work
-  const ConvexPolyhedron p2 = _sweep2(x,disp);
+  const ConvexPolyhedron p2 = _sweep(x,disp);
   return intersect2(p2, polyhedron(y));
 }
 
@@ -122,6 +120,10 @@ bool intersect(Prism x, Cylinder y, Vec3 disp) {
   return intersect2(p2, c);
 }
 
+bool intersect(Prism p, ConvexPolyhedron poly, Vec3 disp){
+  const ConvexPolyhedron p2 = _sweep(p,disp);
+  return intersect2(p2, poly);
+}
 
 /* Intersection with sphere */
 
@@ -328,8 +330,27 @@ bool _cylinder_intersect(Vec3 c, Vec3 disp, Vec3 extents, double r) {
   return false;
 }
 
-
 bool intersect(Prism x, Sphere y, Vec3 disp) {
+  //TODO: bounding box for fast processing
+  ConvexPolyhedron cp = _sweep(x,disp);
+  std::vector<Vec3> vertexes = cp.vertexes;
+  std::vector<IdxPair> edges = cp.edges;  // indexes to vertexes
+  for(IdxPair edge:edges){
+    LineSegment ls =  { vertexes[std::get<0>(edge)], vertexes[std::get<1>(edge)] };
+    if( intersect(ls,y) ){
+      DEBUG_COUT("Intersections found.");
+      DEBUG_LEAVE;
+      return true;
+    }
+
+  }
+  
+  DEBUG_COUT("No intersections found.");
+  DEBUG_LEAVE;
+  return false;
+}
+
+bool intersect_unfinished_for_rotations(Prism x, Sphere y, Vec3 disp) {
   DEBUG_ENTER(__PRETTY_FUNCTION__);
 
   // Taken from geometrictools.com
@@ -565,13 +586,6 @@ bool intersect(Prism x, vector<Intersectable> ys, Vec3 disp) {
   auto visitor = disp_intersect_visitor(x, disp);
   for (size_t i = 0; i < ys.size(); i++) {
     if (boost::apply_visitor(visitor, ys[i])) return true;
-  }
-  return false;
-}
-
-bool intersect(std::array<Prism, 3> x, vector<Intersectable> ys, Vec3 disp) {
-  for (size_t i = 0; i < 3; i++) {
-    intersect(x[i],ys,disp);
   }
   return false;
 }

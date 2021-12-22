@@ -1,5 +1,5 @@
 #include "geom.hpp"
-
+#include "sat.hpp"
 
 /*
 [x] Vec3        Prism
@@ -111,6 +111,10 @@ bool intersect(Sphere x, Sphere y) {
   return norm(y.center - x.center) <= (x.r + y.r);
 }
 
+bool intersect(Prism p, ConvexPolyhedron poly){
+  const ConvexPolyhedron prism_poly = polyhedron(p);
+  return intersect2(prism_poly, poly);
+}
 
 bool intersect(Cylinder y, Sphere x) {
   return intersect(x, y);
@@ -247,7 +251,7 @@ bool intersect(Prism x, Prism y) {
 
   if (c2c2 > vdist2) {
     // cout << "Bounding spheres don't intersect." << endl;
-    DEBUG_COUT("Bounding spheres do not intersect.");
+    //DEBUG_COUT("Bounding spheres do not intersect.");
     DEBUG_LEAVE;
     return false; // bounding spheres do not intersect
   }
@@ -349,6 +353,7 @@ bool intersect(Prism x, Sphere y) {
 // Checks for intersections between a prism and the **side** of a cylinder. Does not check ends of the cylinder.
 // For each line segment in the prism, check if there is a solution to that and the circle
 bool intersect(Prism x, Cylinder y) {
+  
   DEBUG_ENTER(__PRETTY_FUNCTION__);
   // first, find points of prism in frame of cylinder
   auto ls = x.edges();

@@ -222,7 +222,7 @@ string dim_name(Dimension d);
 string dim_name(size_t i);
 
 
-array<Prism, 3> point_to_prisms(const Point& p, bool gantry1);
+array<Prism, 4> point_to_prisms(const Point& p, bool gantry1);
 
 // typedef size_t ODBCollision;
 
@@ -364,6 +364,10 @@ typedef struct DimensionOrder {
 
   // Ensure that what the order is valid (contains each dimension once and only once)
   static boost::optional<DimensionOrder> build(Dimension first, Dimension second, Dimension third, Dimension fourth, Dimension fifth);
+
+  static std::vector<DimensionOrder> get_orders(std::vector<Dimension> dims);
+  
+  static void get_orders_recursive(std::vector<Dimension> dims_left,std::vector<Dimension> dims_used, std::vector<DimensionOrder> &orders, const std::vector<Dimension> dims_unused);
 
   // Gets every order of dimensions
   static std::vector<DimensionOrder> all_orders();

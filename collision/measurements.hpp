@@ -4,15 +4,19 @@
 #define SUPPORT_BEAM_HEIGHT 1.0
 #define SUPPORT_BEAM_WIDTH 0.02
 
-#define GANTRY_X_DIM 0.11 
-#define GANTRY_Y_DIM 0.155
-#define GANTRY_Z_DIM 0.16
+#define GANTRY_X_DIM 0.13 //0.11 
+#define GANTRY_Y_DIM 0.175//0.155
+#define GANTRY_Z_DIM 0.18//0.16
+
+#define GANTRY_TUBE_OFFSET 0.10
 
 #define GANTRY_0_MAX_X 0.696
 #define GANTRY_0_MAX_Y 0.696  // check!
+#define GANTRY_0_MAX_Z 0.535
 #define GANTRY_1_MAX_X 0.749
 #define GANTRY_1_MAX_Y 0.696  // check!
-#define GANTRY_0_MAX_Z 0.53
+#define GANTRY_1_MAX_Z 0.535
+#define GANTRY_1_MIN_Z -0.51
 
 #define ROTARY_AXIS_R 0.03
 #define ROTARY_AXIS_L 0.26

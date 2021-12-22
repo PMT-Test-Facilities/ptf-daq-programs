@@ -80,7 +80,9 @@ bool intersect(Prism x, LineSegment y);
 bool intersect(Prism x, Prism y);
 bool intersect(Prism x, Sphere y);
 bool intersect(Prism x, Cylinder y);
+bool intersect(Prism p, ConvexPolyhedron poly);
 bool intersect(Prism x, Intersectable y); // dispatched
+
 
 // moving intersections
 // `disp` is vector delta for Prism origin
@@ -89,6 +91,7 @@ bool intersect(Prism x, LineSegment y, Vec3 disp);
 bool intersect(Prism x, Prism y,       Vec3 disp);
 bool intersect(Prism x, Sphere y,      Vec3 disp);
 bool intersect(Prism x, Cylinder y,    Vec3 disp);  // needs optimizing
+bool intersect(Prism p, ConvexPolyhedron poly,Vec3 disp);
 
 // rotation
 // Prism orientation goes from original to rotation * original, and positions are rotated by rotation about `about`
@@ -97,6 +100,9 @@ bool intersect(Prism x, LineSegment y, Quaternion rotation, Vec3 about);  // ned
 bool intersect(Prism x, Prism y,       Quaternion rotation, Vec3 about);
 bool intersect(Prism x, Sphere y,      Quaternion rotation, Vec3 about);
 bool intersect(Prism x, Cylinder y,    Quaternion rotation, Vec3 about);
+bool intersect(Prism p, ConvexPolyhedron poly, Quaternion rotation, Vec3 about);
+
+
 
 // dispatch
 bool intersect(Prism x, Intersectable y);
@@ -169,7 +175,7 @@ std::tuple<Vec3, double> furthest(Vec3 from, const array<Vec3, N>& to) {
 
 // Definitions for making geometry functions polymorphic
 
-typedef boost::variant<Vec3, LineSegment, Quaternion, Prism, Sphere, Cylinder> GeometryObject;
+typedef boost::variant<Vec3, LineSegment, Quaternion, Prism, Sphere, Cylinder, ConvexPolyhedron> GeometryObject;
 
 
 boost::optional<Intersectable> geometry_to_intersectable(GeometryObject g);

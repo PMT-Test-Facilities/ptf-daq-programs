@@ -62,6 +62,7 @@ public:
   std::vector<vtkActor*> line_segments;
   static KeyPressInteractorStyle* New();
   vtkTypeMacro(KeyPressInteractorStyle, vtkInteractorStyleTrackballCamera);
+  int incrementor;
 
   virtual void OnKeyPress() override
   {
@@ -86,6 +87,8 @@ public:
       
       auto start = PathGeneration::move_point_from_array(position);
       auto end   = PathGeneration::move_point_from_array(destination);
+
+      //render(_sweep( point_to_prisms(start.gantry0, false)[0],end.gantry0.position-start.gantry0.position) );
 
       auto _path = PathGeneration::single_move(start, end, this->collidable);
 
@@ -113,10 +116,25 @@ public:
 
       vtkTransform* transform = vtkTransform::New();
       transform->Identity();
+
+      vtkTransform* transform_ob = vtkTransform::New();
+      transform_ob->Identity();
       
-      std::cout << destination[1]<<" "<<destination[0]<<" "<<destination[2]<<std::endl;
-      transform->Translate(destination[1],destination[0],destination[2]);
-      this->gantry_actors[0]->SetUserTransform(transform);
+      std::cout << destination[1]<<" "<<destination[0]<<" "<<destination[2]<< " " << destination[3] << " " << destination[4] << std::endl;
+      Vec3 c = PathGeneration::point_to_optical_box({{0.0,0.0,0.0},{0.0,0.0}}, false).center;
+      
+      transform->Translate(destination[1],destination[0],destination[2]);      
+      transform->Translate(c.x,c.y,c.z);
+      transform->RotateWXYZ(-destination[3],0.0,0.0,1.0);
+      transform->Translate(-c.x,-c.y,-c.z);
+
+      transform_ob->Translate(destination[1],destination[0],destination[2]);      
+      transform_ob->Translate(c.x,c.y,c.z);
+      transform_ob->RotateWXYZ(-destination[3],0.0,0.0,1.0);
+      transform_ob->RotateWXYZ(-destination[4],0.0,1.0,0.0);
+      transform_ob->Translate(-c.x,-c.y,-c.z);      
+
+      this->gantry_actors[0]->SetUserTransform(transform_ob);
       this->gantry_actors[0]->Modified();
 
       this->gantry_actors[1]->SetUserTransform(transform);
@@ -124,6 +142,9 @@ public:
 
       this->gantry_actors[2]->SetUserTransform(transform);
       this->gantry_actors[2]->Modified();
+
+      this->gantry_actors[3]->SetUserTransform(transform_ob);
+      this->gantry_actors[3]->Modified();
       renderWindow->Render();
     }
 
@@ -132,7 +153,7 @@ public:
     {
       std::cout << "The a key was pressed." << std::endl;
       array<float, 10> position, destination;
-      //destination = {0.5,0.5,0.5,0.0,0.0,0.749,0.696,0.0,0.0,0.0};
+      destination = {0.3,-0.2,0.24,0.0,0.0,0.749,0.696,0.0,0.0,0.0};
       INT bufsize = 10 * sizeof(float);
       db_get_data(State::Keys::hDB, State::Keys::position, position.data(), &bufsize, TID_FLOAT);
       bufsize = 10 * sizeof(float);
@@ -142,10 +163,23 @@ public:
 
       vtkTransform* transform = vtkTransform::New();
       transform->Identity();
+      vtkTransform* transform_ob = vtkTransform::New();
+      transform_ob->Identity();
       
-      std::cout << destination[1]<<" "<<destination[0]<<" "<<destination[2]<<std::endl;
-      transform->Translate(destination[1],destination[0],destination[2]);
-      this->gantry_actors[0]->SetUserTransform(transform);
+      Vec3 c = PathGeneration::point_to_optical_box({{0.0,0.0,0.0},{0.0,0.0}}, false).center;
+      
+      transform->Translate(destination[1],destination[0],destination[2]);      
+      transform->Translate(c.y,c.x,c.z);
+      transform->RotateWXYZ(-destination[3],0.0,0.0,1.0);
+      transform->Translate(-c.y,-c.x,-c.z);
+
+      transform_ob->Translate(destination[1],destination[0],destination[2]);      
+      transform_ob->Translate(c.y,c.x,c.z);
+      transform_ob->RotateWXYZ(-destination[3],0.0,0.0,1.0);
+      transform_ob->RotateWXYZ(-destination[4],0.0,1.0,0.0);
+      transform_ob->Translate(-c.y,-c.x,-c.z);      
+
+      this->gantry_actors[0]->SetUserTransform(transform_ob);
       this->gantry_actors[0]->Modified();
 
       this->gantry_actors[1]->SetUserTransform(transform);
@@ -153,9 +187,77 @@ public:
 
       this->gantry_actors[2]->SetUserTransform(transform);
       this->gantry_actors[2]->Modified();
+
+      this->gantry_actors[3]->SetUserTransform(transform_ob);
+      this->gantry_actors[3]->Modified();
       renderWindow->Render();
-      if(intersect(point_to_optical_box(start.gantry0, false), this->collidable))
+
+      //render(point_to_prisms(start.gantry0, false)[0]);
+
+      if(intersect(point_to_prisms(start.gantry0, false)[0], this->collidable)||
+         intersect(point_to_prisms(start.gantry0, false)[1], this->collidable)||
+         intersect(point_to_prisms(start.gantry0, false)[2], this->collidable)||
+         intersect(point_to_prisms(start.gantry0, false)[3], this->collidable)){
         std::cout << "Collistion" << std::endl;
+      }
+    }
+
+    if (key == "s")
+    {
+      std::cout << "The s key was pressed." << std::endl;
+      array<float, 10> position, destination;
+      INT bufsize = 10 * sizeof(float);
+      //db_get_data(State::Keys::hDB, State::Keys::position, position.data(), &bufsize, TID_FLOAT);
+      bufsize = 10 * sizeof(float);
+      //db_get_data(State::Keys::hDB, State::Keys::destination, destination.data(), &bufsize, TID_FLOAT);
+
+      position = {0.3,-0.2,0.24,0.0,0.0,0.749,0.696,0.0,0.0,0.0};
+      destination = {0.3,-0.2,0.24,0.0,-90.0,0.749,0.696,0.0,0.0,0.0};
+
+      vtkTransform* transform = vtkTransform::New();
+      transform->Identity();
+      vtkTransform* transform_ob = vtkTransform::New();
+      transform_ob->Identity();
+      
+      Vec3 c = PathGeneration::point_to_optical_box({{0.0,0.0,0.0},{0.0,0.0}}, false).center;
+      
+      transform->Translate(destination[1],destination[0],destination[2]);      
+      transform->Translate(c.y,c.x,c.z);
+      transform->RotateWXYZ(-destination[3],0.0,0.0,1.0);
+      transform->Translate(-c.y,-c.x,-c.z);
+
+      transform_ob->Translate(destination[1],destination[0],destination[2]);      
+      transform_ob->Translate(c.y,c.x,c.z);
+      transform_ob->RotateWXYZ(-destination[3],0.0,0.0,1.0);
+      transform_ob->RotateWXYZ(-destination[4],0.0,1.0,0.0);
+      transform_ob->Translate(-c.y,-c.x,-c.z);      
+
+      this->gantry_actors[0]->SetUserTransform(transform_ob);
+      this->gantry_actors[0]->Modified();
+
+      this->gantry_actors[1]->SetUserTransform(transform);
+      this->gantry_actors[1]->Modified();
+
+      this->gantry_actors[2]->SetUserTransform(transform);
+      this->gantry_actors[2]->Modified();
+
+      this->gantry_actors[3]->SetUserTransform(transform_ob);
+      this->gantry_actors[3]->Modified();
+      renderWindow->Render();
+
+      auto start = PathGeneration::move_point_from_array(position);
+      auto end = PathGeneration::move_point_from_array(destination);
+
+      render(point_to_prisms(end.gantry0, false)[0]);
+
+      if(intersect(point_to_prisms(start.gantry0, false)[0], this->collidable,Quaternion::from_azimuthal(destination[3]*PI/180)*Quaternion::from_axis_angle(Vec3(1,0,0),destination[4]*PI/180),point_to_optical_box(start.gantry0, false).center )||
+         intersect(point_to_prisms(start.gantry0, false)[1], this->collidable,Quaternion::from_azimuthal(destination[3]*PI/180)*Quaternion::from_axis_angle(Vec3(1,0,0),destination[4]*PI/180),point_to_optical_box(start.gantry0, false).center )||
+         intersect(point_to_prisms(start.gantry0, false)[2], this->collidable,Quaternion::from_azimuthal(destination[3]*PI/180)*Quaternion::from_axis_angle(Vec3(1,0,0),destination[4]*PI/180),point_to_optical_box(start.gantry0, false).center )||
+         intersect(point_to_prisms(start.gantry0, false)[3], this->collidable,Quaternion::from_azimuthal(destination[3]*PI/180)*Quaternion::from_axis_angle(Vec3(1,0,0),destination[4]*PI/180),point_to_optical_box(start.gantry0, false).center )){
+        std::cout << "Collistion" << std::endl;
+      }
+
+      incrementor++;
     }
 
     // Forward events
@@ -191,12 +293,20 @@ public:
     //PathGeneration::Point p2 = {{position[0],position[1],position[2]},{position[3],position[4]}};
     //Prism ob = PathGeneration::point_to_optical_box(p2, false);
     //actor->SetPosition(ob.center[1],ob.center[0],ob.center[2]);
-    vtkTransform* transform = vtkTransform::New();
-    transform->Identity();
-    
-    transform->Translate(position[1],position[0],position[2]);
-    actor->SetUserTransform(transform);
-    actor->Modified();
+      vtkTransform* transform_ob = vtkTransform::New();
+      transform_ob->Identity();
+      
+      Vec3 c = PathGeneration::point_to_optical_box({{0.0,0.0,0.0},{0.0,0.0}}, false).center;
+
+      transform_ob->Translate(position[1],position[0],position[2]);      
+      transform_ob->Translate(c.y,c.x,c.z);
+      transform_ob->RotateWXYZ(-position[3],0.0,0.0,1.0);
+      transform_ob->RotateWXYZ(-position[4],0.0,1.0,0.0);
+      transform_ob->Translate(-c.y,-c.x,-c.z);      
+
+      actor->SetUserTransform(transform_ob);
+      actor->Modified();
+
     vtkRenderWindowInteractor* iren = dynamic_cast<vtkRenderWindowInteractor*>(caller);
     iren->GetRenderWindow()->Render();
 
@@ -599,11 +709,11 @@ int main(int args, char** argc)
   }
   render_limit_box();
 
-  ColStlMesh mesh_monkey("/home/midptf/Documents/Student/Elena/ptf-daq-programs-viz/render/monkey_head.stl");
+  /*ColStlMesh mesh_monkey("/home/midptf/Documents/Student/Elena/ptf-daq-programs-viz/render/monkey_head.stl");
   ConvexPolyhedron poly_monkey = polyhedron(mesh_monkey);
   poly_monkey = scale(poly_monkey, Vec3(0.2,0.2,-0.2));
   poly_monkey = translate(poly_monkey, Vec3(0.5,0.5,0.0));
-  render( poly_monkey );
+  render( poly_monkey );*/
 
   /*
    *Uses odb and creates a fake path to get the grantry collidable box
@@ -612,8 +722,8 @@ int main(int args, char** argc)
   auto to   = PathGeneration::move_point_from_array(destination);
   //auto path = PathGeneration::single_move(from, to, ret);
   auto path  = PathGeneration::generate_move({from.gantry0, to.gantry0}, from.gantry1, PathGeneration::Gantry0, PathGeneration::DimensionOrder::all_orders()[0]);
-  auto pt = get<PathGeneration::MovePath>(path)[0];
-  PathGeneration::Point p2 = {{0.0,0.0,0.0},pt.gantry0.angle};
+  auto pt = get<PathGeneration::MovePath>(path)[0]; 
+  PathGeneration::Point p2 = {{0.0,0.0,0.0},{0.0,0.0}};
   //Prism ob0 = PathGeneration::point_to_optical_box(p2, false);//Used Because the animation will set the right values
   auto prs0 = point_to_prisms(p2, false);
   Prism ob1 = PathGeneration::point_to_optical_box(pt.gantry1, true);
@@ -624,15 +734,21 @@ int main(int args, char** argc)
   animated_actors.push_back(render(prs0[0]));
   animated_actors.push_back(render(prs0[1]));
   animated_actors.push_back(render(prs0[2]));
+  animated_actors.push_back(render(prs0[3]));
 
-  /*render(_sweep(prs0[0],Vec3(-0.3,0.0,0.0) ));
-  render(polyhedron(get<Cylinder>(collidable[1])));
+  /*render(_sweep(prs0[0],Vec3(0.0,0.3,0.0) ));
+  render(_sweep(prs0[1],Vec3(0.0,0.3,0.0) ));
+  render(_sweep(prs0[2],Vec3(0.0,0.3,0.0) ));
+  render(polyhedron(get<Cylinder>(collidable[0])));
 
-  std::cout << "Does Intersect? " << intersect2(_sweep(prs0[0],Vec3(-0.3,0.0,0.0) ),polyhedron(get<Cylinder>(collidable[1]))) << std::endl;*/
+  std::cout << "Does Intersect? " << intersect2(_sweep(prs0[0],Vec3(0.0,0.3,0.0) ),polyhedron(get<Cylinder>(collidable[0]))) << std::endl;
+  std::cout << "Does Intersect? " << intersect2(_sweep(prs0[1],Vec3(0.0,0.3,0.0) ),polyhedron(get<Cylinder>(collidable[0]))) << std::endl;
+  std::cout << "Does Intersect? " << intersect2(_sweep(prs0[2],Vec3(0.0,0.3,0.0) ),polyhedron(get<Cylinder>(collidable[0]))) << std::endl;*/
 
   style->gantry_actors.push_back(vtkSmartPointer<vtkActor>(animated_actors[0]));
   style->gantry_actors.push_back(vtkSmartPointer<vtkActor>(animated_actors[1]));
   style->gantry_actors.push_back(vtkSmartPointer<vtkActor>(animated_actors[2]));
+  style->gantry_actors.push_back(vtkSmartPointer<vtkActor>(animated_actors[3]));
 
   render(ob1);
   //render(PathGeneration::point_to_optical_box(p2, false));

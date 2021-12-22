@@ -76,7 +76,7 @@ pair<int, string> find_next_pair(const string& s, uint32_t start, uint32_t max) 
   while (i < s.length() && i < max && s[i] != ':') {
     kv.push_back(s[i]);
     i++;
-    if (i == ']') {
+    if (s[i] == ']') {
       return make_pair(-1, "");
     }
   }
@@ -127,7 +127,6 @@ pair<unordered_map<string, string>, bool> find_pairs(const string& s) {
 
     if (pair.first == -1) {
       // error!
-      std::cout << "there\n";
       return make_pair(map, true);
     }
     else if (pair.first == -2) {
@@ -138,7 +137,6 @@ pair<unordered_map<string, string>, bool> find_pairs(const string& s) {
     auto idx = str.find(':');
 
     if (idx < 0) {
-      std::cout << "here\n";
       return make_pair(map, true);
     }
     
@@ -207,7 +205,6 @@ unordered_map<string, GeomResult> parse_geometry(const string& s, const unordere
   }
 
   if (prop_res.second) {
-    std::cout << prop_res.first.begin()->first << std::endl;
     ret["*"] = UnknownError;
     return ret;
   }

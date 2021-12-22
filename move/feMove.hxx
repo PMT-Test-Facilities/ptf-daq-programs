@@ -20,7 +20,7 @@
 #define COLLIDE_STR_NUM 16
 
 // polling time for waiting for motors to start moving, in milliseconds
-#define MOTOR_POLL_TIME 500
+#define MOTOR_POLL_TIME 2000
 //timeout for when we decide motors aren't responding, in seconds
 #define MOTOR_TIMEOUT 60
 // time to try resending the start signal, in seconds
@@ -36,7 +36,7 @@
 #define TILT_MAX   15
 #define TILT_TOLERANCE 1.0
 
-#define MAX_TILT_RETRIES 4
+#define MAX_TILT_RETRIES 20
 
 #ifndef nullptr
 #define nullptr NULL
@@ -267,7 +267,7 @@ void channel_read(HNDLE hDB, State::Keys::GantryPair keys, array<T, 10>& values,
 template<typename T>
 void channel_write(HNDLE hDB, State::Keys::GantryPair keys, const array<T, 10>& values, DWORD tid) {
   array<T, 8> m0, m1;
-
+  //std::cout << values[0] <<" "<<values[1]<<" "<<values[2]<<std::endl;
   // again needed because initializer lists aren't working on gcc 4.4
   m0[0] = 0.0;
   m0[1] = 0.0;
@@ -347,8 +347,13 @@ bool initialize_axis(HNDLE hDB) {
     D == Z ? make_tuple((size_t)2, (size_t)7) :
     make_tuple((size_t)3, (size_t)8); // Theta
   
-  array<float, 10> vals, o_position, n_position,n_limit;
+  array<float, 10> vals, o_position, n_position;
+  array<BOOL, 10> n_limit;
   channel_read(hDB, State::Keys::Motor::destination, vals, TID_FLOAT);
+
+  for(int i = 0; i < 10;i++)
+    vals[i]=0;
+
   vals[get<0>(axes)] = 500 * fabs(State::Settings::scale[get<0>(axes)]);
   //vals[get<1>(axes)] = 500 * State::Settings::scale[get<1>(axes)];
   cm_msg(MDEBUG, "feMove:initialize_axis", "Dest: %f",vals[get<0>(axes)]);
@@ -358,7 +363,6 @@ bool initialize_axis(HNDLE hDB) {
   channel_read(hDB, State::Keys::Motor::position, o_position, TID_FLOAT);
   
   array<BOOL, 10> start = TEN_FALSE;
-  start[4] = TRUE; start[7] = TRUE;
   start[get<0>(axes)] = TRUE;//TODO setup for other gantry
 
   //channel_write(hDB, State::Keys::Motor::start, start, TID_BOOL);
@@ -388,13 +392,20 @@ bool initialize_axis(HNDLE hDB) {
     cm_msg(MERROR, name, "Warning: One or both motors for dimension %s has not moved. Failed init", dim_name(D).c_str());
     return false;
   }
-  //TODO: check if this is right?
-  State::Initialization::motor_origin[get<0>(axes)] = n_position[get<0>(axes)] = 0;
-  State::Initialization::motor_origin[get<1>(axes)] = n_position[get<1>(axes)] = 0;
-  State::Initialization::position[get<0>(axes)] = State::Settings::limits[get<0>(axes)];
-  State::Initialization::position[get<1>(axes)] = State::Settings::limits[get<1>(axes)];
 
-  db_set_data_index(hDB, State::Keys::position, &(n_position[get<0>(axes)]), sizeof(float), get<0>(axes), TID_FLOAT);
+  //TODO: check if this is right?
+  State::Initialization::motor_origin[get<0>(axes)] = n_position[get<0>(axes)];
+  State::Initialization::motor_origin[get<1>(axes)] = n_position[get<1>(axes)];
+  if(D == Theta){
+    State::Initialization::position[get<0>(axes)] = State::Settings::limits[get<0>(axes)]*PI/180;
+    State::Initialization::position[get<1>(axes)] = State::Settings::limits[get<1>(axes)]*PI/180;
+  }else{
+    State::Initialization::position[get<0>(axes)] = State::Settings::limits[get<0>(axes)];
+    State::Initialization::position[get<1>(axes)] = State::Settings::limits[get<1>(axes)];
+  }
+
+  db_set_data_index(hDB, State::Keys::position, &(State::Settings::limits[get<0>(axes)]), sizeof(float), get<0>(axes), TID_FLOAT);
+  db_set_data_index(hDB, State::Keys::position, &(State::Settings::limits[get<1>(axes)]), sizeof(float), get<1>(axes), TID_FLOAT);
   //TODO reenable other gantry
   //db_set_data_index(hDB, State::Keys::position, &(n_position[get<1>(axes)]), sizeof(float), get<1>(axes), TID_FLOAT);
 

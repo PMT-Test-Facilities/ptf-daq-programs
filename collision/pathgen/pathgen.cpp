@@ -59,6 +59,44 @@ bool check_any_collisions(
   const vector<Intersectable>& static_geometry
 );
 
+//kinda ugly
+std::vector<Dimension> _get_used_dims(const MovePoint& from, const MovePoint& to){
+  std::vector<Dimension> ret;
+  const double tolerence = 0.0001;
+
+  bool z_first = (to.gantry0.position.z - from.gantry0.position.z < -tolerence) || 
+                  (to.gantry1.position.z - from.gantry1.position.z < -tolerence);
+  //z if more likly to be the first move with the current setup
+  if(z_first){
+    if(fabs(from.gantry0.position.z - to.gantry0.position.z)>tolerence ||
+      fabs(from.gantry1.position.z - to.gantry1.position.z)>tolerence)
+      ret.push_back(Dimension::Z);
+  }
+
+  if(fabs(from.gantry0.position.x - to.gantry0.position.x)>tolerence ||
+    fabs(from.gantry1.position.x - to.gantry1.position.x) > tolerence)
+    ret.push_back(Dimension::X);
+
+  if(fabs(from.gantry0.position.y - to.gantry0.position.y)>tolerence ||
+    fabs(from.gantry1.position.y - to.gantry1.position.y)>tolerence)
+    ret.push_back(Dimension::Y);
+
+  if(!z_first){//kinda ugly but help with preformece
+    if(fabs(from.gantry0.position.z - to.gantry0.position.z)>tolerence ||
+      fabs(from.gantry1.position.z - to.gantry1.position.z)>tolerence)
+      ret.push_back(Dimension::Z);
+  }
+
+  if(fabs(from.gantry0.angle.phi - to.gantry0.angle.phi)>tolerence ||
+    fabs(from.gantry1.angle.phi - to.gantry1.angle.phi)>tolerence)
+    ret.push_back(Dimension::Phi);
+
+  if(fabs(from.gantry0.angle.theta - to.gantry0.angle.theta)>tolerence ||
+    fabs(from.gantry1.angle.theta - to.gantry1.angle.theta)>tolerence)
+    ret.push_back(Dimension::Theta);
+  return ret;
+}
+
 // Most-used public functions
 
 
@@ -66,24 +104,35 @@ variant<MovePath, ErrorType> single_move(const MovePoint& from, const MovePoint&
   DEBUG_ENTER(__PRETTY_FUNCTION__);
   DEBUG_COUT("Checking destination and source...");
   if (!is_destination_valid(to.gantry0, to.gantry1, static_geometry)) {
+    DEBUG_COUT("InvalidDestination");
     return ErrorType::InvalidDestination;
   }
   else if (!is_destination_valid(from.gantry0, from.gantry1, static_geometry)) {
+    DEBUG_COUT("InvalidOrigin");
     return ErrorType::InvalidOrigin;
   }
-  static const auto all_orders = DimensionOrder::all_orders();
+  //static const auto all_orders = DimensionOrder::all_orders();
+
+  std::vector<Dimension> red = _get_used_dims(from,to);
+  auto orders = DimensionOrder::get_orders(red);
+  /*for(DimensionOrder order:orders){
+    for(int i = 0; i < 5; i ++){
+      std::cout << dim_name(order[i]) << " ";
+    }
+    std::cout << std::endl;
+  }*/
 
   DEBUG_COUT("Attempting to move G0 first.");
   
   // try moving gantry 0 first
-  for (size_t i = 0; i < all_orders.size(); i++) {
-    auto order0 = all_orders[i];
+  for (size_t i = 0; i < orders.size(); i++) {
+    auto order0 = orders[i];
 
     DEBUG_COUT("Attempting dim order " << C_BOLD << i << ": " << order0 << C_RESET);
     auto path0  = generate_move({from.gantry0, to.gantry0}, from.gantry1, Gantry0, order0);
     if (is_move_valid(path0, Gantry0, static_geometry)) {
-      for (size_t j = 0; j < all_orders.size(); j++) {
-        auto order1 = all_orders[j];
+      for (size_t j = 0; j < orders.size(); j++) {
+        auto order1 = orders[j];
         auto path1  = generate_move({from.gantry1, to.gantry1}, to.gantry0, Gantry1, order1);
         // cerr << "," << j;
         if (is_move_valid(path1, Gantry1, static_geometry)) {
@@ -103,15 +152,15 @@ variant<MovePath, ErrorType> single_move(const MovePoint& from, const MovePoint&
   DEBUG_COUT("Attempting to move G1 first.");
 
   // now try moving gantry 1 first
-  for (size_t i = 0; i < all_orders.size(); i++) {
-    auto order1 = all_orders[i];
+  for (size_t i = 0; i < orders.size(); i++) {
+    auto order1 = orders[i];
 
     DEBUG_COUT("Attempting dim order " << C_BOLD << i << ": " << order1 << C_RESET);
 
     auto path1  = generate_move({from.gantry1, to.gantry1}, from.gantry0, Gantry1, order1);
     if (is_move_valid(path1, Gantry1, static_geometry)) {
-      for (size_t j = 0; j < all_orders.size(); j++) {
-        auto order0 = all_orders[j];
+      for (size_t j = 0; j < orders.size(); j++) {
+        auto order0 = orders[j];
         auto path0  = generate_move({from.gantry0, to.gantry0}, to.gantry1, Gantry0, order0);
         if (is_move_valid(path0, Gantry0, static_geometry)) {
           path1.reserve(10);
@@ -151,7 +200,36 @@ bool is_destination_valid(
   const Point& gantry0,
   const Point& gantry1,
   const vector<Intersectable>& static_geometry
-) {
+) {//should have just used substraction of tolerence of 0.0001
+  if(round(gantry0.position.x*1e3) > GANTRY_0_MAX_X*1e3 || gantry0.position.x < 0){
+    DEBUG_COUT("GANTRY 0 X OUT OF BOUNDS");
+    DEBUG_LEAVE;
+    return false;
+  }else if(round(gantry0.position.y*1e3) > GANTRY_0_MAX_Y*1e3 || gantry0.position.y < 0){
+    DEBUG_COUT("GANTRY 0 Y OUT OF BOUNDS");
+    DEBUG_LEAVE;
+    return false;
+  }if(round(gantry0.position.z*1e3) > GANTRY_0_MAX_Z*1e3 || gantry0.position.z < 0){
+    DEBUG_COUT("GANTRY 0 Z OUT OF BOUNDS");
+    DEBUG_LEAVE;
+    return false;
+  }
+
+  if(round(gantry1.position.x*1e3) > GANTRY_1_MAX_X*1e3 || gantry1.position.x < 0){
+    DEBUG_COUT("GANTRY 1 X OUT OF BOUNDS");
+    DEBUG_LEAVE;
+    return false;
+  }else if(round(gantry1.position.y*1e3) > GANTRY_1_MAX_Y*1e3 || gantry1.position.y < 0){
+    DEBUG_COUT("GANTRY 1 Y OUT OF BOUNDS");
+    DEBUG_LEAVE;
+    return false;
+  }if(round(gantry1.position.z*1e3) > GANTRY_1_MAX_Z*1e3 || gantry1.position.z < GANTRY_1_MIN_Z){
+    DEBUG_COUT("GANTRY 1 Z OUT OF BOUNDS");
+    DEBUG_LEAVE;
+    return false;
+  }
+
+
   DEBUG_ENTER(__PRETTY_FUNCTION__);
   if (fabs(gantry1.position.y - gantry0.position.y) < GANTRY_MIN_Y_SEPARATION) {//TODO: why was this condidtion reqiuire, maybe do coordinate tranform between the positions
     DEBUG_COUT("Y diff less than GANTRY_MIN_Y_SEPARATION.");
@@ -201,12 +279,20 @@ bool is_move_valid(
       da1 = eldiff(pt.gantry1.angle, prev.gantry1.angle);
     
     if (norm2(dp0) > 0) {
+          //
+          //
       DEBUG_COUT("Found nonzero displacement for gantry 0: " << SD::serialize(dp0));
       if (   intersect(point_to_prisms(prev.gantry0, false)[0], static_geometry, dp0)
           || intersect(point_to_prisms(prev.gantry0, false)[1], static_geometry, dp0)
           || intersect(point_to_prisms(prev.gantry0, false)[2], static_geometry, dp0)
+          || intersect(point_to_prisms(prev.gantry0, false)[3], static_geometry, dp0)
           || intersect(point_to_optical_box(pt.gantry1, true), static_geometry)
          ) {
+          std::cout << intersect(point_to_prisms(prev.gantry0, false)[0], static_geometry, dp0) << std::endl;
+          std::cout << intersect(point_to_prisms(prev.gantry0, false)[1], static_geometry, dp0) << std::endl;
+          std::cout << intersect(point_to_prisms(prev.gantry0, false)[2], static_geometry, dp0) << std::endl;
+          std::cout << intersect(point_to_prisms(prev.gantry0, false)[3], static_geometry, dp0) << std::endl;
+          std::cout << intersect(point_to_optical_box(pt.gantry1, true), static_geometry) << std::endl;
         DEBUG_COUT("Found collision.");
         DEBUG_LEAVE;
         return false;
@@ -217,7 +303,8 @@ bool is_move_valid(
       if (intersect(point_to_optical_box(pt.gantry0, false), static_geometry)
           || intersect(point_to_prisms(prev.gantry1, true)[0], static_geometry, dp1)
           || intersect(point_to_prisms(prev.gantry1, true)[1], static_geometry, dp1)
-          || intersect(point_to_prisms(prev.gantry1, true)[2], static_geometry, dp1)) {
+          || intersect(point_to_prisms(prev.gantry1, true)[2], static_geometry, dp1)
+          || intersect(point_to_prisms(prev.gantry1, true)[3], static_geometry, dp1)) {
         DEBUG_COUT("Found collision.");
         DEBUG_LEAVE;
         return false;
@@ -225,8 +312,8 @@ bool is_move_valid(
     }
     else if (da0.theta != 0 || da0.phi != 0) {
       DEBUG_COUT("Found nonzero rotation for gantry 0: theta=" << da0.theta << ", phi=" << da0.phi);
-      if (intersect(point_to_optical_box(pt.gantry0, false), static_geometry, Quaternion::from_spherical_angle(da0.theta, da0.phi), pt.gantry0.position)
-          || intersect(point_to_optical_box(pt.gantry1, false), static_geometry)) {
+      if (intersect(point_to_optical_box(prev.gantry0, false), static_geometry,Quaternion::from_azimuthal(da0.theta)*Quaternion::from_axis_angle(Vec3(1,0,0),da0.phi),point_to_optical_box(prev.gantry0, false).center )||
+          intersect(point_to_optical_box(prev.gantry1, true), static_geometry)) {
         DEBUG_COUT("Found collision.");
         DEBUG_LEAVE;
         return false;
@@ -234,15 +321,15 @@ bool is_move_valid(
     }
     else if (da1.theta != 0 || da1.phi != 0) {
       DEBUG_COUT("Found nonzero rotation for gantry 1: theta=" << da1.theta << ", phi=" << da1.phi);
-      if (intersect(point_to_optical_box(pt.gantry1, false), static_geometry, Quaternion::from_spherical_angle(da1.theta, da1.phi), pt.gantry1.position)
-          || intersect(point_to_optical_box(pt.gantry0, false), static_geometry)) {
+      if (intersect(point_to_optical_box(prev.gantry1, true), static_geometry,Quaternion::from_azimuthal(da1.theta)*Quaternion::from_axis_angle(Vec3(1,0,0),da1.phi),point_to_optical_box(prev.gantry1, false).center )||
+          intersect(point_to_optical_box(prev.gantry0, false), static_geometry)) {
         DEBUG_COUT("Found collision.");
         DEBUG_LEAVE;
         return false;
       }
     } else {
       DEBUG_COUT("Found no movement. Should be covered by start/dest checks.");
-      if (intersect(point_to_optical_box(pt.gantry1, false), static_geometry)
+      if (intersect(point_to_optical_box(pt.gantry1, true), static_geometry)
           || intersect(point_to_optical_box(pt.gantry0, false), static_geometry)) {
         DEBUG_COUT("Found collision.");
         DEBUG_LEAVE;
@@ -358,6 +445,47 @@ vector<DimensionOrder> DimensionOrder::all_orders() {
   return ret;
 }
 
+std::vector<DimensionOrder> DimensionOrder::get_orders(std::vector<Dimension> dims){
+  vector<DimensionOrder> ret;
+  std::vector<Dimension> dims_unused;
+
+  for(int i = 0; i < 5; i++){
+    bool found = false;
+    for(Dimension dim:dims){
+      if(dim==_dim_of(i)){
+        found = true;
+        break;
+      }
+    }
+    if(!found)
+      dims_unused.push_back(_dim_of(i));
+  }
+
+
+  get_orders_recursive(dims,{},ret,dims_unused);
+  return ret;
+}
+
+void DimensionOrder::get_orders_recursive(std::vector<Dimension> dims_left,std::vector<Dimension> dims_used, std::vector<DimensionOrder> &orders, const std::vector<Dimension> dims_unused) {
+  if(dims_left.size()==1){
+    dims_used.push_back(dims_left.back());
+    for(Dimension dim:dims_unused)
+      dims_used.push_back(dim);
+    DimensionOrder d = {dims_used[0],dims_used[1],dims_used[2],dims_used[3],dims_used[4]};
+    orders.push_back(d);
+  }
+  
+  for(Dimension dim:dims_left){
+    std::vector<Dimension> dims_remaining;
+    std::vector<Dimension> dims_to_be_used = dims_used;
+    for(Dimension dim2:dims_left)
+      if(dim!=dim2)
+        dims_remaining.push_back(dim2);
+    dims_to_be_used.push_back(dim);
+    get_orders_recursive(dims_remaining,dims_to_be_used,orders,dims_unused);
+  }
+}
+
 
 string error_message(ErrorType e) {
   switch (e) {
@@ -422,8 +550,8 @@ bool check_any_collisions(const Point& gantry0, const Point& gantry1, const vect
 
   DEBUG_COUT("Checking gantry-gantry collisions.");
   
-  for (size_t i = 0 ; i < 3; i++) {
-    for (size_t j = 0; j < 3; j++) {
+  for (size_t i = 0 ; i < 4; i++) {
+    for (size_t j = 0; j < 4; j++) {
       if (intersect(g0[i], g1[j])) {
         DEBUG_COUT("Gantry-gantry collision found, " << i << ", " << j);
         DEBUG_LEAVE;
@@ -437,7 +565,7 @@ bool check_any_collisions(const Point& gantry0, const Point& gantry1, const vect
   for (size_t gi = 0; gi < static_geometry.size(); gi++) {
     DEBUG_COUT("Checking with object " << gi);
 
-    for (size_t i = 0; i < 3; i++) {
+    for (size_t i = 0; i < 4; i++) {
       if (intersect(g0[i], static_geometry[gi]) || intersect(g1[i], static_geometry[gi])) {
         DEBUG_COUT(
           "Collision found, with prism " << i
@@ -553,8 +681,9 @@ inline bool operator==(const MovePoint& l, const MovePoint& r) {
 
 bool equal_path_positions(PathGeneration::MovePoint &p1, PathGeneration::MovePoint &p2){
   if(
-    p1.gantry0.position == p2.gantry0.position &&
-    p1.gantry0.angle == p2.gantry0.angle
+    norm(p1.gantry0.position - p2.gantry0.position) < 0.00001 &&
+    p1.gantry0.angle.theta - p2.gantry0.angle.theta < 0.00001 &&
+    p1.gantry0.angle.phi - p2.gantry0.angle.phi < 0.00001
   ){
     return true;
   }
@@ -569,9 +698,9 @@ MovePath generate_move(
 ) {
   DEBUG_ENTER(__PRETTY_FUNCTION__);
   if (is_moving == Gantry0) {
-    DEBUG_COUT("Generating move sequence for gantry 0 from " << moving.start.position << " to " << moving.end.position);
+    DEBUG_COUT("Generating move sequence for gantry 0 from " << moving.start.position  << " , {"<< moving.start.angle.phi << " , " << moving.start.angle.theta << "} to " << moving.end.position << " , {"<< moving.end.angle.phi << " , " << moving.end.angle.theta << "} ");
   } else {
-    DEBUG_COUT("Generating move sequence for gantry 1 from " << moving.start.position << " to " << moving.end.position);
+    DEBUG_COUT("Generating move sequence for gantry 1 from " << moving.start.position << " , {"<< moving.start.angle.phi << " , " << moving.start.angle.theta << "} to " << moving.end.position << " , {"<< moving.start.angle.phi << " , " << moving.start.angle.theta << "} ");
   }
 
   MovePath ret;
@@ -584,19 +713,16 @@ MovePath generate_move(
     is_moving == Gantry0 ? unmoving : moving.start
   }));
 
-  DEBUG_COUT("0: " << ret[0].gantry0 << ", " << ret[1].gantry1);
-
   if (is_moving == Gantry0) {
     for (size_t i = 0; i < 5; i++) {
-      std::cout << "Trying dim in order: " << i << std::endl;
-      next_path_position = std::move(_generate_move_0(ret[i].gantry0, moving.end, unmoving, order[i]));
+      next_path_position = std::move(_generate_move_0(ret.back().gantry0, moving.end, unmoving, order[i]));
       if (!equal_path_positions(ret.back(),next_path_position)) {
         ret.push_back(std::move(next_path_position));
       }
     }
   } else {
     for (size_t i = 0; i < 5; i++) {
-      next_path_position = std::move(_generate_move_1(ret[i].gantry1, moving.end, unmoving, order[i]));
+      next_path_position = std::move(_generate_move_1(ret.back().gantry1, moving.end, unmoving, order[i]));
       if (!equal_path_positions(ret.back(),next_path_position)) {
         ret.push_back(std::move(next_path_position));
       }
@@ -610,9 +736,10 @@ MovePath generate_move(
 /* Conversions */
 
 
-array<Prism, 3> point_to_prisms(const Point& p, bool gantry1) {
-  array<Prism, 3> ret;
-  Vec3 disp = { GANTRY_X_DIM / 2 + SUPPORT_BEAM_WIDTH / 2, GANTRY_Y_DIM / 2 + SUPPORT_BEAM_WIDTH / 2, 0 };
+array<Prism, 4> point_to_prisms(const Point& p, bool gantry1) {
+  array<Prism, 4> ret;
+  Vec3 disp = { GANTRY_X_DIM / 2 + SUPPORT_BEAM_WIDTH / 2, GANTRY_Y_DIM / 2 + SUPPORT_BEAM_WIDTH / 2,0 };
+  Vec3 disp_tube = { 0,  GANTRY_Y_DIM/2+GANTRY_TUBE_OFFSET/2,0 };
 
   Quaternion q1, q2;
   q1 = Quaternion(1.0,0.0,0.0,0.0);
@@ -621,14 +748,14 @@ array<Prism, 3> point_to_prisms(const Point& p, bool gantry1) {
 
   if (gantry1) {
     q1 = Quaternion::from_azimuthal(PI) * Quaternion::from_azimuthal(p.angle.theta);
-    q2 = Quaternion::from_spherical_angle(p.angle.theta, 0);//Quaternion::from_azimuthal(PI) * 
+    q2 = Quaternion::from_azimuthal(p.angle.theta)*Quaternion::from_axis_angle(Vec3(1,0,0),p.angle.phi);
   } else { 
     q1 = Quaternion::from_azimuthal(p.angle.theta);
-    q2 = Quaternion::from_spherical_angle(p.angle.theta, 0);
+    q2 = Quaternion::from_azimuthal(p.angle.theta)*Quaternion::from_axis_angle(Vec3(1,0,0),p.angle.phi);
   }
   // optical box
   ret[0] = {
-    p.position+disp,//TODO: figure out why this was nessisary: rotate_point(p.position+disp, p.position, q1),
+    p.position+disp,
     GANTRY_X_DIM/2, GANTRY_Y_DIM/2, GANTRY_Z_DIM/2,
     q2
   };
@@ -640,8 +767,13 @@ array<Prism, 3> point_to_prisms(const Point& p, bool gantry1) {
   };
   ret[2] = {
     p.position + (Vec3){0, 0, -SUPPORT_BEAM_HEIGHT}+disp,
-    SUPPORT_BEAM_WIDTH, SUPPORT_BEAM_WIDTH, SUPPORT_BEAM_HEIGHT,
+    ROTARY_AXIS_L/2, SUPPORT_BEAM_WIDTH, SUPPORT_BEAM_HEIGHT,
     q1
+  };
+  ret[3] = {
+    p.position+disp+disp_tube,
+    0.4*GANTRY_X_DIM/2, GANTRY_TUBE_OFFSET/2, GANTRY_Z_DIM/2,
+    q2
   };
   return ret;
 }
@@ -656,15 +788,15 @@ Prism point_to_optical_box(const Point& p, bool gantry1) {
 
   if (gantry1) {
     q1 = Quaternion::from_azimuthal(PI) * Quaternion::from_azimuthal(p.angle.theta);
-    q2 = Quaternion::from_spherical_angle(p.angle.theta, 0);//Quaternion::from_azimuthal(PI) *
+    q2 = Quaternion::from_azimuthal(p.angle.theta)*Quaternion::from_axis_angle(Vec3(1,0,0),p.angle.phi);
   } else { 
     q1 = Quaternion::from_azimuthal(p.angle.theta);
-    q2 = Quaternion::from_spherical_angle(p.angle.theta, 0);
+    q2 = Quaternion::from_azimuthal(p.angle.theta)*Quaternion::from_axis_angle(Vec3(1,0,0),p.angle.phi);
   }
 
   return {
     p.position + disp,//rotate_point(p.position + disp, p.position, q1),
-    GANTRY_X_DIM/2, GANTRY_Y_DIM/2, GANTRY_Z_DIM/2,
+    GANTRY_X_DIM/2, GANTRY_TUBE_OFFSET/2, GANTRY_Z_DIM/2,
     q2
   };
 }

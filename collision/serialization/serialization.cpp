@@ -55,11 +55,10 @@ GeomResult deserialize(const string& s) {
   // Remove whitespace and make lowercase
   static const regex ws("\\s+");
   auto reduced = regex_replace(s, ws, "");
-
   // check if it's commented out
   if (s.size() && (s[0] == '#' || s[0] == '!')) return Commented;
 
-  transform(reduced.begin(), reduced.end(), reduced.begin(), ::tolower);
+  //transform(reduced.begin(), reduced.end(), reduced.begin(), ::tolower);
 
   GeomType geom_type;
 
@@ -348,7 +347,6 @@ ErrorType deserialize(const string& s, ConvexPolyhedron& p) {
   }
 
   string file_name = get<string>(res["file"]);
-  std::cout << file_name <<" here\n";
   Vec3 scale_vec(get<double>(res["sx"]),get<double>(res["sy"]),get<double>(res["sz"]));
   Vec3 center = get<Vec3>(res["center"]);
   Quaternion orientation = get<Quaternion>(res["orientation"]);
