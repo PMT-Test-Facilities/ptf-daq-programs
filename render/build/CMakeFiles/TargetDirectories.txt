@@ -1,0 +1,3 @@
+/home/midptf/Documents/Student/Elena/ptf-daq-programs-viz/render/build/CMakeFiles/rebuild_cache.dir
+/home/midptf/Documents/Student/Elena/ptf-daq-programs-viz/render/build/CMakeFiles/edit_cache.dir
+/home/midptf/Documents/Student/Elena/ptf-daq-programs-viz/render/build/CMakeFiles/CollisionObjectsViewer.dir
