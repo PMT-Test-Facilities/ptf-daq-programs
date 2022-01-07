@@ -70,7 +70,7 @@ def rx2deg (reply):
     return angle
     
 
-def seiral_move_to(dist):
+def serial_move_to(dist):
         #TODO: we didn't test this yet since we needed power for the usb hub
         countstr=deg2tx(dist)
         mvcmd="0ma"+countstr.upper()
@@ -158,7 +158,7 @@ class MyPeriodicEquipment(midas.frontend.EquipmentBase):
         posreply=ser.readline() #read most recent line in serial port file
         pos=rx2deg(posreply) #convert to a float value
         dest=self.client.odb_get("/Equipment/RotatorMount0%s/Settings/Destination" % (midas.frontend.frontend_index,))
-        pos=seiral_move_to(dest)
+        pos=serial_move_to(dest)
         self.client.odb_set("/Equipment/RotatorMount0%s/Variables/Position[0]" % (midas.frontend.frontend_index,),pos) # set the odb variable
 
         self.set_status("Initialized")
@@ -217,7 +217,7 @@ class MyFrontend(midas.frontend.FrontendBase):
     def my_odb_callback(self,client, path, odb_value):
         time.sleep(1) #not disrupt other communications if they are happening
         dest=self.client.odb_get("/Equipment/RotatorMount0%s/Settings/Destination" % (midas.frontend.frontend_index,))
-        pos=seiral_move_to(dest)
+        pos=serial_move_to(dest)
         self.client.odb_set("/Equipment/RotatorMount0%s/Variables/Position[0]" % (midas.frontend.frontend_index,),pos)
 
         
