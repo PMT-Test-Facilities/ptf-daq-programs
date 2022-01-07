@@ -43,7 +43,9 @@
 Alexander Jaffray \\
 Kevin Xie \\
 Mia Kramer \\
+Vincent Gousy-Leblanc \\
 Skylar Wingfelder\\
+Elena Cornick \\
 % {\today} \\
 Version 5}
 
@@ -89,11 +91,11 @@ CSA approved safety footwear with a steel toe is required in the Meson Hall. A s
 
 \subsection{Contact and Help}
 
-If there is any additional assistance/guidance required, please do not hesitate to contact Thomas Lindner. Their offices are in Trailer Ff and emails are available at the TRIUMF staff directory website. Thomas' building is at ISAC-II.\@ As well, the TRIUMF main control room number is 7333.
+If there is any additional assistance/guidance required, please do not hesitate to contact Thomas Lindner, his office is in ISAC-II. You can also contact, Akira Konaka (konaka@triumf.ca) or Mark Hartz (mhartz@triumf.ca) on the second floor of MOB. As well, the TRIUMF main control room number is 7333.
 
 \begin{center}\begin{tabular}{rl}
+	Vincent Gousy-Leblanc & vgousyleblanc@triumf.ca \\
 	Thomas Lindner & lindner@triumf.ca \\
-	John Walker    & jmgwalker@triumf.ca \\
 	Patrick de Perio     & pdeperio@triumf.ca
 \end{tabular}\end{center}
 
@@ -109,8 +111,8 @@ The PTF is located on the first floor of the Meson Hall Extension Service Annex.
 	\item Upon exiting the Badge Room, turn left and walk towards ISAC 1
 	\item Enter the Meson Hall loading bay (on the right), either through the main bay doors or through the small access door on the right side adjacent to the compressed gas tanks
 	\item Once inside the Meson Hall, turn left towards the helium recovery area and walk down the hallway
-	\item Proceed down the short stairs by the scissor lift, make a right around the clean room and walk to the Meson Hall Extension Service Annex 
-	\item Once in MHESA, the PTF is the first room on the right.
+	\item Keep going straight, then right, pass the clean room
+	\item If you keep going straight, 2 doors will be there, along with a detector facility sigh, keep going and take a first left, the first dark room is the PTF facility
 	\item Check the status screen. If the PMT is on, do not open the curtain, and do not turn on the room lights, use a flashlight when in the room. If the screen indicates that a run is in progress, only enter if really necessary, following the precautions above
 \end{enumerate}
 
@@ -960,6 +962,47 @@ To measure the differential (in the dimension being currently examined), there a
 
 \clearpage
 
+\section{The PTF water system}
+
+PTF uses an ultra clean water system to allow a correct diffusion of light in the water. The complete description of the operation is written here \url{http://ladd00.triumf.ca/~lindner/Water%20System/PMT_Water_Circ_System_Manual.html}
+\subsection{The operation }
+\textbf{Follow the order written in the manual to power on the system, otherwise the system might not work as expected}\\
+
+The operation of the system to fill the PTF tank works relatively easily, pure water from the dionization group is connected to the storage tank. A vaccum pump takes this water to the bell jar (see figure) and then the water level increase until a specific pressure that was previously set on the valve(see picture). Once this level is achieve another pump is use to take the water out of the bell jar, through 2 finer filter: back to the storage tank or through a UV filter and then the PTF water tank. \\
+
+To empty the PTF tank, similar steps are followed, the second pump is used to get the water from the tank to the bell jar and by using the same process as previously, the second pump, will be used to push the water from the bell jar to the storage tank,
+\FloatBarrier
+\begin{figure}[!htb]\centering
+	\includegraphics[width=\picwidth]{Water_system_diagram.png}
+  \caption{Schematic of the water system}
+\end{figure}
+\FloatBarrier
+\subsection{Troubleshooting}
+When we first used the water system a few problems were seen
+\begin{itemize}
+    \item If the pump doesn't display the correct values for the rpm, simply restart it. Once it goes in a certain mode, it doesn't seem to be able to "get out" of it 
+    \item While starting the pump, it might make it easier to orient the pipes vertically to give a push to water, this will help to start the second pump.
+\end{itemize}
+
+
+\section{Inserting the PMT in the PTF tank}
+Here is a brief overview of the steps to follow in order to insert the PMT in the water tank. For more details about the risk associated to this procedure, an hasard analysis was done here \url{https://docs.google.com/document/d/166mG6hkSm4oPT4rZqQC2nB3A2U0TLMZI/edit?usp=sharing&ouid=108951175899342724526&rtpof=true&sd=true} . An Elog describing  this procedure was also published \url{https://midptf01.triumf.ca/elog/PTF/476}\\ 
+\begin{enumerate}
+    \item Center the steel plate so that we can reproduce the position of the PMT with good precision between each time we are changing of PMT. 
+    \item The PMT is secured when it is in the cardboard box and when manipulating the PMT, we must ensure that the acrylic cover is fixed to protect against the vacuum hazard.We require at least 2 people to when getting the PMT out of the box since it is quite big, pull the PMT first and ensure at each that you maintain full control of the PMT. (See image X)
+    \item Once the PMT is out of the box, you need to tale off the top part of the PMT holder, unscrewing 2 pairs of nuts. 
+    \item Once this is done, center the PMT with the right screw and fix the bottom of the PMT using a 2 screws and 2 nots. Make sure the screws don't go out of the PMT holder.Otherwise, the PMT holder won't attach properly to the steel plate
+    \item Once the PMT is secured on the PMT platform, the crane operator will hook the PMT platform to the crane
+    \item Once the cable is secured, someone trained to use the crane operator can lift the PMT and descend in the PMT tank, trying to align as much as possible with the steel plate and with the PMT dynode as well.
+    \item To lock the PMT on the steel plate, you need to rotate it by 45˚ clockwise. You also then need to put to pinch screw on the steel plate, to ensure that the PMT won't move for the remaining time. Once this is done, we can untie the cable and proceed to the next step.
+    \item After making sure the PMT is secure, take the top plate of the PMT platform out.
+    \item After this, lift coils 1 and 2 by sliding them down. Install the wood ramp at the front of the PTF
+    \item Gantry 0 needs to be unscrewed at the top, at the cross pattern so that the tank can be inserted. 
+    \item Someone trained to use a pallet jack can then lift the pallet, slide the pallet on the ramp and insert the PMT + tank at the right position in PTF. 
+    \item Inspect and move manually the pallet so that it fits the position of the tank.
+
+\end{enumerate}
+
 
 
 \section{Technical Scripts and Troubleshooting}
@@ -1028,13 +1071,14 @@ The primary documentation method used in the PTF is the E-Log system which can b
 
 \subsection{PTF Section}
 
-E-Log entries in the PTF section are primarily focused on configuration adjustments and problem identification and solution. Standard procedures, protocols, and physical and electronic equipment changes are to be recorded in individual entries. As well, if a problem is encountered, it is appropriate to add an entry with the category of ``Problem'', or ``Problem Fixed''.
+E-Log entries (\url{https://midptf01.triumf.ca/elog/PTF}) in the PTF section are primarily focused on configuration adjustments and problem identification and solution. Standard procedures, protocols, and physical and electronic equipment changes are to be recorded in individual entries. As well, if a problem is encountered, it is appropriate to add an entry with the category of ``Problem'', or ``Problem Fixed''.
 
 \subsection{Run Control}
 
 The Run Control section is designed to allow detailed description of the activity concerning measurements of the PMT or other parameters. For example, if a lengthy measurement was to begin, a Run Control entry should be added with the experimental design, experiment objective, and estimated run duration so as to aid in scheduling of other measurements in the PTF.
 
 As well, if a testing run is being performed, the reason and feature being tested should be added as an entry for future reference. Adding entries to the Run Control section also helps in keeping international collaborations informed on the progress being made in the PTF.
+
 
 \newpage
 
@@ -1070,6 +1114,4 @@ Due to the technical nature of the Photosensor Test Facility, there are a variet
 	
 	
 \end{description}
-
-
 \end{document}
