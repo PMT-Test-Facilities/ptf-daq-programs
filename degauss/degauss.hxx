@@ -60,9 +60,4 @@ pair<double, double> exponential_factors(double target_voltage, Coil coil, uint3
 vector<double> degauss_path(double target_voltage, Coil coil, uint32_t steps);
 
 
-// gets a particular degauss step
-// returns 0 on error
-double degauss_step(double target_voltage, Coil coil, uint32_t step, double c, double k);
-
-
 #endif
