@@ -1,0 +1,228 @@
+<html>
+  <head>
+    <title>TRIUMF T2K FGDmini LV control</title>
+    <!-- <meta http-equiv="Refresh" content="5">   -->
+
+  </head>
+
+  <body>
+    <form name="form1" method="Get">
+      <table border=1 cellpadding=2 width="100%">
+	<tr><th colspan=2>TRIUMF T2K FGDmini LV control</tr>
+	<tr><td width="50%">
+            <input value="Status"    name="cmd" type="submit">
+            <input value="ODB"       name="cmd" type="submit">
+            <input value="History"   name="cmd" type="submit">
+          </td><td>
+            <center> <a href="http://midas.triumf.ca"> >>>> Midas Help <<<< </a></center>
+          </td></tr>
+      </tr>
+      </table>
+    </form>
+
+    <script src='mhttpd.js'></script>
+
+    <script>
+      var reloadTimerId = 0;
+    </script>
+
+    <script>
+      
+    </script>
+
+    <style type="text/css">
+      
+
+td.style_mainSwitch { background-color: <odb src="/Equipment/FgdWiener02/Status/mainSwitchColor"> }
+td.style_mainStatus { background-color: <odb src="/Equipment/FgdWiener02/Status/mainStatusColor"> }
+td.style_delayedMainStatus { background-color: <odb src="/Equipment/FgdWiener02/Status/delayedMainStatusColor"> }
+
+tr.style_2 { background-color: <odb src="/Equipment/FgdWiener02/Status/outputColor[2]"> }
+td.style_switch_2 { background-color: <odb src="/Equipment/FgdWiener02/Status/switchColor[2]"> }
+td.style_status_2 { background-color: <odb src="/Equipment/FgdWiener02/Status/statusColor[2]"> }
+td.style_demand_2 { background-color: <odb src="/Equipment/FgdWiener02/Status/demandColor[2]"> }
+td.style_measured_2 { background-color: <odb src="/Equipment/FgdWiener02/Status/measuredColor[2]"> }
+tr.style_3 { background-color: <odb src="/Equipment/FgdWiener02/Status/outputColor[3]"> }
+td.style_switch_3 { background-color: <odb src="/Equipment/FgdWiener02/Status/switchColor[3]"> }
+td.style_status_3 { background-color: <odb src="/Equipment/FgdWiener02/Status/statusColor[3]"> }
+td.style_demand_3 { background-color: <odb src="/Equipment/FgdWiener02/Status/demandColor[3]"> }
+td.style_measured_3 { background-color: <odb src="/Equipment/FgdWiener02/Status/measuredColor[3]"> }
+tr.style_4 { background-color: <odb src="/Equipment/FgdWiener02/Status/outputColor[4]"> }
+td.style_switch_4 { background-color: <odb src="/Equipment/FgdWiener02/Status/switchColor[4]"> }
+td.style_status_4 { background-color: <odb src="/Equipment/FgdWiener02/Status/statusColor[4]"> }
+td.style_demand_4 { background-color: <odb src="/Equipment/FgdWiener02/Status/demandColor[4]"> }
+td.style_measured_4 { background-color: <odb src="/Equipment/FgdWiener02/Status/measuredColor[4]"> }
+tr.style_1 { background-color: <odb src="/Equipment/FgdWiener02/Status/outputColor[1]"> }
+td.style_switch_1 { background-color: <odb src="/Equipment/FgdWiener02/Status/switchColor[1]"> }
+td.style_status_1 { background-color: <odb src="/Equipment/FgdWiener02/Status/statusColor[1]"> }
+td.style_demand_1 { background-color: <odb src="/Equipment/FgdWiener02/Status/demandColor[1]"> }
+td.style_measured_1 { background-color: <odb src="/Equipment/FgdWiener02/Status/measuredColor[1]"> }
+tr.style_5 { background-color: <odb src="/Equipment/FgdWiener02/Status/outputColor[5]"> }
+td.style_switch_5 { background-color: <odb src="/Equipment/FgdWiener02/Status/switchColor[5]"> }
+td.style_status_5 { background-color: <odb src="/Equipment/FgdWiener02/Status/statusColor[5]"> }
+td.style_demand_5 { background-color: <odb src="/Equipment/FgdWiener02/Status/demandColor[5]"> }
+td.style_measured_5 { background-color: <odb src="/Equipment/FgdWiener02/Status/measuredColor[5]"> }
+tr.style_6 { background-color: <odb src="/Equipment/FgdWiener02/Status/outputColor[6]"> }
+td.style_switch_6 { background-color: <odb src="/Equipment/FgdWiener02/Status/switchColor[6]"> }
+td.style_status_6 { background-color: <odb src="/Equipment/FgdWiener02/Status/statusColor[6]"> }
+td.style_demand_6 { background-color: <odb src="/Equipment/FgdWiener02/Status/demandColor[6]"> }
+td.style_measured_6 { background-color: <odb src="/Equipment/FgdWiener02/Status/measuredColor[6]"> }
+tr.style_0 { background-color: <odb src="/Equipment/FgdWiener02/Status/outputColor[0]"> }
+td.style_switch_0 { background-color: <odb src="/Equipment/FgdWiener02/Status/switchColor[0]"> }
+td.style_status_0 { background-color: <odb src="/Equipment/FgdWiener02/Status/statusColor[0]"> }
+td.style_demand_0 { background-color: <odb src="/Equipment/FgdWiener02/Status/demandColor[0]"> }
+td.style_measured_0 { background-color: <odb src="/Equipment/FgdWiener02/Status/measuredColor[0]"> }
+tr.style_7 { background-color: <odb src="/Equipment/FgdWiener02/Status/outputColor[7]"> }
+td.style_switch_7 { background-color: <odb src="/Equipment/FgdWiener02/Status/switchColor[7]"> }
+td.style_status_7 { background-color: <odb src="/Equipment/FgdWiener02/Status/statusColor[7]"> }
+td.style_demand_7 { background-color: <odb src="/Equipment/FgdWiener02/Status/demandColor[7]"> }
+td.style_measured_7 { background-color: <odb src="/Equipment/FgdWiener02/Status/measuredColor[7]"> }
+
+    </style>
+
+    <form name="form2" method="Get">
+      <hr>
+      <table border=1 cellpadding=2">
+        <tr>
+          <td>Control enabled: <odb src="/Equipment/FgdWiener02/Settings/EnableControl"></td>
+          <td>Output enabled: <odb src="/Equipment/FgdWiener02/Settings/outputEnable"></td>
+          <td><input type=button value="Turn on" onClick="ODBRpc('fefgdwiener02','TurnOn'); window.location.reload();"></input></td>
+          <td><input type=button value="Turn off" onClick="ODBRpc('fefgdwiener02','TurnOff'); window.location.reload();"></input></td>
+          <td class=style_mainSwitch>Main switch: <odb src="/Equipment/FgdWiener02/Settings/mainSwitch"> / <odb src="/Equipment/FgdWiener02/Readback/sysMainSwitch.0"></td>
+          <td class=style_mainStatus>Status: <odb src="/Equipment/FgdWiener02/Status/mainStatus"></td>
+          <td class=style_delayedMainStatus> Delayed status: <odb src="/Equipment/FgdWiener02/Status/delayedMainStatus"></td>
+        </tr>
+      </table>
+      <hr>
+      
+<table border=1 cellpadding=2>
+<tr>
+<th colspan=2>Name
+<th>HWCH
+<th>switch
+<th>demand
+<th>measured
+<th>current
+<th>sparks
+<th>status
+</tr>
+
+<tr>
+<td rowspan=5 align=center>FGD
+</tr>
+
+<tr class=style_2 >
+<td colspan=1 align=left>FGD%A+6V</td>
+<td align=left>U2 [2]</td>
+<td class=style_switch_2 align=center><odb src="/Equipment/FgdWiener02/Settings/outputSwitch[2]"> / <odb src="/Equipment/FgdWiener02/Variables/switch[2]"></td>
+<td class=style_demand_2 align=center><odb src="/Equipment/FgdWiener02/Settings/outputVoltage[2]" edit=1> / <odb src="/Equipment/FgdWiener02/Variables/demandVoltage[2]" format="%.1f"></td>
+<td class=style_measured_2 align=center><odb src="/Equipment/FgdWiener02/Variables/senseVoltage[2]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/FgdWiener02/Variables/current[2]" format="%.3f"> A</td>
+<td align=center><odb src="/Equipment/FgdWiener02/Variables/sparkCount[2]"></td>
+<td class=style_status_2 align=center><odb format=0x%x src="/Equipment/FgdWiener02/Variables/status[2]">
+(<odb src="/Equipment/FgdWiener02/Readback/outputStatusString[2]">)</td>
+</tr>
+
+<tr class=style_3 >
+<td colspan=1 align=left>FGD%A-6V</td>
+<td align=left>U3 [3]</td>
+<td class=style_switch_3 align=center><odb src="/Equipment/FgdWiener02/Settings/outputSwitch[3]"> / <odb src="/Equipment/FgdWiener02/Variables/switch[3]"></td>
+<td class=style_demand_3 align=center><odb src="/Equipment/FgdWiener02/Settings/outputVoltage[3]" edit=1> / <odb src="/Equipment/FgdWiener02/Variables/demandVoltage[3]" format="%.1f"></td>
+<td class=style_measured_3 align=center><odb src="/Equipment/FgdWiener02/Variables/senseVoltage[3]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/FgdWiener02/Variables/current[3]" format="%.3f"> A</td>
+<td align=center><odb src="/Equipment/FgdWiener02/Variables/sparkCount[3]"></td>
+<td class=style_status_3 align=center><odb format=0x%x src="/Equipment/FgdWiener02/Variables/status[3]">
+(<odb src="/Equipment/FgdWiener02/Readback/outputStatusString[3]">)</td>
+</tr>
+
+<tr class=style_4 >
+<td colspan=1 align=left>FGD%CMB+4V</td>
+<td align=left>U4 [4]</td>
+<td class=style_switch_4 align=center><odb src="/Equipment/FgdWiener02/Settings/outputSwitch[4]"> / <odb src="/Equipment/FgdWiener02/Variables/switch[4]"></td>
+<td class=style_demand_4 align=center><odb src="/Equipment/FgdWiener02/Settings/outputVoltage[4]" edit=1> / <odb src="/Equipment/FgdWiener02/Variables/demandVoltage[4]" format="%.1f"></td>
+<td class=style_measured_4 align=center><odb src="/Equipment/FgdWiener02/Variables/senseVoltage[4]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/FgdWiener02/Variables/current[4]" format="%.3f"> A</td>
+<td align=center><odb src="/Equipment/FgdWiener02/Variables/sparkCount[4]"></td>
+<td class=style_status_4 align=center><odb format=0x%x src="/Equipment/FgdWiener02/Variables/status[4]">
+(<odb src="/Equipment/FgdWiener02/Readback/outputStatusString[4]">)</td>
+</tr>
+
+<tr class=style_1 >
+<td colspan=1 align=left>FGD%D+6V</td>
+<td align=left>U1 [1]</td>
+<td class=style_switch_1 align=center><odb src="/Equipment/FgdWiener02/Settings/outputSwitch[1]"> / <odb src="/Equipment/FgdWiener02/Variables/switch[1]"></td>
+<td class=style_demand_1 align=center><odb src="/Equipment/FgdWiener02/Settings/outputVoltage[1]" edit=1> / <odb src="/Equipment/FgdWiener02/Variables/demandVoltage[1]" format="%.1f"></td>
+<td class=style_measured_1 align=center><odb src="/Equipment/FgdWiener02/Variables/senseVoltage[1]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/FgdWiener02/Variables/current[1]" format="%.3f"> A</td>
+<td align=center><odb src="/Equipment/FgdWiener02/Variables/sparkCount[1]"></td>
+<td class=style_status_1 align=center><odb format=0x%x src="/Equipment/FgdWiener02/Variables/status[1]">
+(<odb src="/Equipment/FgdWiener02/Readback/outputStatusString[1]">)</td>
+</tr>
+
+<tr>
+<td rowspan=4 align=center>MCM
+</tr>
+
+<tr class=style_5 >
+<td colspan=1 align=left>MCM%3.8V</td>
+<td align=left>U5 [5]</td>
+<td class=style_switch_5 align=center><odb src="/Equipment/FgdWiener02/Settings/outputSwitch[5]"> / <odb src="/Equipment/FgdWiener02/Variables/switch[5]"></td>
+<td class=style_demand_5 align=center><odb src="/Equipment/FgdWiener02/Settings/outputVoltage[5]" edit=1> / <odb src="/Equipment/FgdWiener02/Variables/demandVoltage[5]" format="%.1f"></td>
+<td class=style_measured_5 align=center><odb src="/Equipment/FgdWiener02/Variables/senseVoltage[5]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/FgdWiener02/Variables/current[5]" format="%.3f"> A</td>
+<td align=center><odb src="/Equipment/FgdWiener02/Variables/sparkCount[5]"></td>
+<td class=style_status_5 align=center><odb format=0x%x src="/Equipment/FgdWiener02/Variables/status[5]">
+(<odb src="/Equipment/FgdWiener02/Readback/outputStatusString[5]">)</td>
+</tr>
+
+<tr class=style_6 >
+<td colspan=1 align=left>MCM%5.5V</td>
+<td align=left>U6 [6]</td>
+<td class=style_switch_6 align=center><odb src="/Equipment/FgdWiener02/Settings/outputSwitch[6]"> / <odb src="/Equipment/FgdWiener02/Variables/switch[6]"></td>
+<td class=style_demand_6 align=center><odb src="/Equipment/FgdWiener02/Settings/outputVoltage[6]" edit=1> / <odb src="/Equipment/FgdWiener02/Variables/demandVoltage[6]" format="%.1f"></td>
+<td class=style_measured_6 align=center><odb src="/Equipment/FgdWiener02/Variables/senseVoltage[6]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/FgdWiener02/Variables/current[6]" format="%.3f"> A</td>
+<td align=center><odb src="/Equipment/FgdWiener02/Variables/sparkCount[6]"></td>
+<td class=style_status_6 align=center><odb format=0x%x src="/Equipment/FgdWiener02/Variables/status[6]">
+(<odb src="/Equipment/FgdWiener02/Readback/outputStatusString[6]">)</td>
+</tr>
+
+<tr class=style_0 >
+<td colspan=1 align=left>MSCB%MSCB+5V</td>
+<td align=left>U0 [0]</td>
+<td class=style_switch_0 align=center><odb src="/Equipment/FgdWiener02/Settings/outputSwitch[0]"> / <odb src="/Equipment/FgdWiener02/Variables/switch[0]"></td>
+<td class=style_demand_0 align=center><odb src="/Equipment/FgdWiener02/Settings/outputVoltage[0]" edit=1> / <odb src="/Equipment/FgdWiener02/Variables/demandVoltage[0]" format="%.1f"></td>
+<td class=style_measured_0 align=center><odb src="/Equipment/FgdWiener02/Variables/senseVoltage[0]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/FgdWiener02/Variables/current[0]" format="%.3f"> A</td>
+<td align=center><odb src="/Equipment/FgdWiener02/Variables/sparkCount[0]"></td>
+<td class=style_status_0 align=center><odb format=0x%x src="/Equipment/FgdWiener02/Variables/status[0]">
+(<odb src="/Equipment/FgdWiener02/Readback/outputStatusString[0]">)</td>
+</tr>
+
+<tr>
+<td rowspan=6 align=center>Spare
+</tr>
+
+<tr class=style_7 >
+<td align=left>U7</td>
+<td align=left>U7 [7]</td>
+<td class=style_switch_7 align=center><odb src="/Equipment/FgdWiener02/Settings/outputSwitch[7]"> / <odb src="/Equipment/FgdWiener02/Variables/switch[7]"></td>
+<td class=style_demand_7 align=center><odb src="/Equipment/FgdWiener02/Settings/outputVoltage[7]" edit=1> / <odb src="/Equipment/FgdWiener02/Variables/demandVoltage[7]" format="%.1f"></td>
+<td class=style_measured_7 align=center><odb src="/Equipment/FgdWiener02/Variables/senseVoltage[7]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/FgdWiener02/Variables/current[7]" format="%.3f"> A</td>
+<td align=center><odb src="/Equipment/FgdWiener02/Variables/sparkCount[7]"></td>
+<td class=style_status_7 align=center><odb format=0x%x src="/Equipment/FgdWiener02/Variables/status[7]">
+(<odb src="/Equipment/FgdWiener02/Readback/outputStatusString[7]">)</td>
+</tr>
+
+</table>
+
+    </form>
+
+    <script>
+      //alert("Hello!");
+      reloadTimerId = setTimeout('window.location.reload()', 10000);
+    </script>
+
+  </body>
+</html>

@@ -1,0 +1,701 @@
+<html>
+  <head>
+    <title>HV control</title>
+    <!-- <meta http-equiv="Refresh" content="5">   -->
+
+  </head>
+
+  <body>
+    <form name="form1" method="Get">
+      <table border=1 cellpadding=2 width="100%">
+	<tr><th colspan=2>HV control</tr>
+	<tr><td width="50%">
+            <input value="Status"    name="cmd" type="submit">
+            <input value="ODB"       name="cmd" type="submit">
+            <input value="History"   name="cmd" type="submit">
+          </td><td>
+            <center> <a href="http://midas.triumf.ca"> >>>> Midas Help <<<< </a></center>
+          </td></tr>
+      </tr>
+      </table>
+    </form>
+
+    <script src='mhttpd.js'></script>
+    <script src='obsolete.js'></script>
+
+    <script>
+      var reloadTimerId = 0;
+    </script>
+
+    <script>
+      
+function setSwitch_0(value) { // group 
+  clearTimeout(reloadTimerId);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[16]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[8]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[9]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[2]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[4]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[1]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[0]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[25]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[24]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[29]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[28]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[5]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[6]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[3]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[7]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[10]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[11]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[12]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[13]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[14]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[15]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[17]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[18]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[19]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[20]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[21]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[22]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[23]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[26]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[27]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[30]', value);
+  ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[31]', value);
+}
+
+function setSwitch(value) { // top level
+  setSwitch_0(value);
+}
+
+
+    </script>
+
+    <style type="text/css">
+      
+
+td.style_mainSwitch { background-color: <odb src="/Equipment/PtfWiener/Status/mainSwitchColor"> }
+td.style_mainStatus { background-color: <odb src="/Equipment/PtfWiener/Status/mainStatusColor"> }
+td.style_delayedMainStatus { background-color: <odb src="/Equipment/PtfWiener/Status/delayedMainStatusColor"> }
+
+tr.style_16 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[16]"> }
+td.style_switch_16 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[16]"> }
+td.style_status_16 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[16]"> }
+td.style_demand_16 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[16]"> }
+td.style_measured_16 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[16]"> }
+tr.style_8 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[8]"> }
+td.style_switch_8 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[8]"> }
+td.style_status_8 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[8]"> }
+td.style_demand_8 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[8]"> }
+td.style_measured_8 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[8]"> }
+tr.style_9 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[9]"> }
+td.style_switch_9 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[9]"> }
+td.style_status_9 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[9]"> }
+td.style_demand_9 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[9]"> }
+td.style_measured_9 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[9]"> }
+tr.style_2 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[2]"> }
+td.style_switch_2 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[2]"> }
+td.style_status_2 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[2]"> }
+td.style_demand_2 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[2]"> }
+td.style_measured_2 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[2]"> }
+tr.style_4 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[4]"> }
+td.style_switch_4 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[4]"> }
+td.style_status_4 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[4]"> }
+td.style_demand_4 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[4]"> }
+td.style_measured_4 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[4]"> }
+tr.style_1 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[1]"> }
+td.style_switch_1 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[1]"> }
+td.style_status_1 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[1]"> }
+td.style_demand_1 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[1]"> }
+td.style_measured_1 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[1]"> }
+tr.style_0 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[0]"> }
+td.style_switch_0 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[0]"> }
+td.style_status_0 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[0]"> }
+td.style_demand_0 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[0]"> }
+td.style_measured_0 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[0]"> }
+tr.style_25 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[25]"> }
+td.style_switch_25 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[25]"> }
+td.style_status_25 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[25]"> }
+td.style_demand_25 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[25]"> }
+td.style_measured_25 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[25]"> }
+tr.style_24 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[24]"> }
+td.style_switch_24 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[24]"> }
+td.style_status_24 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[24]"> }
+td.style_demand_24 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[24]"> }
+td.style_measured_24 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[24]"> }
+tr.style_29 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[29]"> }
+td.style_switch_29 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[29]"> }
+td.style_status_29 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[29]"> }
+td.style_demand_29 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[29]"> }
+td.style_measured_29 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[29]"> }
+tr.style_28 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[28]"> }
+td.style_switch_28 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[28]"> }
+td.style_status_28 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[28]"> }
+td.style_demand_28 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[28]"> }
+td.style_measured_28 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[28]"> }
+tr.style_5 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[5]"> }
+td.style_switch_5 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[5]"> }
+td.style_status_5 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[5]"> }
+td.style_demand_5 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[5]"> }
+td.style_measured_5 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[5]"> }
+tr.style_6 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[6]"> }
+td.style_switch_6 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[6]"> }
+td.style_status_6 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[6]"> }
+td.style_demand_6 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[6]"> }
+td.style_measured_6 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[6]"> }
+tr.style_3 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[3]"> }
+td.style_switch_3 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[3]"> }
+td.style_status_3 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[3]"> }
+td.style_demand_3 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[3]"> }
+td.style_measured_3 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[3]"> }
+tr.style_7 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[7]"> }
+td.style_switch_7 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[7]"> }
+td.style_status_7 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[7]"> }
+td.style_demand_7 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[7]"> }
+td.style_measured_7 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[7]"> }
+tr.style_10 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[10]"> }
+td.style_switch_10 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[10]"> }
+td.style_status_10 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[10]"> }
+td.style_demand_10 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[10]"> }
+td.style_measured_10 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[10]"> }
+tr.style_11 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[11]"> }
+td.style_switch_11 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[11]"> }
+td.style_status_11 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[11]"> }
+td.style_demand_11 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[11]"> }
+td.style_measured_11 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[11]"> }
+tr.style_12 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[12]"> }
+td.style_switch_12 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[12]"> }
+td.style_status_12 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[12]"> }
+td.style_demand_12 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[12]"> }
+td.style_measured_12 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[12]"> }
+tr.style_13 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[13]"> }
+td.style_switch_13 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[13]"> }
+td.style_status_13 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[13]"> }
+td.style_demand_13 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[13]"> }
+td.style_measured_13 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[13]"> }
+tr.style_14 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[14]"> }
+td.style_switch_14 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[14]"> }
+td.style_status_14 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[14]"> }
+td.style_demand_14 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[14]"> }
+td.style_measured_14 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[14]"> }
+tr.style_15 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[15]"> }
+td.style_switch_15 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[15]"> }
+td.style_status_15 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[15]"> }
+td.style_demand_15 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[15]"> }
+td.style_measured_15 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[15]"> }
+tr.style_17 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[17]"> }
+td.style_switch_17 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[17]"> }
+td.style_status_17 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[17]"> }
+td.style_demand_17 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[17]"> }
+td.style_measured_17 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[17]"> }
+tr.style_18 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[18]"> }
+td.style_switch_18 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[18]"> }
+td.style_status_18 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[18]"> }
+td.style_demand_18 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[18]"> }
+td.style_measured_18 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[18]"> }
+tr.style_19 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[19]"> }
+td.style_switch_19 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[19]"> }
+td.style_status_19 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[19]"> }
+td.style_demand_19 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[19]"> }
+td.style_measured_19 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[19]"> }
+tr.style_20 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[20]"> }
+td.style_switch_20 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[20]"> }
+td.style_status_20 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[20]"> }
+td.style_demand_20 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[20]"> }
+td.style_measured_20 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[20]"> }
+tr.style_21 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[21]"> }
+td.style_switch_21 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[21]"> }
+td.style_status_21 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[21]"> }
+td.style_demand_21 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[21]"> }
+td.style_measured_21 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[21]"> }
+tr.style_22 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[22]"> }
+td.style_switch_22 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[22]"> }
+td.style_status_22 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[22]"> }
+td.style_demand_22 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[22]"> }
+td.style_measured_22 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[22]"> }
+tr.style_23 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[23]"> }
+td.style_switch_23 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[23]"> }
+td.style_status_23 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[23]"> }
+td.style_demand_23 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[23]"> }
+td.style_measured_23 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[23]"> }
+tr.style_26 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[26]"> }
+td.style_switch_26 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[26]"> }
+td.style_status_26 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[26]"> }
+td.style_demand_26 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[26]"> }
+td.style_measured_26 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[26]"> }
+tr.style_27 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[27]"> }
+td.style_switch_27 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[27]"> }
+td.style_status_27 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[27]"> }
+td.style_demand_27 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[27]"> }
+td.style_measured_27 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[27]"> }
+tr.style_30 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[30]"> }
+td.style_switch_30 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[30]"> }
+td.style_status_30 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[30]"> }
+td.style_demand_30 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[30]"> }
+td.style_measured_30 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[30]"> }
+tr.style_31 { background-color: <odb src="/Equipment/PtfWiener/Status/outputColor[31]"> }
+td.style_switch_31 { background-color: <odb src="/Equipment/PtfWiener/Status/switchColor[31]"> }
+td.style_status_31 { background-color: <odb src="/Equipment/PtfWiener/Status/statusColor[31]"> }
+td.style_demand_31 { background-color: <odb src="/Equipment/PtfWiener/Status/demandColor[31]"> }
+td.style_measured_31 { background-color: <odb src="/Equipment/PtfWiener/Status/measuredColor[31]"> }
+
+    </style>
+
+    <form name="form2" method="Get">
+      <hr>
+      <table border=1 cellpadding=2">
+        <tr>
+          <td class=style_mainSwitch>ISEG/MPOD Main switch: <odb src="/Equipment/PtfWiener/Settings/mainSwitch"> / <odb src="/Equipment/PtfWiener/Readback/sysMainSwitch.0"></td>
+          <td class=xstyle_mainStatus>Output Enabled: <odb src="/Equipment/PtfWiener/Settings/outputEnable"></td>
+          <td class=style_mainStatus>Status: <odb src="/Equipment/PtfWiener/Status/mainStatus"></td>
+          <td class=style_delayedMainStatus> Delayed: <odb src="/Equipment/PtfWiener/Status/delayedMainStatus"></td>
+          <td>Control enabled: <odb src="/Equipment/PtfWiener/Settings/EnableControl"></td>
+          <!--- <td><input type=button value="turn on and ramp up" onClick="setSwitch(1); window.location.reload();"></input></td> --->
+          <!--- <td><input type=button value="ramp down and turn off" onClick="setSwitch(0); window.location.reload();"></input></td> --->
+          <!--- <td>Set voltages: <input type=input size=7 value="0" onKeyPress="if (event.keyCode==13) { setVoltage(this.value); window.location.reload() }"></input></td> --->
+        </tr>
+        <tr>
+	  <td>
+             <input type=button value="Main switch ON" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/mainSwitch', 1); window.location.reload();"></input>
+             <input type=button value="Main switch OFF" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/mainSwitch', 0); window.location.reload();"></input>
+          </td>
+	  <td>
+             <input type=button value="Output ON" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputEnable', 1); window.location.reload();"></input>
+             <input type=button value="Output OFF" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputEnable', 0); window.location.reload();"></input>
+          </td>
+        </tr>
+      </table>
+      <hr>
+      
+<table border=1 cellpadding=2>
+<tr>
+<th colspan=1>Name<th>HWCH<th>Action<th>switch<th>demand<th>measured<th>current<th>sparks<th>status
+</tr>
+<tr class=style_16 >
+<td colspan=1 align=left>20in R3600 PMT</td>
+<td align=left>U200 [16]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[16]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[16]', 0); window.location.reload();"></input></td>
+<td class=style_switch_16 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[16]"> / <odb src="/Equipment/PtfWiener/Variables/switch[16]"></td>
+<td class=style_demand_16 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[16]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[16]" format="%.1f"></td>
+<td class=style_measured_16 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[16]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[16]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[16]"></td>
+<td class=style_status_16 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[16]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[16]">)</td>
+</tr>
+
+<tr class=style_8 >
+<td colspan=1 align=left>Coil1</td>
+<td align=left>U100 [8]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[8]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[8]', 0); window.location.reload();"></input></td>
+<td class=style_switch_8 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[8]"> / <odb src="/Equipment/PtfWiener/Variables/switch[8]"></td>
+<td class=style_demand_8 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[8]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[8]" format="%.1f"></td>
+<td class=style_measured_8 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[8]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[8]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[8]"></td>
+<td class=style_status_8 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[8]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[8]">)</td>
+</tr>
+
+<tr class=style_9 >
+<td colspan=1 align=left>Coil2</td>
+<td align=left>U101 [9]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[9]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[9]', 0); window.location.reload();"></input></td>
+<td class=style_switch_9 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[9]"> / <odb src="/Equipment/PtfWiener/Variables/switch[9]"></td>
+<td class=style_demand_9 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[9]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[9]" format="%.1f"></td>
+<td class=style_measured_9 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[9]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[9]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[9]"></td>
+<td class=style_status_9 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[9]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[9]">)</td>
+</tr>
+
+<tr class=style_2 >
+<td colspan=1 align=left>Coil3</td>
+<td align=left>U2 [2]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[2]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[2]', 0); window.location.reload();"></input></td>
+<td class=style_switch_2 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[2]"> / <odb src="/Equipment/PtfWiener/Variables/switch[2]"></td>
+<td class=style_demand_2 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[2]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[2]" format="%.1f"></td>
+<td class=style_measured_2 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[2]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[2]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[2]"></td>
+<td class=style_status_2 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[2]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[2]">)</td>
+</tr>
+
+<tr class=style_4 >
+<td colspan=1 align=left>Coil4</td>
+<td align=left>U4 [4]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[4]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[4]', 0); window.location.reload();"></input></td>
+<td class=style_switch_4 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[4]"> / <odb src="/Equipment/PtfWiener/Variables/switch[4]"></td>
+<td class=style_demand_4 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[4]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[4]" format="%.1f"></td>
+<td class=style_measured_4 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[4]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[4]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[4]"></td>
+<td class=style_status_4 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[4]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[4]">)</td>
+</tr>
+
+<tr class=style_1 >
+<td colspan=1 align=left>Coil5</td>
+<td align=left>U1 [1]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[1]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[1]', 0); window.location.reload();"></input></td>
+<td class=style_switch_1 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[1]"> / <odb src="/Equipment/PtfWiener/Variables/switch[1]"></td>
+<td class=style_demand_1 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[1]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[1]" format="%.1f"></td>
+<td class=style_measured_1 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[1]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[1]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[1]"></td>
+<td class=style_status_1 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[1]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[1]">)</td>
+</tr>
+
+<tr class=style_0 >
+<td colspan=1 align=left>Coil6</td>
+<td align=left>U0 [0]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[0]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[0]', 0); window.location.reload();"></input></td>
+<td class=style_switch_0 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[0]"> / <odb src="/Equipment/PtfWiener/Variables/switch[0]"></td>
+<td class=style_demand_0 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[0]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[0]" format="%.1f"></td>
+<td class=style_measured_0 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[0]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[0]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[0]"></td>
+<td class=style_status_0 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[0]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[0]">)</td>
+</tr>
+
+<tr class=style_25 >
+<td colspan=1 align=left>G0 - Monitor PMT</td>
+<td align=left>U301 [25]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[25]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[25]', 0); window.location.reload();"></input></td>
+<td class=style_switch_25 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[25]"> / <odb src="/Equipment/PtfWiener/Variables/switch[25]"></td>
+<td class=style_demand_25 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[25]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[25]" format="%.1f"></td>
+<td class=style_measured_25 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[25]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[25]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[25]"></td>
+<td class=style_status_25 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[25]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[25]">)</td>
+</tr>
+
+<tr class=style_24 >
+<td colspan=1 align=left>G0 - Receiver PMT</td>
+<td align=left>U300 [24]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[24]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[24]', 0); window.location.reload();"></input></td>
+<td class=style_switch_24 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[24]"> / <odb src="/Equipment/PtfWiener/Variables/switch[24]"></td>
+<td class=style_demand_24 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[24]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[24]" format="%.1f"></td>
+<td class=style_measured_24 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[24]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[24]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[24]"></td>
+<td class=style_status_24 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[24]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[24]">)</td>
+</tr>
+
+<tr class=style_29 >
+<td colspan=1 align=left>G1 - Monitor PMT</td>
+<td align=left>U305 [29]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[29]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[29]', 0); window.location.reload();"></input></td>
+<td class=style_switch_29 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[29]"> / <odb src="/Equipment/PtfWiener/Variables/switch[29]"></td>
+<td class=style_demand_29 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[29]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[29]" format="%.1f"></td>
+<td class=style_measured_29 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[29]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[29]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[29]"></td>
+<td class=style_status_29 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[29]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[29]">)</td>
+</tr>
+
+<tr class=style_28 >
+<td colspan=1 align=left>G1 - Receiver PMT</td>
+<td align=left>U304 [28]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[28]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[28]', 0); window.location.reload();"></input></td>
+<td class=style_switch_28 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[28]"> / <odb src="/Equipment/PtfWiener/Variables/switch[28]"></td>
+<td class=style_demand_28 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[28]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[28]" format="%.1f"></td>
+<td class=style_measured_28 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[28]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[28]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[28]"></td>
+<td class=style_status_28 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[28]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[28]">)</td>
+</tr>
+
+<tr class=style_5 >
+<td colspan=1 align=left>HPD HV Control</td>
+<td align=left>U5 [5]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[5]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[5]', 0); window.location.reload();"></input></td>
+<td class=style_switch_5 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[5]"> / <odb src="/Equipment/PtfWiener/Variables/switch[5]"></td>
+<td class=style_demand_5 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[5]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[5]" format="%.1f"></td>
+<td class=style_measured_5 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[5]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[5]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[5]"></td>
+<td class=style_status_5 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[5]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[5]">)</td>
+</tr>
+
+<tr class=style_6 >
+<td colspan=1 align=left>HPD LV Control</td>
+<td align=left>U6 [6]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[6]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[6]', 0); window.location.reload();"></input></td>
+<td class=style_switch_6 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[6]"> / <odb src="/Equipment/PtfWiener/Variables/switch[6]"></td>
+<td class=style_demand_6 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[6]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[6]" format="%.1f"></td>
+<td class=style_measured_6 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[6]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[6]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[6]"></td>
+<td class=style_status_6 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[6]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[6]">)</td>
+</tr>
+
+<tr class=style_3 >
+<td colspan=1 align=left>U3</td>
+<td align=left>U3 [3]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[3]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[3]', 0); window.location.reload();"></input></td>
+<td class=style_switch_3 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[3]"> / <odb src="/Equipment/PtfWiener/Variables/switch[3]"></td>
+<td class=style_demand_3 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[3]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[3]" format="%.1f"></td>
+<td class=style_measured_3 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[3]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[3]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[3]"></td>
+<td class=style_status_3 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[3]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[3]">)</td>
+</tr>
+
+<tr class=style_7 >
+<td colspan=1 align=left>U7</td>
+<td align=left>U7 [7]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[7]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[7]', 0); window.location.reload();"></input></td>
+<td class=style_switch_7 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[7]"> / <odb src="/Equipment/PtfWiener/Variables/switch[7]"></td>
+<td class=style_demand_7 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[7]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[7]" format="%.1f"></td>
+<td class=style_measured_7 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[7]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[7]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[7]"></td>
+<td class=style_status_7 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[7]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[7]">)</td>
+</tr>
+
+<tr class=style_10 >
+<td colspan=1 align=left>U102</td>
+<td align=left>U102 [10]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[10]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[10]', 0); window.location.reload();"></input></td>
+<td class=style_switch_10 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[10]"> / <odb src="/Equipment/PtfWiener/Variables/switch[10]"></td>
+<td class=style_demand_10 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[10]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[10]" format="%.1f"></td>
+<td class=style_measured_10 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[10]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[10]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[10]"></td>
+<td class=style_status_10 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[10]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[10]">)</td>
+</tr>
+
+<tr class=style_11 >
+<td colspan=1 align=left>U103</td>
+<td align=left>U103 [11]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[11]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[11]', 0); window.location.reload();"></input></td>
+<td class=style_switch_11 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[11]"> / <odb src="/Equipment/PtfWiener/Variables/switch[11]"></td>
+<td class=style_demand_11 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[11]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[11]" format="%.1f"></td>
+<td class=style_measured_11 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[11]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[11]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[11]"></td>
+<td class=style_status_11 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[11]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[11]">)</td>
+</tr>
+
+<tr class=style_12 >
+<td colspan=1 align=left>U104</td>
+<td align=left>U104 [12]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[12]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[12]', 0); window.location.reload();"></input></td>
+<td class=style_switch_12 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[12]"> / <odb src="/Equipment/PtfWiener/Variables/switch[12]"></td>
+<td class=style_demand_12 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[12]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[12]" format="%.1f"></td>
+<td class=style_measured_12 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[12]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[12]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[12]"></td>
+<td class=style_status_12 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[12]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[12]">)</td>
+</tr>
+
+<tr class=style_13 >
+<td colspan=1 align=left>U105</td>
+<td align=left>U105 [13]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[13]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[13]', 0); window.location.reload();"></input></td>
+<td class=style_switch_13 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[13]"> / <odb src="/Equipment/PtfWiener/Variables/switch[13]"></td>
+<td class=style_demand_13 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[13]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[13]" format="%.1f"></td>
+<td class=style_measured_13 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[13]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[13]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[13]"></td>
+<td class=style_status_13 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[13]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[13]">)</td>
+</tr>
+
+<tr class=style_14 >
+<td colspan=1 align=left>U106</td>
+<td align=left>U106 [14]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[14]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[14]', 0); window.location.reload();"></input></td>
+<td class=style_switch_14 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[14]"> / <odb src="/Equipment/PtfWiener/Variables/switch[14]"></td>
+<td class=style_demand_14 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[14]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[14]" format="%.1f"></td>
+<td class=style_measured_14 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[14]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[14]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[14]"></td>
+<td class=style_status_14 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[14]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[14]">)</td>
+</tr>
+
+<tr class=style_15 >
+<td colspan=1 align=left>U107</td>
+<td align=left>U107 [15]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[15]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[15]', 0); window.location.reload();"></input></td>
+<td class=style_switch_15 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[15]"> / <odb src="/Equipment/PtfWiener/Variables/switch[15]"></td>
+<td class=style_demand_15 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[15]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[15]" format="%.1f"></td>
+<td class=style_measured_15 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[15]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[15]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[15]"></td>
+<td class=style_status_15 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[15]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[15]">)</td>
+</tr>
+
+<tr class=style_17 >
+<td colspan=1 align=left>U201</td>
+<td align=left>U201 [17]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[17]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[17]', 0); window.location.reload();"></input></td>
+<td class=style_switch_17 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[17]"> / <odb src="/Equipment/PtfWiener/Variables/switch[17]"></td>
+<td class=style_demand_17 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[17]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[17]" format="%.1f"></td>
+<td class=style_measured_17 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[17]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[17]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[17]"></td>
+<td class=style_status_17 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[17]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[17]">)</td>
+</tr>
+
+<tr class=style_18 >
+<td colspan=1 align=left>U202</td>
+<td align=left>U202 [18]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[18]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[18]', 0); window.location.reload();"></input></td>
+<td class=style_switch_18 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[18]"> / <odb src="/Equipment/PtfWiener/Variables/switch[18]"></td>
+<td class=style_demand_18 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[18]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[18]" format="%.1f"></td>
+<td class=style_measured_18 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[18]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[18]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[18]"></td>
+<td class=style_status_18 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[18]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[18]">)</td>
+</tr>
+
+<tr class=style_19 >
+<td colspan=1 align=left>U203</td>
+<td align=left>U203 [19]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[19]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[19]', 0); window.location.reload();"></input></td>
+<td class=style_switch_19 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[19]"> / <odb src="/Equipment/PtfWiener/Variables/switch[19]"></td>
+<td class=style_demand_19 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[19]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[19]" format="%.1f"></td>
+<td class=style_measured_19 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[19]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[19]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[19]"></td>
+<td class=style_status_19 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[19]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[19]">)</td>
+</tr>
+
+<tr class=style_20 >
+<td colspan=1 align=left>U204</td>
+<td align=left>U204 [20]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[20]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[20]', 0); window.location.reload();"></input></td>
+<td class=style_switch_20 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[20]"> / <odb src="/Equipment/PtfWiener/Variables/switch[20]"></td>
+<td class=style_demand_20 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[20]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[20]" format="%.1f"></td>
+<td class=style_measured_20 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[20]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[20]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[20]"></td>
+<td class=style_status_20 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[20]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[20]">)</td>
+</tr>
+
+<tr class=style_21 >
+<td colspan=1 align=left>U205</td>
+<td align=left>U205 [21]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[21]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[21]', 0); window.location.reload();"></input></td>
+<td class=style_switch_21 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[21]"> / <odb src="/Equipment/PtfWiener/Variables/switch[21]"></td>
+<td class=style_demand_21 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[21]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[21]" format="%.1f"></td>
+<td class=style_measured_21 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[21]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[21]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[21]"></td>
+<td class=style_status_21 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[21]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[21]">)</td>
+</tr>
+
+<tr class=style_22 >
+<td colspan=1 align=left>U206</td>
+<td align=left>U206 [22]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[22]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[22]', 0); window.location.reload();"></input></td>
+<td class=style_switch_22 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[22]"> / <odb src="/Equipment/PtfWiener/Variables/switch[22]"></td>
+<td class=style_demand_22 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[22]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[22]" format="%.1f"></td>
+<td class=style_measured_22 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[22]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[22]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[22]"></td>
+<td class=style_status_22 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[22]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[22]">)</td>
+</tr>
+
+<tr class=style_23 >
+<td colspan=1 align=left>U207</td>
+<td align=left>U207 [23]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[23]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[23]', 0); window.location.reload();"></input></td>
+<td class=style_switch_23 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[23]"> / <odb src="/Equipment/PtfWiener/Variables/switch[23]"></td>
+<td class=style_demand_23 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[23]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[23]" format="%.1f"></td>
+<td class=style_measured_23 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[23]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[23]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[23]"></td>
+<td class=style_status_23 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[23]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[23]">)</td>
+</tr>
+
+<tr class=style_26 >
+<td colspan=1 align=left>U302</td>
+<td align=left>U302 [26]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[26]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[26]', 0); window.location.reload();"></input></td>
+<td class=style_switch_26 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[26]"> / <odb src="/Equipment/PtfWiener/Variables/switch[26]"></td>
+<td class=style_demand_26 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[26]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[26]" format="%.1f"></td>
+<td class=style_measured_26 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[26]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[26]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[26]"></td>
+<td class=style_status_26 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[26]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[26]">)</td>
+</tr>
+
+<tr class=style_27 >
+<td colspan=1 align=left>U303 Broken</td>
+<td align=left>U303 [27]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[27]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[27]', 0); window.location.reload();"></input></td>
+<td class=style_switch_27 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[27]"> / <odb src="/Equipment/PtfWiener/Variables/switch[27]"></td>
+<td class=style_demand_27 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[27]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[27]" format="%.1f"></td>
+<td class=style_measured_27 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[27]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[27]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[27]"></td>
+<td class=style_status_27 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[27]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[27]">)</td>
+</tr>
+
+<tr class=style_30 >
+<td colspan=1 align=left>U306</td>
+<td align=left>U306 [30]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[30]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[30]', 0); window.location.reload();"></input></td>
+<td class=style_switch_30 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[30]"> / <odb src="/Equipment/PtfWiener/Variables/switch[30]"></td>
+<td class=style_demand_30 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[30]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[30]" format="%.1f"></td>
+<td class=style_measured_30 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[30]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[30]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[30]"></td>
+<td class=style_status_30 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[30]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[30]">)</td>
+</tr>
+
+<tr class=style_31 >
+<td colspan=1 align=left>U307</td>
+<td align=left>U307 [31]</td>
+<td align=left><input type=button value="on" onClick="clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[31]', 1); window.location.reload();"></input><input type=button value="off" onClick=";clearTimeout(reloadTimerId); ODBSet('/Equipment/PtfWiener/Settings/outputSwitch[31]', 0); window.location.reload();"></input></td>
+<td class=style_switch_31 align=center><odb src="/Equipment/PtfWiener/Settings/outputSwitch[31]"> / <odb src="/Equipment/PtfWiener/Variables/switch[31]"></td>
+<td class=style_demand_31 align=center><odb src="/Equipment/PtfWiener/Settings/outputVoltage[31]" edit=1> / <odb src="/Equipment/PtfWiener/Variables/demandVoltage[31]" format="%.1f"></td>
+<td class=style_measured_31 align=center><odb src="/Equipment/PtfWiener/Variables/senseVoltage[31]" format="%.1f"> V</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/current[31]" format="%.6f"> A</td>
+<td align=center><odb src="/Equipment/PtfWiener/Variables/sparkCount[31]"></td>
+<td class=style_status_31 align=center><odb format=0x%x src="/Equipment/PtfWiener/Variables/status[31]">
+(<odb src="/Equipment/PtfWiener/Readback/outputStatusString[31]">)</td>
+</tr>
+
+</table>
+
+    </form>
+
+    <script>
+      //alert("Hello!");
+      reloadTimerId = setTimeout('window.location.reload()', 10000);
+    </script>
+
+  </body>
+</html>
