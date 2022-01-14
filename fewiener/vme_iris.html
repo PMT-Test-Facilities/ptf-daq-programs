@@ -1,0 +1,189 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title>IRIS VME crate control</title>
+
+    <script src='mhttpd.js'></script>
+  </head>
+
+  <body>
+    <form name="form1" method="Get">
+      <table border=1 cellpadding=2 width="100%">
+	<tr><th colspan=2>IRIS VME crate control</tr>
+	<tr><td width="50%">
+            <input value="Status"    name="cmd" type="submit">
+            <input value="ODB"       name="cmd" type="submit">
+            <input value="History"   name="cmd" type="submit">
+          </td><td>
+            <center> <a href="http://midas.triumf.ca"> >>>> Midas Help <<<< </a></center>
+          </td></tr>
+      </tr>
+      </table>
+    </form>
+
+    <p id="LastUpdated">Last updated: never</p>
+
+    <p>
+      <input type=button value="all on" onClick="setMainSwitchAll(1); window.location.reload();"></input>
+      <input type=button value="all off" onClick="setMainSwitchAll(0); window.location.reload();"></input>
+      <input type=button value="reload" onClick="update();"></input>
+    </p>
+
+    <table border=1>
+      <thead>
+	  <th align=center>Name
+	  <th align=center>Control<br>Enabled
+	  <th align=center>Main<br>switch
+	  <th align=center>Action
+	  <th align=center>+5V
+	  <th align=center>+12V
+	  <th align=center>-12V
+      </thead>
+      <tbody>
+	<tr>
+	  <td align=center>irisvme1
+	  <td align=center id="enableControl1">
+	  <td align=center id="mainSwitch1">
+	  <td align=center>
+	    <input type=button value="on" onClick="setMainSwitch1(1); window.location.reload();"></input>
+	    <input type=button value="off" onClick="setMainSwitch1(0); window.location.reload();"></input>
+	  <td align=center id="p5v1">
+	  <td align=center id="p12v1">
+	  <td align=center id="m12v1">
+	</tr>
+	<tr>
+	  <td align=center>irisvme2
+	  <td align=center id="enableControl2">
+	  <td align=center id="mainSwitch2">
+	  <td align=center>
+	    <input type=button value="on" onClick="setMainSwitch2(1); window.location.reload();"></input>
+	    <input type=button value="off" onClick="setMainSwitch2(0); window.location.reload();"></input>
+	  <td align=center id="p5v2">
+	  <td align=center id="p12v2">
+	  <td align=center id="m12v2">
+	</tr>
+      </tbody>
+    </table>
+
+    <p>
+
+    <table border=1>
+      <thead>
+	  <th align=center>Name
+	  <th align=center>Fans
+	  <th align=center>Temperatures
+      </thead>
+      <tbody>
+	<tr>
+	  <td align=center>irisvme1
+	  <td align=center id="fans1">
+	  <td align=center id="temp1">
+	</tr>
+	<tr>
+	  <td align=center>irisvme2
+	  <td align=center id="fans2">
+	  <td align=center id="temp2">
+	</tr>
+      </tbody>
+    </table>
+
+<!--
+    <input type=button value='Update once' onClick='updatePeriod=0; update();'></input>
+    <input type=button value='Update every 1 sec' onClick='updatePeriod=1000; update();'></input>
+    <input type=button value='Update every 10 sec' onClick='updatePeriod=10000; update();'></input>
+ -->
+
+    <p id="debug"></p>
+      
+    <script type="text/javascript">
+
+      var updatePeriod = 10000; // in msec
+      var updateTimerId = 0;
+
+      function setMainSwitch1(value) {
+      ODBSet('/Equipment/vmecrate1/Settings/mainSwitch', value);
+      }
+
+      function setMainSwitch2(value) {
+      ODBSet('/Equipment/vmecrate2/Settings/mainSwitch', value);
+      }
+
+      function setMainSwitchAll(value) {
+      setMainSwitch1(value);
+      setMainSwitch2(value);
+      }
+
+      function load_callback(data)
+      {
+      document.getElementById('debug').innerHTML = data;
+
+      var obj = JSON.parse(data);
+
+      document.getElementById('enableControl1').innerHTML = obj[0].EnableControl;
+      document.getElementById('mainSwitch1').innerHTML = obj[1]['mainSwitch'] + " / " + obj[2]['sysMainSwitch.0'];
+      
+      document.getElementById('p5v1').innerHTML = obj[3].current[0];
+      document.getElementById('p12v1').innerHTML = obj[3].current[1];
+      document.getElementById('m12v1').innerHTML = obj[3].current[2];
+
+      document.getElementById('fans1').innerHTML = obj[3].fanSpeed;
+      document.getElementById('temp1').innerHTML = obj[3].sensorTemperature;
+
+      document.getElementById('enableControl2').innerHTML = obj[4].EnableControl;
+      document.getElementById('mainSwitch2').innerHTML = obj[5]['mainSwitch'] + " / " + obj[6]['sysMainSwitch.0'];
+
+      document.getElementById('p5v2').innerHTML = obj[7].current[0];
+      document.getElementById('p12v2').innerHTML = obj[7].current[1];
+      document.getElementById('m12v2').innerHTML = obj[7].current[2];
+
+      document.getElementById('fans2').innerHTML = obj[7].fanSpeed;
+      document.getElementById('temp2').innerHTML = obj[7].sensorTemperature;
+
+      document.getElementById('LastUpdated').innerHTML = "Last updated: " + new Date;
+      }
+
+      function load()
+      {
+      //document.getElementById('LastUpdated').innerHTML = "Updating..." + new Date;
+      
+      var paths = [
+      "/Equipment/vmecrate1/Settings/EnableControl",
+      "/Equipment/vmecrate1/Settings/mainSwitch",
+      "/Equipment/vmecrate1/Readback/sysMainSwitch.0",
+      "/Equipment/vmecrate1/Variables",
+      "/Equipment/vmecrate2/Settings/EnableControl",
+      "/Equipment/vmecrate2/Settings/mainSwitch",
+      "/Equipment/vmecrate2/Readback/sysMainSwitch.0",
+      "/Equipment/vmecrate2/Variables",
+      ];
+
+      ODBMCopy(paths, load_callback, "json");
+      }
+
+      function update()
+      {
+      clearTimeout(updateTimerId);
+      load();
+      if (updatePeriod > 0)
+      updateTimerId = setTimeout('update()', updatePeriod);
+      }
+      
+      function main()
+      {
+      clearTimeout(updateTimerId);
+      }
+
+      main();
+      if (updatePeriod > 0)
+      update();
+
+    </script>
+
+    <hr>
+    <address><a href="mailto:xxx@xxx">MIDAS Example</a></address>
+<!-- Created: Tue Sep 21 15:44:39 PDT 2010 -->
+<!-- hhmts start -->
+Last modified: Wed Apr  2 11:15:24 PDT 2014
+<!-- hhmts end -->
+  </body>
+</html>

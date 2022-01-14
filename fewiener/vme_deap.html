@@ -1,0 +1,280 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+  <head>
+    <title>DEAP VME crate control</title>
+
+    <script src='mhttpd.js'></script>
+  </head>
+
+  <body>
+    <form name="form1" method="Get">
+      <table border=1 cellpadding=2 width="100%">
+	<tr><th colspan=2>DEAP VME crate control</tr>
+	<tr><td width="50%">
+            <input value="Status"    name="cmd" type="submit">
+            <input value="ODB"       name="cmd" type="submit">
+            <input value="History"   name="cmd" type="submit">
+          </td><td>
+            <center> <a href="http://midas.triumf.ca"> >>>> Midas Help <<<< </a></center>
+          </td></tr>
+      </tr>
+      </table>
+    </form>
+
+    <p id="LastUpdated">Last updated: never</p>
+
+    <p>
+      <input type=button value="all on" onClick="setMainSwitchAll(1); window.location.reload();"></input>
+      <input type=button value="all off" onClick="setMainSwitchAll(0); window.location.reload();"></input>
+      <input type=button value="refresh" onClick="update();"></input>
+    </p>
+
+    <table border=1>
+      <thead>
+	  <th align=center>Name
+	  <th align=center>Control<br>Enabled
+	  <th align=center>Main<br>switch
+	  <th align=center>Action
+	  <th align=center>&nbsp;+5V&nbsp;
+	  <th align=center>&nbsp;+12V&nbsp;
+	  <th align=center>&nbsp;-12V&nbsp;
+	  <th align=center colspan=2>&nbsp;Status&nbsp;
+      </thead>
+      <tbody>
+	<tr>
+	  <td align=center>deapvme01
+	  <td align=center id="c0enableControl">
+	  <td align=center id="c0mainSwitch">
+	  <td align=center>
+	    <input type=button value="on" onClick="setMainSwitch1(1); window.location.reload();"></input>
+	    <input type=button value="off" onClick="setMainSwitch1(0); window.location.reload();"></input>
+	  <td align=center id="c0p5v">
+	  <td align=center id="c0p12v">
+	  <td align=center id="c0m12v">
+	  <td align=center id="c0status">
+	  <td align=center id="c0delayedStatus">
+	</tr>
+	<tr>
+	  <td align=center>deapvme02
+	  <td align=center id="c1enableControl">
+	  <td align=center id="c1mainSwitch">
+	  <td align=center>
+	    <input type=button value="on" onClick="setMainSwitch2(1); window.location.reload();"></input>
+	    <input type=button value="off" onClick="setMainSwitch2(0); window.location.reload();"></input>
+	  <td align=center id="c1p5v">
+	  <td align=center id="c1p12v">
+	  <td align=center id="c1m12v">
+	  <td align=center id="c1status">
+	  <td align=center id="c1delayedStatus">
+	</tr>
+	<tr>
+	  <td align=center>deapvme03
+	  <td align=center id="c2enableControl">
+	  <td align=center id="c2mainSwitch">
+	  <td align=center>
+	    <input type=button value="on" onClick="setMainSwitch3(1); window.location.reload();"></input>
+	    <input type=button value="off" onClick="setMainSwitch3(0); window.location.reload();"></input>
+	  <td align=center id="c2p5v">
+	  <td align=center id="c2p12v">
+	  <td align=center id="c2m12v">
+	  <td align=center id="c2status">
+	  <td align=center id="c2delayedStatus">
+	</tr>
+      </tbody>
+    </table>
+
+    <p>
+
+    <table border=1>
+      <thead>
+	  <th align=center>Name
+	  <th align=center colspan=3>Fans, RPM
+	  <th align=center>Air, degC
+	  <th align=center colspan=8>Temperatures, degC
+      </thead>
+      <tbody>
+	<tr>
+	  <td align=center>deapvme01
+	  <td align=center id="c0fans0">
+	  <td align=center id="c0fans1">
+	  <td align=center id="c0fans2">
+	  <td align=center id="c0airt">
+	  <td align=center id="c0temp0">
+	  <td align=center id="c0temp1">
+	  <td align=center id="c0temp2">
+	  <td align=center id="c0temp3">
+	  <td align=center id="c0temp4">
+	  <td align=center id="c0temp5">
+	  <td align=center id="c0temp6">
+	  <td align=center id="c0temp7">
+	</tr>
+	<tr>
+	  <td align=center>deapvme02
+	  <td align=center id="c1fans0">
+	  <td align=center id="c1fans1">
+	  <td align=center id="c1fans2">
+	  <td align=center id="c1airt">
+	  <td align=center id="c1temp0">
+	  <td align=center id="c1temp1">
+	  <td align=center id="c1temp2">
+	  <td align=center id="c1temp3">
+	  <td align=center id="c1temp4">
+	  <td align=center id="c1temp5">
+	  <td align=center id="c1temp6">
+	  <td align=center id="c1temp7">
+	</tr>
+	<tr>
+	  <td align=center>deapvme03
+	  <td align=center id="c2fans0">
+	  <td align=center id="c2fans1">
+	  <td align=center id="c2fans2">
+	  <td align=center id="c2airt">
+	  <td align=center id="c2temp0">
+	  <td align=center id="c2temp1">
+	  <td align=center id="c2temp2">
+	  <td align=center id="c2temp3">
+	  <td align=center id="c2temp4">
+	  <td align=center id="c2temp5">
+	  <td align=center id="c2temp6">
+	  <td align=center id="c2temp7">
+	</tr>
+      </tbody>
+    </table>
+
+<!--
+    <input type=button value='Update once' onClick='updatePeriod=0; update();'></input>
+    <input type=button value='Update every 1 sec' onClick='updatePeriod=1000; update();'></input>
+    <input type=button value='Update every 10 sec' onClick='updatePeriod=10000; update();'></input>
+ -->
+
+    <p id="debug"></p>
+      
+    <script type="text/javascript">
+
+      var updatePeriod = 10000; // in msec
+      var updateTimerId = 0;
+
+      function setMainSwitch1(value) {
+      ODBSet('/Equipment/deapvme01/Settings/mainSwitch', value);
+      }
+
+      function setMainSwitch2(value) {
+      ODBSet('/Equipment/deapvme02/Settings/mainSwitch', value);
+      }
+
+      function setMainSwitch3(value) {
+      ODBSet('/Equipment/deapvme03/Settings/mainSwitch', value);
+      }
+
+      function setMainSwitchAll(value) {
+      setMainSwitch1(value);
+      setMainSwitch2(value);
+      setMainSwitch3(value);
+      }
+
+      function set_text(dom_prefix, item, value)
+      {
+      var e = document.getElementById(dom_prefix + item);
+      if (e) e.innerHTML = value;
+      }
+
+      function set_color(dom_prefix, item, value)
+      {
+      var e = document.getElementById(dom_prefix + item);
+      if (e) e.style.backgroundColor = value;
+      }
+
+      function load_vme(p, sec, sms, rsms, v, s)
+      {
+      set_text(p, 'enableControl', sec.EnableControl);
+      set_text(p, 'mainSwitch', sms['mainSwitch'] + " / " + rsms['sysMainSwitch.0']);
+      
+      set_text(p, 'p5v',  v.current[0].toFixed(1));
+      set_text(p, 'p12v', v.current[1].toFixed(1));
+      set_text(p, 'm12v', v.current[2].toFixed(1));
+
+      for (var i=0; i<3; i++) {
+      set_text(p, 'fans'+i, v.fanSpeed[i]);
+      }
+      set_text(p, 'airt', v.fanAirTemperature);
+      for (var i=0;i<8; i++) {
+      var t = v.sensorTemperature[i];
+      if (t < 0) t = '';
+      set_text(p, 'temp'+i, t);
+      }
+
+      if (s) {
+      set_text(p, 'status', s.mainStatus);
+      set_color(p, 'status', s.mainStatusColor);
+      set_text(p, 'delayedStatus', s.delayedMainStatus);
+      set_color(p, 'delayedStatus', s.delayedMainStatusColor);
+      }
+      }
+
+      function load_callback(data)
+      {
+      //document.getElementById('debug').innerHTML = data;
+      
+      var obj = JSON.parse(data);
+
+      var o = 0;
+      for (var i=0; i<3; i++) {
+      load_vme('c'+i, obj[o+0], obj[o+1], obj[o+2], obj[o+3], obj[o+4]);
+      o += 5;
+      }
+
+      document.getElementById('LastUpdated').innerHTML = "Last updated: " + new Date;
+      }
+
+      function load()
+      {
+      //document.getElementById('LastUpdated').innerHTML = "Updating..." + new Date;
+      
+      var paths = [
+      "/Equipment/deapvme01/Settings/EnableControl",
+      "/Equipment/deapvme01/Settings/mainSwitch",
+      "/Equipment/deapvme01/Readback/sysMainSwitch.0",
+      "/Equipment/deapvme01/Variables",
+      "/Equipment/deapvme01/Status",
+      "/Equipment/deapvme02/Settings/EnableControl",
+      "/Equipment/deapvme02/Settings/mainSwitch",
+      "/Equipment/deapvme02/Readback/sysMainSwitch.0",
+      "/Equipment/deapvme02/Variables",
+      "/Equipment/deapvme02/Status",
+      "/Equipment/deapvme03/Settings/EnableControl",
+      "/Equipment/deapvme03/Settings/mainSwitch",
+      "/Equipment/deapvme03/Readback/sysMainSwitch.0",
+      "/Equipment/deapvme03/Variables",
+      "/Equipment/deapvme03/Status",
+      ];
+
+      ODBMCopy(paths, load_callback, "json");
+      }
+
+      function update()
+      {
+      clearTimeout(updateTimerId);
+      load();
+      if (updatePeriod > 0)
+      updateTimerId = setTimeout('update()', updatePeriod);
+      }
+      
+      function main()
+      {
+      clearTimeout(updateTimerId);
+      }
+
+      main();
+      if (updatePeriod > 0)
+      update();
+
+    </script>
+
+    <hr>
+    <address><a href="mailto:xxx@xxx">MIDAS Example</a></address>
+<!-- Created: Tue Sep 21 15:44:39 PDT 2010 -->
+<!-- hhmts start -->
+Last modified: Fri Apr 11 11:52:01 EDT 2014
+<!-- hhmts end -->
+  </body>
+</html>
