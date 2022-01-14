@@ -1,3 +1,4 @@
+
 #include "feMove.hxx"
 #include "col.hpp"
 #include "has.hpp"
@@ -385,6 +386,7 @@ bool phidgets_responding(HNDLE hDB) {
   struct timespec now;
   const auto init = monotonic_clock();
 
+
   INT bufsize = 12 * sizeof(double), status;
   status = db_get_value(hDB, get<0>(State::Keys::Motor::phidget), "OB19", p0_values_old.data(), &bufsize, TID_DOUBLE, FALSE);
   if (HAS_PHI_0 && status != DB_SUCCESS) {
@@ -420,8 +422,8 @@ bool phidgets_responding(HNDLE hDB) {
     else {
       ss_sleep(250);
     }
+}
 
-  }
 
   return true;
 }
@@ -610,7 +612,6 @@ void move(HNDLE hDB) {
   db_get_data(hDB, get<0>(State::Keys::Motor::destination), m0dest.data(), &bufsize, TID_FLOAT);
   bufsize = 8 * sizeof(float);
   db_get_data(hDB, get<1>(State::Keys::Motor::destination), m1dest.data(), &bufsize, TID_FLOAT);
-
 
   // no movement is necessary
   if (!any(deltas)) {

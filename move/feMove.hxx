@@ -12,6 +12,7 @@
 #include "midas.h"
 #include "mfe.h"
 
+//#include <array>
 #include "pathgen.hpp"
 
 // maximum string length for collidable objects
@@ -221,8 +222,10 @@ static const auto
   GANTRY_1 = PathGeneration::Gantry1;
 
 
+
 /* The frontend name (client name) as seen by other MIDAS clients   */
 const char *frontend_name = "feMove";
+// MIDAS requirements
 
 /* The frontend file name, don't change it                          */
 const char *frontend_file_name = __FILE__;
@@ -243,8 +246,38 @@ INT event_buffer_size = 10 * 3000;
 INT max_event_size_frag = 5 * 300 * 300;
 
 /*-- Info structure declaration ------------------------------------*/
-
 BOOL equipment_common_overwrite = FALSE;
+
+INT
+  display_period      = 0,
+  max_event_size      = 3000,
+  max_event_size_frag = 5 * 1024 * 1024,
+  event_buffer_size   = 10 * 1000;
+
+INT frontend_init();
+INT frontend_exit();
+INT begin_of_run( INT run_number, char *error );
+INT end_of_run(   INT run_number, char *error );
+INT pause_run(    INT run_number, char *error );
+INT resume_run(   INT run_number, char *error );
+INT frontend_loop();
+INT poll_event(INT source, INT count, BOOL test);
+INT interrupt_configure(INT cmd, INT source[], PTYPE adr);
+
+INT readout_event(char* pevent, INT off);
+
+// ODB Callbacks
+
+// for these when used as a callback, info will be nullptr
+// however if info is not nullptr, the functions will write `true` or `false`
+// when they succeed or fail, respectively. So, only give them a pointer to bool.
+// monitor is the exception, which should get a pointer to either GANTRY_0 or GANTRY_1
+
+void start_move( HNDLE hDB, HNDLE hKey = 0, void* info = nullptr );
+void stop_move(  HNDLE hDB, HNDLE hKey = 0, void* info = nullptr );
+void initialize( HNDLE hDB, HNDLE hKey = 0, void* info = nullptr );
+void monitor(    HNDLE hDB, HNDLE hKey = 0, void* info = nullptr );
+
 
 void move(HNDLE hDB);
 

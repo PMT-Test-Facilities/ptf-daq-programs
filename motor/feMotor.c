@@ -28,21 +28,21 @@
 #include "mcstd.h"
 #include "tcpip.h"
 #include "cd_Galil.h"
+#include "mfe.h"
 
-/* make frontend functions callable from the C framework */
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /*-- Globals -------------------------------------------------------*/
 
 /* The frontend name (client name) as seen by other MIDAS clients   */
-char *frontend_name = "feMotor";
+const char *frontend_name = "feMotor";
 /* The frontend file name, don't change it */
-char *frontend_file_name = __FILE__;
+const char *frontend_file_name = __FILE__;
 
 /* frontend_loop is called periodically if this variable is TRUE    */
 BOOL frontend_call_loop = FALSE;
+
+
+BOOL equipment_common_overwrite = FALSE;
 
 /* a frontend status page is displayed with this frequency in ms */
 //INT display_period = 3000;
@@ -68,7 +68,7 @@ INT resume_run(INT run_number, char *error);
 INT frontend_loop();
 
 INT poll_trigger_event(INT count, PTYPE test);
-INT interrupt_configure(INT cmd, PTYPE adr);
+extern void interrupt_routine(void);
 INT read_trigger_event(char *pevent, INT off);
 INT read_scaler_event(char *pevent, INT off);
 
@@ -106,9 +106,6 @@ EQUIPMENT equipment[] = {
   { "" }
 };
 
-#ifdef __cplusplus
-}
-#endif
 
 /********************************************************************\
               Callback routines for system transitions
@@ -203,11 +200,23 @@ INT poll_event(INT source, INT count, BOOL test)
 }
 
 /*-- Interrupt configuration for trigger event ---------------------*/
-
-INT interrupt_configure(INT cmd, PTYPE adr)
+/*-- Interrupt configuration ---------------------------------------*/
+INT interrupt_configure(INT cmd, INT source, POINTER_T adr)
 {
-  return CM_SUCCESS;
+  switch (cmd) {
+  case CMD_INTERRUPT_ENABLE:
+    break;
+  case CMD_INTERRUPT_DISABLE:
+    break;
+  case CMD_INTERRUPT_ATTACH:
+    break;
+  case CMD_INTERRUPT_DETACH:
+    break;
+  }
+  return SUCCESS;
 }
+
+
 
 /*-- Event readout -------------------------------------------------*/
 INT read_trigger_event(char *pevent, INT off)

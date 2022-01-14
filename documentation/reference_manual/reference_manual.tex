@@ -12,7 +12,7 @@
 \usepackage{textcomp}
 \usepackage{todo}
 \usepackage{graphicx}
-% \usepackage{placeins}
+%\usepackage{placeins}
 \usepackage[section]{placeins}
 \usepackage{hyperref}
 \usepackage{booktabs}
@@ -36,14 +36,18 @@
 \newcommand{\ie}{i.\,e.,}
 \newcommand{\eg}{e.\,g..}
 \DeclareRobustCommand \cs[1]{\texttt{\char`\\#1}}
+\DeclareUnicodeCharacter{2212}{-} % add unicode minus sign 
 
 \title{Photosensor Test Facility Operations Manual}
 \author{TRIUMF National Laboratory \\
 Alexander Jaffray \\
 Kevin Xie \\
 Mia Kramer \\
+Vincent Gousy-Leblanc \\
+Skylar Wingfelder\\
+Elena Cornick \\
 % {\today} \\
-Version 4}
+Version 5}
 
 \date{Updated \today}
 \emergencystretch1em %
@@ -64,7 +68,7 @@ Version 4}
 \maketitle
 
 \begin{abstract}
-	This document describes standard operation of the Photosensor Test Facility (PTF) at TRIUMF, and is intended to be a ``living'' document, added to as functionality is implemented.
+	This document describes standard operation of the Photosensor Test Facility (PTF) at TRIUMF, and is intended to be a "living" document, added to as functionality is implemented.
 \end{abstract}
 \tableofcontents
 
@@ -87,11 +91,11 @@ CSA approved safety footwear with a steel toe is required in the Meson Hall. A s
 
 \subsection{Contact and Help}
 
-If there is any additional assistance/guidance required, please do not hesitate to contact Thomas Lindner. Their offices are in Trailer Ff and emails are available at the TRIUMF staff directory website. Thomas' building is at ISAC-II.\@ As well, the TRIUMF main control room number is 7333.
+If there is any additional assistance/guidance required, please do not hesitate to contact Thomas Lindner, his office is in ISAC-II. You can also contact, Akira Konaka (konaka@triumf.ca) or Mark Hartz (mhartz@triumf.ca) on the second floor of MOB. As well, the TRIUMF main control room number is 7333.
 
 \begin{center}\begin{tabular}{rl}
+	Vincent Gousy-Leblanc & vgousyleblanc@triumf.ca \\
 	Thomas Lindner & lindner@triumf.ca \\
-	John Walker    & jmgwalker@triumf.ca \\
 	Patrick de Perio     & pdeperio@triumf.ca
 \end{tabular}\end{center}
 
@@ -101,13 +105,14 @@ If there is any additional assistance/guidance required, please do not hesitate 
 
 \subsection{Finding the PTF}
 
-The PTF is located on level B2 of the Meson Hall, across from the Proton Therapy facility. Directions to the PTF from the Badge Room are as follows:
+The PTF is located on the first floor of the Meson Hall Extension Service Annex. Directions to the PTF from the Badge Room are as follows:
 
 \begin{enumerate}
 	\item Upon exiting the Badge Room, turn left and walk towards ISAC 1
 	\item Enter the Meson Hall loading bay (on the right), either through the main bay doors or through the small access door on the right side adjacent to the compressed gas tanks
-	\item Once inside the Meson Hall, there should be a set of metal stairs beside the helium recovery area which descend to the bottom floor of the Meson hall
-	\item Proceed down the stairs, and turn left for a few feet then right. There should be a set of doors on the right hand side with a screen adjacent to them displaying the status of the PTF
+	\item Once inside the Meson Hall, turn left towards the helium recovery area and walk down the hallway
+	\item Keep going straight, then right, pass the clean room
+	\item If you keep going straight, 2 doors will be there, along with a detector facility sigh, keep going and take a first left, the first dark room is the PTF facility
 	\item Check the status screen. If the PMT is on, do not open the curtain, and do not turn on the room lights, use a flashlight when in the room. If the screen indicates that a run is in progress, only enter if really necessary, following the precautions above
 \end{enumerate}
 
@@ -227,7 +232,7 @@ Provides constant voltage output to PMTs and Helmholtz coil system. Power delive
 
 \subsubsection{Galil Motor Controller}
 
-Provides control interface between Gantry Move program in \textbf{Movement Navigation Tab} and the motors controlling the motion of the gantry system itself. Also provides power to the motors. Controlled by the PDU.\@ The Galil Motor Controller is located in the main equipment rack as shown in Figure~\ref{mainEquipmentRack} on the left.
+Provides control interface between Gantry Move program in \textbf{Movement Navigation Tab} and the motors controlling the motion of the gantry system itself. Powers the motors and tracks position by counting the motor's microsteps and the motor encoders quadrature pulses. Controlled by the PDU.\@ The Galil Motor Controller is located in the main equipment rack as shown in Figure~\ref{mainEquipmentRack} on the left.
 
 \subsubsection{Hamamatsu Laser}
 
@@ -283,7 +288,7 @@ These channels correspond to data acquisition channels in the recorded ROOT file
 
 The trigger pulse rack contains a counter (left) and a pulse generator (right), which sets the frequency of the laser pulses incident to the PMT.\@ This can be adjusted to achieve desired data acquisition speeds as long as the data can still be read out from the digitizer appropriately. The frequency dial is scaled by about a factor of 10 so the actual trigger frequency should be read from the \textbf{Events[/s]} value close to FEV17300OPTIC on the midptf status page during a run. Currently scans are performed at about 1600 Hz. Scans are performed at a default 3 seconds per point to provide a total of about 5000 waveforms per point.
 
-\clearpage
+
 
 \subsubsection{PMTs}
 
@@ -298,7 +303,7 @@ The PMT located in the water tank under the acrylic cover is the Super Kamiokand
 The multi-PMT (mPMT) is a prototype for the photosensors that will go into Hyper Kamiokande. Instead of a single large PMT, they're made up of many smaller PMTs which sacrifice some detecting area for a large increase in resolution. In addition, the acrylic cover and optical gel were included in the original design to help prevent implosion cascades.
 
 %TODO: include picture
-
+\clearpage
 \subsubsection{Magnetic Field Control}
 
 Magnetic fields can have a large effect on PMTs, especially larger ones such as the 20'' SK PMT\footnote{The magnetic field can affect the path of photoelectrons.}. As the PTF is close to the cyclotron, there is a very large magnetic field present. There are two types of compensation present: passive shielding from the G-Iron mesh surrounding the PMT tank, and active compensation from the six Helmholtz coils seen in Figure~\ref{fig:pmtAndCoils}. Detailed information is provided in Section~\ref{sec:magField}.
@@ -312,7 +317,6 @@ Magnetic fields can have a large effect on PMTs, especially larger ones such as 
 	\caption{PMT and Helmholtz Coils\label{fig:pmtAndCoils}}
 \end{figure}
 
-\FloatBarrier
 
 
 \subsubsection{Phidgets}
@@ -322,9 +326,12 @@ Magnetic fields can have a large effect on PMTs, especially larger ones such as 
 %TODO: include picture of phidgets with and without covers
 
 \begin{figure}[!htpb]\centering
-	\caption{A phidget\label{fig:phidget}}
+	\includegraphics[width=0.3\textwidth]{images/Phidget_with_Casing.jpg}
+	\includegraphics[width=0.3\textwidth]{images/Phidget_without_Casing.jpg}
+	\caption{A spatial phidget accelerometer/magnetometer\label{fig:phidget}}
 \end{figure}
 
+\FloatBarrier
 
 \clearpage
 
@@ -664,7 +671,8 @@ The process for setting up a scan is as follows
 			
 	\item Choose a sub type:
 	
-			Sub Type 0/Default specifies a regular vertical injection scan of the PMT. Sub Type 1/Monitor Reference Point is the same as Default but will scan a reference point periodically. The point and periodicity are specified in the ODB at /Equipment/Scan/RectangularParams/MonitorPoint. Sub Type 2 specifies a normal incidence (or offset incidence) scan.
+			Sub Type 0/Default specifies a regular vertical injection scan of the PMT. Sub Type 1/Monitor Reference Point is the same as Default but will scan a reference point periodically. The point and periodicity are specified in the ODB at 
+			/Equipment/Scan/RectangularParams/MonitorPoint. Sub Type 2 specifies a normal incidence (or offset incidence) scan.
 	
 	\textbf{AFTER setting all scan settings above, switch ON the feSCAN frontend. If any settings change, you need to reset the frontend to reload the settings.}
 	
@@ -954,6 +962,47 @@ To measure the differential (in the dimension being currently examined), there a
 
 \clearpage
 
+\section{The PTF water system}
+
+PTF uses an ultra clean water system to allow a correct diffusion of light in the water. The complete description of the operation is written here \url{http://ladd00.triumf.ca/~lindner/Water%20System/PMT_Water_Circ_System_Manual.html}
+\subsection{The operation }
+\textbf{Follow the order written in the manual to power on the system, otherwise the system might not work as expected}\\
+
+The operation of the system to fill the PTF tank works relatively easily, pure water from the dionization group is connected to the storage tank. A vaccum pump takes this water to the bell jar (see figure) and then the water level increase until a specific pressure that was previously set on the valve(see picture). Once this level is achieve another pump is use to take the water out of the bell jar, through 2 finer filter: back to the storage tank or through a UV filter and then the PTF water tank. \\
+
+To empty the PTF tank, similar steps are followed, the second pump is used to get the water from the tank to the bell jar and by using the same process as previously, the second pump, will be used to push the water from the bell jar to the storage tank,
+\FloatBarrier
+\begin{figure}[!htb]\centering
+	\includegraphics[width=\picwidth]{Water_system_diagram.png}
+  \caption{Schematic of the water system}
+\end{figure}
+\FloatBarrier
+\subsection{Troubleshooting}
+When we first used the water system a few problems were seen
+\begin{itemize}
+    \item If the pump doesn't display the correct values for the rpm, simply restart it. Once it goes in a certain mode, it doesn't seem to be able to "get out" of it 
+    \item While starting the pump, it might make it easier to orient the pipes vertically to give a push to water, this will help to start the second pump.
+\end{itemize}
+
+
+\section{Inserting the PMT in the PTF tank}
+Here is a brief overview of the steps to follow in order to insert the PMT in the water tank. For more details about the risk associated to this procedure, an hasard analysis was done here \url{https://docs.google.com/document/d/166mG6hkSm4oPT4rZqQC2nB3A2U0TLMZI/edit?usp=sharing&ouid=108951175899342724526&rtpof=true&sd=true} . An Elog describing  this procedure was also published \url{https://midptf01.triumf.ca/elog/PTF/476}\\ 
+\begin{enumerate}
+    \item Center the steel plate so that we can reproduce the position of the PMT with good precision between each time we are changing of PMT. 
+    \item The PMT is secured when it is in the cardboard box and when manipulating the PMT, we must ensure that the acrylic cover is fixed to protect against the vacuum hazard.We require at least 2 people to when getting the PMT out of the box since it is quite big, pull the PMT first and ensure at each that you maintain full control of the PMT. (See image X)
+    \item Once the PMT is out of the box, you need to tale off the top part of the PMT holder, unscrewing 2 pairs of nuts. 
+    \item Once this is done, center the PMT with the right screw and fix the bottom of the PMT using a 2 screws and 2 nots. Make sure the screws don't go out of the PMT holder.Otherwise, the PMT holder won't attach properly to the steel plate
+    \item Once the PMT is secured on the PMT platform, the crane operator will hook the PMT platform to the crane
+    \item Once the cable is secured, someone trained to use the crane operator can lift the PMT and descend in the PMT tank, trying to align as much as possible with the steel plate and with the PMT dynode as well.
+    \item To lock the PMT on the steel plate, you need to rotate it by 45˚ clockwise. You also then need to put to pinch screw on the steel plate, to ensure that the PMT won't move for the remaining time. Once this is done, we can untie the cable and proceed to the next step.
+    \item After making sure the PMT is secure, take the top plate of the PMT platform out.
+    \item After this, lift coils 1 and 2 by sliding them down. Install the wood ramp at the front of the PTF
+    \item Gantry 0 needs to be unscrewed at the top, at the cross pattern so that the tank can be inserted. 
+    \item Someone trained to use a pallet jack can then lift the pallet, slide the pallet on the ramp and insert the PMT + tank at the right position in PTF. 
+    \item Inspect and move manually the pallet so that it fits the position of the tank.
+
+\end{enumerate}
+
 
 
 \section{Technical Scripts and Troubleshooting}
@@ -1022,13 +1071,14 @@ The primary documentation method used in the PTF is the E-Log system which can b
 
 \subsection{PTF Section}
 
-E-Log entries in the PTF section are primarily focused on configuration adjustments and problem identification and solution. Standard procedures, protocols, and physical and electronic equipment changes are to be recorded in individual entries. As well, if a problem is encountered, it is appropriate to add an entry with the category of ``Problem'', or ``Problem Fixed''.
+E-Log entries (\url{https://midptf01.triumf.ca/elog/PTF}) in the PTF section are primarily focused on configuration adjustments and problem identification and solution. Standard procedures, protocols, and physical and electronic equipment changes are to be recorded in individual entries. As well, if a problem is encountered, it is appropriate to add an entry with the category of ``Problem'', or ``Problem Fixed''.
 
 \subsection{Run Control}
 
 The Run Control section is designed to allow detailed description of the activity concerning measurements of the PMT or other parameters. For example, if a lengthy measurement was to begin, a Run Control entry should be added with the experimental design, experiment objective, and estimated run duration so as to aid in scheduling of other measurements in the PTF.
 
 As well, if a testing run is being performed, the reason and feature being tested should be added as an entry for future reference. Adding entries to the Run Control section also helps in keeping international collaborations informed on the progress being made in the PTF.
+
 
 \newpage
 
@@ -1040,10 +1090,11 @@ As well, if a testing run is being performed, the reason and feature being teste
 Due to the technical nature of the Photosensor Test Facility, there are a variety of precise terms and acronyms that will be frequently used in this reference manual.
 
 \begin{description}
-	\item[\textbf{PTF}] Photosensor Test Facility: A system for automated quantitative measurement of the response of large area (up to 20'') photomultiplier tubes to various environmental and induced conditions.
-	\item[\textbf{PMT}] Photomultiplier Tube: Photons incident to the surface cause emission of photoelectrons, which are accelerated and multiplied using an electron multiplier to produce an output signal.
+	\item[\textbf{Photosensor Test Facility (PTF)}] A system for automated quantitative measurement of the response of large area (up to 20'') photomultiplier tubes to various environmental and induced conditions.
+	\item[\textbf{Photomultiplier Tube (PMT)}] Photons incident to the surface cause emission of photoelectrons, which are accelerated and multiplied using an electron multiplier to produce an output signal.
 	\item[\textbf{Gantry}] Servo-driven system capable of motion in 5 axes (x, y, z, $\theta$ (rotation), $\phi$ (tilt)). There are two independent gantry systems capable of simultaneous motion across the PMT surface (Gantry 0 and Gantry 1) used to control the optical boxes.
 	\item[\textbf{Motors}] The stepper motors used to control the movement of the gantry system. The motors are controlled by a Galil motor controller.
+	\item[\textbf{Encoders}] The built-in encoders on the motors which send information on the motors position to the Galil motor controller.
 	\item[\textbf{Optical Box}] The box which contains both the monitor and receiver PMTs as well as the laser, polarizer, collimator and splitter, as well as the phidget accelerometer and magnetometers. There are two optical boxes, one mounted to each gantry. Optical Box 0 and Optical Box 1 are mounted to Gantry 0 and Gantry 1 respectively.
 	\item[\textbf{Helmholtz Coil}] Six coils of wire arranged in pairs along 3 axes. Allows for active compensation of ambient magnetic fields in the PTF.
 	\item[\textbf{G-Iron}] High magnetic permeability (high $\mu$) material similar to Mu-Metal in functionality. Arranged below and around the PMT to improve homogeneity of the field when active compensation is used.
@@ -1063,6 +1114,4 @@ Due to the technical nature of the Photosensor Test Facility, there are a variet
 	
 	
 \end{description}
-
-
 \end{document}

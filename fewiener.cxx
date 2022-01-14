@@ -24,13 +24,11 @@
 #include <vector>
 
 #include "midas.h"
+#include "mfe.h"
 #include "evid.h"
 //#include "strlcpy.h"
 
 /* make frontend functions callable from the C framework */
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #ifndef FE_NAME
 #define FE_NAME "fewiener"
@@ -48,11 +46,13 @@ extern "C" {
 /*-- Globals -------------------------------------------------------*/
 
 /* The frontend name (client name) as seen by other MIDAS clients   */
-char *frontend_name = FE_NAME;
+const char *frontend_name = FE_NAME;
 /* The frontend file name, don't change it */
-char *frontend_file_name = __FILE__;
+const char *frontend_file_name = __FILE__;
 /* frontend_loop is called periodically if this variable is TRUE    */
 BOOL frontend_call_loop = TRUE;
+
+BOOL equipment_common_overwrite = FALSE;
 
 /* a frontend status page is displayed with this frequency in ms */
 INT display_period = 0;
@@ -87,6 +87,8 @@ INT frontend_loop();
 
 INT read_wiener_event(char *pevent, INT off);
 
+extern void interrupt_routine(void);
+
 /*-- Equipment list ------------------------------------------------*/
 
 EQUIPMENT equipment[] = {
@@ -112,9 +114,7 @@ EQUIPMENT equipment[] = {
     {""}
 };
 
-#ifdef __cplusplus
-}
-#endif
+
 /********************************************************************\
               Callback routines for system transitions
 
@@ -144,7 +144,7 @@ EQUIPMENT equipment[] = {
 
 /*-- Global variables ----------------------------------------------*/
 
-extern "C" int frontend_index;
+//extern "C" int frontend_index;
 
 static std::string gWienerDev;
 static std::string gSnmpwalkCommand;
@@ -190,10 +190,21 @@ INT frontend_loop() {
 \********************************************************************/
 
 /*-- Interrupt configuration ---------------------------------------*/
-extern "C" INT interrupt_configure(INT cmd, INT source, PTYPE adr) {
-  assert(!"interrupt_configure() is not implemented");
-  return 0;
+INT interrupt_configure(INT cmd, INT source, POINTER_T adr)
+{
+   switch (cmd) {
+   case CMD_INTERRUPT_ENABLE:
+      break;
+   case CMD_INTERRUPT_DISABLE:
+      break;
+   case CMD_INTERRUPT_ATTACH:
+      break;
+   case CMD_INTERRUPT_DETACH:
+      break;
+   }
+   return SUCCESS;
 }
+
 
 void Replace(std::string &x, const char *replace, const char *with) {
   int i = x.find(replace);
@@ -484,25 +495,25 @@ static void update_settings() {
   gMainStatus.Add(0, 1000, kBlue);
   gMainStatus.Write();
 
-  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/ReadPeriod", frontend_index);
+  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/ReadPeriod", get_frontend_index());
 
   gReadPeriod = odbReadInt(str, 0, 10);
 
-  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/EnableControl", frontend_index);
+  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/EnableControl", get_frontend_index());
 
   gEnableControl = odbReadInt(str, 0, 0);
 
-  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/EnableSparkMode", frontend_index);
+  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/EnableSparkMode", get_frontend_index());
 
   set.enableSparkMode = odbReadInt(str, 0, 0);
 
-  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/SparkShutdownTime", frontend_index);
+  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/SparkShutdownTime", get_frontend_index());
 
   set.sparkShutdownTime = odbReadInt(str, 0, 5);
 
   // turn the mainframe on or off
 
-  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/mainSwitch", frontend_index);
+  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/mainSwitch", get_frontend_index());
 
   set.mainSwitch = odbReadInt(str, 0, 0);
 
@@ -516,7 +527,7 @@ static void update_settings() {
 
   // set the ramping rates
 
-  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/rampRate", frontend_index);
+  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/rampRate", get_frontend_index());
 
   set.rampRate = odbReadFloat(str, 0, 0);
 
@@ -532,7 +543,7 @@ static void update_settings() {
 
   // set enableKill
 
-  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/enableKill", frontend_index);
+  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/enableKill", get_frontend_index());
 
   set.enableKill = odbReadInt(str, 0, 1);
 
@@ -553,7 +564,7 @@ static void update_settings() {
 
   // set output voltage limits
 
-  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/maxVoltage", frontend_index);
+  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/maxVoltage", get_frontend_index());
 
   odbResizeArray(str, TID_FLOAT, num);
 
@@ -565,7 +576,7 @@ static void update_settings() {
 
   // set resistance
 
-  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/resistance", frontend_index);
+  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/resistance", get_frontend_index());
 
   odbResizeArray(str, TID_FLOAT, num);
 
@@ -577,7 +588,7 @@ static void update_settings() {
 
   // set output current limits
 
-  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/outputCurrent", frontend_index);
+  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/outputCurrent", get_frontend_index());
 
   odbResizeArray(str, TID_FLOAT, num);
 
@@ -589,7 +600,7 @@ static void update_settings() {
     }
   }
 
-  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/outputVoltage", frontend_index);
+  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/outputVoltage", get_frontend_index());
 
   odbResizeArray(str, TID_FLOAT, num);
 
@@ -625,7 +636,7 @@ static void update_settings() {
 
   // turn channels on and off
 
-  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/outputSwitch", frontend_index);
+  sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings/outputSwitch", get_frontend_index());
 
   odbResizeArray(str, TID_FLOAT, num);
 
@@ -683,9 +694,9 @@ INT frontend_init() {
   setbuf(stdout, NULL);
   setbuf(stderr, NULL);
 
-  if (frontend_index < 1) {
+  if (get_frontend_index() < 1) {
     cm_msg(MERROR, frontend_name, "frontend_init(): Frontend index %d is not valid, please start with \'-i 1\'",
-           frontend_index);
+           get_frontend_index());
     return !SUCCESS;
   }
 
@@ -694,7 +705,7 @@ INT frontend_init() {
   cm_set_transition_sequence(TR_PAUSE, 0);
   cm_set_transition_sequence(TR_RESUME, 0);
 
-  sprintf(eq_name, "%s%02d", EQ_NAME, frontend_index);
+  sprintf(eq_name, "%s%02d", EQ_NAME, get_frontend_index());
 
   char str[1024];
   sprintf(str, "/Equipment/%s/Settings/Hostname", eq_name);
@@ -745,7 +756,7 @@ int read_wiener_event(char *pevent, INT off) {
 
   if (hSet == 0) {
     char str[1024];
-    sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings", frontend_index);
+    sprintf(str, "/Equipment/" EQ_NAME "%02d/Settings", get_frontend_index());
 
     int status = db_find_key(hDB, 0, str, &hSet);
     if (status == DB_NO_KEY) {
@@ -762,7 +773,7 @@ int read_wiener_event(char *pevent, INT off) {
 
   if (hRdb == 0) {
     char str[1024];
-    sprintf(str, "/Equipment/" EQ_NAME "%02d/Readback", frontend_index);
+    sprintf(str, "/Equipment/" EQ_NAME "%02d/Readback", get_frontend_index());
 
     int status = db_find_key(hDB, 0, str, &hRdb);
     if (status == DB_NO_KEY) {
@@ -779,7 +790,7 @@ int read_wiener_event(char *pevent, INT off) {
 
   if (hStatus == 0) {
     char str[1024];
-    sprintf(str, "/Equipment/" EQ_NAME "%02d/Status", frontend_index);
+    sprintf(str, "/Equipment/" EQ_NAME "%02d/Status", get_frontend_index());
 
     int status = db_find_key(hDB, 0, str, &hStatus);
     if (status == DB_NO_KEY) {
@@ -1428,7 +1439,7 @@ int read_wiener_event(char *pevent, INT off) {
   return 0;
 }
 
-extern "C" INT poll_event(INT source, INT count, BOOL test)
+INT poll_event(INT source, INT count, BOOL test)
 /* Polling routine for events. Returns TRUE if event
    is available. If test equals TRUE, don't return. The test
    flag is used to time the polling */

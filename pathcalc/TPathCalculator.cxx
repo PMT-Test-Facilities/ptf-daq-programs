@@ -319,18 +319,18 @@ void TPathCalculator::CreatePath(double startX, double startY, double endX, doub
   if (xFirst) {
     //std::cout << "Try X FIRST with Xspeed " << XSpeed << std::endl;
     for (int i = 0; i < NStepsX; ++i) {
-      path.push_back(std::make_pair<double, double>(XSpeed, 0));
+      path.push_back(std::make_pair(XSpeed, 0));
     }
     for (int i = 0; i < NStepsY; ++i) {
-      path.push_back(std::make_pair<double, double>(0, YSpeed));
+      path.push_back(std::make_pair(0, YSpeed));
     }
   } else {
     //std::cout << "Try Y FIRST with Yspeed " << YSpeed << std::endl;
     for (int i = 0; i < NStepsY; ++i) {
-      path.push_back(std::make_pair<double, double>(0, YSpeed));
+      path.push_back(std::make_pair(0, YSpeed));
     }
     for (int i = 0; i < NStepsX; ++i) {
-      path.push_back(std::make_pair<double, double>(XSpeed, 0));
+      path.push_back(std::make_pair(XSpeed, 0));
     }
   }
   //std::cout << "TF debug: path size " << (int)path.size() << std::endl;

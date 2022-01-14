@@ -19,12 +19,13 @@ DRV_DIR = $(MIDASSYS)/drivers/bus
 
 MFE       = $(MIDASSYS)/lib/mfe.o
 MIDASLIBS = $(MIDASSYS)/lib/libmidas.a
-CFLAGS   += -I$(BOOST_DIR)/boost
 CFLAGS   += -I$(MIDASSYS)/include
 CFLAGS   += -I$(MIDASSYS)/drivers/vme
+CFLAGS   += -I$(BOOST_DIR)/boost
 # CFLAGS   += -I$(HOME)/packages/root
 CFLAGS   += -I$(DRV_DIR)
 CXX = g++
+
 # ROOT library
 
 ROOTLIBS  = $(shell $(ROOTSYS)/bin/root-config --libs) -lThread -Wl,-rpath,$(ROOTSYS)/lib
@@ -62,7 +63,7 @@ LIBS = -lm -lz -lutil -lnsl -lpthread -lrt -L$(BOOST_DIR)/libs -lboost_regex -lb
 
 # all: default target for "make"
 
-all:feMotor feMove feScan fedvm fePhidget fesimdaq.exe feptfwiener.exe testVI feDegauss
+all:feMotor feMove feScan fePhidget feptfwiener.exe testVI feDegauss
 
 
 gefvme.o: %.o: $(MIDASSYS)/drivers/vme/vmic/%.c
@@ -73,6 +74,7 @@ feMotor: $(MIDASLIBS) $(MFE) feMotor.o $(DRV_DIR)/tcpip.o cd_Galil.o
 	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS)
 
 feMove: $(MIDASLIBS) $(MFE) feMove.o bounds.o geom.o intersection_displacement.o intersection_rotation.o intersection_static.o prism.o cyl.o  quaternion.o rotations.o sat.o serialization_internal.o rect.o vec3.o pathgen.o serialization.o
+
 	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS)
 
 #feMoveNew: $(MIDASLIBS) $(MFE) feMove.o TPathCalculator.o TRotationCalculator.o TGantryConfigCalculator.o
