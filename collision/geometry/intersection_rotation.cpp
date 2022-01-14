@@ -196,6 +196,12 @@ bool intersect(Prism x, Sphere y, Quaternion rotation, Vec3 about) {
   return false;
 }
 
+bool intersect(Prism p, ConvexPolyhedron poly, Quaternion rotation, Vec3 about){
+  //TODO finish
+  std::cout << "ERROR Rotation not implemented" << std::endl;
+  return false;
+}
+
 
 bool intersect(Prism x, Cylinder y, Quaternion rotation, Vec3 about) {
   DEBUG_ENTER(__PRETTY_FUNCTION__);

@@ -7,7 +7,6 @@
 #include "linesegment.hpp"
 #include "geom.hpp"
 
-
 // this file contains multiple implementations of the method of separating axes
 
 // if there are more than this many axes to check, we'll do a bounding sphere check first
@@ -20,26 +19,6 @@
 
 
 #define NUM_NORMALS_FOR_CYLINDER 128
-
-
-// using IdxPair = std::pair<uint32_t, uint32_t>;
-typedef std::pair<uint32_t, uint32_t> IdxPair;
-
-
-// vertexes should be stored in positive orientation order (such that the cross product of any two successive points
-//    is the normal), the first/last should not be duplicated, and they should be coplanar.
-// these are not enforced, but the test will not work if they are not.
-typedef struct ConvexPolygon {
-  std::vector<Vec3> vertexes;
-} ConvexPolygon;
-
-
-// convexity and vailidity not enforced
-typedef struct ConvexPolyhedron {
-  std::vector<Vec3>    vertexes;
-  std::vector<IdxPair> edges;  // indexes to vertexes
-  std::vector<Vec3>    normals;
-} ConvexPolyhedron;
 
 
 ConvexPolyhedron to_polyhedron(const ConvexPolygon& p);
@@ -56,9 +35,18 @@ void scale(ConvexPolyhedron& poly, const double factor);
 
 ConvexPolyhedron polyhedron(const Prism p);
 ConvexPolyhedron polyhedron(const Cylinder c);
+ConvexPolyhedron polyhedron(const ColStlMesh mesh);
+
+ConvexPolyhedron translate(const ConvexPolyhedron mesh,Vec3 disp);
+ConvexPolyhedron rotate(const ConvexPolyhedron mesh,Quaternion orientation,Vec3 rotation_point=Vec3::zero());
+ConvexPolyhedron scale(const ConvexPolyhedron mesh,Vec3 scale,Vec3 scale_point=Vec3::zero());
 
 
 ConvexPolyhedron sweep(const ConvexPolygon& p,    const Vec3 disp);
+
+
+ConvexPolyhedron _sweep(const Prism p, Vec3 disp);//TODO: removed, this is added for testing and should only be decalered in geom.cxx
+ConvexPolyhedron _sweep2(const Prism p, Vec3 disp);//TODO: removed, this is added for testing and should only be decalered in geom.cxx
 // ConvexPolyhedron sweep(const ConvexPolyhedron& p, const Vec3 disp);
 
 
@@ -82,6 +70,7 @@ bool separated(const std::vector<Vec3>& points1, const std::vector<Vec3>& points
 
 bool intersect(const ConvexPolygon& poly1, const ConvexPolygon& poly2);
 bool intersect(const ConvexPolyhedron& polyh1, const ConvexPolyhedron& polyh2);
+bool intersect2(const ConvexPolyhedron& polyh1, const ConvexPolyhedron& polyh2);
 bool intersect(const ConvexPolygon& polygon, const ConvexPolyhedron& polyhedron);
 // alias to the latter
 bool intersect(const ConvexPolyhedron& polyhedron, const ConvexPolygon& polygon);

@@ -76,7 +76,7 @@ pair<int, string> find_next_pair(const string& s, uint32_t start, uint32_t max) 
   while (i < s.length() && i < max && s[i] != ':') {
     kv.push_back(s[i]);
     i++;
-    if (i == ']') {
+    if (s[i] == ']') {
       return make_pair(-1, "");
     }
   }
@@ -141,7 +141,7 @@ pair<unordered_map<string, string>, bool> find_pairs(const string& s) {
     }
     
     auto str1 = str.substr(0, idx), str2 = str.substr(idx+1);
-    // cerr << "The strings are: '" << str1 << "', '" << str2 << "'." << endl;
+    //std::cout << "The strings are: '" << str1 << "', '" << str2 << "'." << std::endl;
     map[str1] = str2;
 
     i = pair.first + 1;
@@ -149,7 +149,6 @@ pair<unordered_map<string, string>, bool> find_pairs(const string& s) {
       break;
     }
   }
-
   return make_pair(map, false);
 }
 
@@ -250,6 +249,7 @@ unordered_map<string, GeomResult> parse_geometry(const string& s, const unordere
     Prism p;
     Sphere s;
     Cylinder c;
+    string string_value;
 
     switch (geom_type) {
       case GeomTypes::Vec3:
@@ -321,6 +321,10 @@ unordered_map<string, GeomResult> parse_geometry(const string& s, const unordere
           ret["*"] = SyntaxError;
           return ret;
         }
+
+      case GeomTypes::String:
+        ret[prop_name] = str;
+        return ret;
 
       default:
         ret["*"] = NoParser;

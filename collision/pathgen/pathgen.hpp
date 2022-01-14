@@ -222,7 +222,7 @@ string dim_name(Dimension d);
 string dim_name(size_t i);
 
 
-array<Prism, 3> point_to_prisms(const Point& p, bool gantry1);
+array<Prism, 4> point_to_prisms(const Point& p, bool gantry1);
 
 // typedef size_t ODBCollision;
 
@@ -336,6 +336,61 @@ public:
     return storage.data() + i;
   }
 };
+
+
+namespace PathGeneration {
+
+
+// Represents the order in which a gantry travels a path
+typedef struct DimensionOrder {
+  Dimension first;
+  Dimension second;
+  Dimension third;
+  Dimension fourth;
+  Dimension fifth;
+
+  template<typename T>
+  Dimension operator[](T idx) const {
+    switch (idx) {
+      case 0: return this->first;
+      case 1: return this->second;
+      case 2: return this->third;
+      case 3: return this->fourth;
+      case 4: return this->fifth;
+      default:
+        throw new runtime_error("Out of range.");
+    }
+  }
+
+  // Ensure that what the order is valid (contains each dimension once and only once)
+  static boost::optional<DimensionOrder> build(Dimension first, Dimension second, Dimension third, Dimension fourth, Dimension fifth);
+
+  static std::vector<DimensionOrder> get_orders(std::vector<Dimension> dims);
+  
+  static void get_orders_recursive(std::vector<Dimension> dims_left,std::vector<Dimension> dims_used, std::vector<DimensionOrder> &orders, const std::vector<Dimension> dims_unused);
+
+  // Gets every order of dimensions
+  static std::vector<DimensionOrder> all_orders();
+} DimensionOrder;
+// variant<vector<MovePath>, flatten
+
+
+ostream& operator<<(ostream& l, const DimensionOrder& r);
+ostream& operator<<(ostream& l, const Point& r);
+bool operator==(const Point& l, const Point& r);
+
+
+Prism point_to_optical_box(const Point& p, bool gantry1);
+
+MovePath generate_move(
+  const ScanSegment moving,
+  const Point unmoving,
+  const WhichGantry is_moving,
+  const DimensionOrder order
+);
+
+}
+
 
 
 #endif // __PATH_GEN__
