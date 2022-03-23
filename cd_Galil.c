@@ -1771,7 +1771,7 @@ INT galil_init(EQUIPMENT *pequipment) {
     sprintf(buff, "%1.0f,", pInfo->fMotorType[i]);
     strcat(command, buff);
   }
-  cm_msg(MINFO, "galil_init", "%s", command);
+  cm_msg(MINFO, "galil_init", "configure motor type %s", command);
   strcat(command, "\r");
 
   buffLength = strlen(command);
@@ -1786,6 +1786,30 @@ INT galil_init(EQUIPMENT *pequipment) {
     cm_msg(MERROR, "galil_init", "Bad response from MT command %s", response);
     return FE_ERR_HW;
   }
+
+  //define encoder type     TL 2021-10-18
+  // hardcode the encoder type to be normal quadrature
+  sprintf(command, "CEC=0 ");
+  //for (i = 0; i < pInfo->num_channels; i++) {
+  //  sprintf(buff, "%1.0f,", 1);
+  //  strcat(command, buff);
+  // }
+  cm_msg(MINFO, "galil_init", "Configure encoder %s", command);
+  strcat(command, "\r");
+
+  buffLength = strlen(command);
+  writeCount = DRIVER(0)(CMD_WRITE, pequipment->driver[0].dd_info, command, buffLength);
+  if (writeCount != buffLength) {
+    cm_msg(MERROR, "galil_init", "Error in device driver - CMD_WRITE");
+  }
+  buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 100, ":", 500);
+  response[buffLength] = 0x0;
+
+  if ((strchr(response, ':') == NULL) || (strchr(response, '?') != NULL)) {
+    cm_msg(MERROR, "galil_init", "Bad response from CE command %s", response);
+    return FE_ERR_HW;
+  }
+
 
   // Turn motor off (??)
   sprintf(command, "MO");
