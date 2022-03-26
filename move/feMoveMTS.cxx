@@ -90,18 +90,18 @@ INT read_trigger_event(char *pevent, INT off);
 INT read_scaler_event(char *pevent, INT off);
 
 // Added functions
-void move_init(HNDLE hDB, HNDLE hKey, void *data);
+void move_init(midas::odb &arg);
 
 
 void monitor(HNDLE hDB, HNDLE hKey, void *data);
 
 void move();
 
-void stop_move(HNDLE hDB, HNDLE hKey, void *data);
+void stop_move(midas::odb &arg);
 
-void initialize(midas::odb &arg);
+void initialize();
 
-void reinitialize(HNDLE hDB, HNDLE hKey, void *data);
+void reinitialize(midas::odb &arg);
 
 
 
@@ -223,7 +223,15 @@ INT read_scaler_event(char *pevent, INT off) {
   return 0;
 }
 
+
+// DB watch variables
 midas::odb dbwatch_reinit;
+midas::odb dbwatch_start;
+midas::odb dbwatch_stop;
+
+// Global variable for storing the origin position (in counts)
+float mOrigin[2];
+
 
 /********************************************************************\
              USED callback routines for system transitions
@@ -256,123 +264,39 @@ INT frontend_init() {
 
   o.connect("/Equipment/Move/Settings");
 
+  midas::odb move_var = {
+    {"Initializing", false},
+    {"Initialized", false},
+    {"Bad Destination", false},
+    {"Completed", false},
+    {"Moving", false},
+    {"Axis Moving", std::array<bool, 2>{}},
+    {"Position", std::array<float, 2>{}},
+    
+  };
+  move_var.connect("/Equipment/Move/Variables");
 
+  // Program restarted, so need to re-initialiaze
+  move_var["Initialized"] = false;
 
+  mOrigin[0] = 0; mOrigin[1] = 1;
 
-  /*
-  pInfo->Position = (float *) calloc(2, sizeof(float));
-  pInfo->AxisMoving = (BOOL *) calloc(2, sizeof(BOOL));
-  pInfo->neg_AxisLimit = (BOOL *) calloc(2, sizeof(BOOL));
-  pInfo->pos_AxisLimit = (BOOL *) calloc(2, sizeof(BOOL));
-  pInfo->CountPos = (float *) calloc(2, sizeof(float));
-  pInfo->CountDest = (float *) calloc(2, sizeof(float));
-  pInfo->mOrigin = (float *) calloc(2, sizeof(float));
-  pInfo->MovePath = (float **) calloc(2, sizeof(float *));
-
-
-  cm_get_experiment_database(&hDB, NULL);
-  pInfo->hDB = hDB;
-*/
   /* Initialize non-ODB variables */
   PathSize = 0;
   PathIndex = 0;
   AbortCode = AC_USER_INPUT;
 
-  /* Initialize "Control" ODB variables */
-
-  /*  
-  // "Position(X,Y,Z,Theta,Phi)"
-  db_find_key(hDB, 0, "/Equipment/Move/Variables/Position", &pInfo->hKeyPos);
-  db_set_data(hDB, pInfo->hKeyPos, pInfo->Position, 10 * sizeof(float), 10, TID_FLOAT);
-
-  // "Initialized"
-  db_find_key(hDB, 0, "/Equipment/Move/Variables/Initialized", &pInfo->hKeyInit);
-  pInfo->Initialized = 0;
-  db_set_data(hDB, pInfo->hKeyInit, &pInfo->Initialized, sizeof(BOOL), 1, TID_BOOL);
-
-  // "Bad Destination"
-  db_find_key(hDB, 0, "/Equipment/Move/Variables/Bad Destination", &pInfo->hKeyBadDest);
-  pInfo->BadDest = 0;
-  db_set_data(hDB, pInfo->hKeyBadDest, &pInfo->BadDest, sizeof(BOOL), 1, TID_BOOL);
-
-  // "Completed"
-  db_find_key(hDB, 0, "/Equipment/Move/Variables/Completed", &pInfo->hKeyCompleted);
-  pInfo->Completed = 1;
-  db_set_data(hDB, pInfo->hKeyCompleted, &pInfo->Completed, sizeof(BOOL), 1, TID_BOOL);
-
-  // "Moving"
-  db_find_key(hDB, 0, "/Equipment/Move/Variables/Moving", &pInfo->hKeyMoving);
-
-  // "Initializing"
-  db_find_key(hDB, 0, "/Equipment/Move/Variables/Initializing", &pInfo->hKeyInitializing);
-
-  // "Axis Moving"
-  db_find_key(hDB, 0, "/Equipment/Move/Variables/Axis Moving", &pInfo->hKeyAxMoving);
-  db_set_data(hDB, pInfo->hKeyAxMoving, pInfo->AxisMoving, 10 * sizeof(BOOL), 10, TID_BOOL);
-
-  // "Negative Axis Limit"  
-  db_find_key(hDB, 0, "/Equipment/Move/Variables/Negative Axis Limit", &pInfo->hKeyAxLimitNeg);
-  db_set_data(hDB, pInfo->hKeyAxLimitNeg, pInfo->neg_AxisLimit, 10 * sizeof(BOOL), 10, TID_BOOL);
-
-  // "Positive Axis Limit"  
-  db_find_key(hDB, 0, "/Equipment/Move/Variables/Positive Axis Limit", &pInfo->hKeyAxLimitPos);
-  db_set_data(hDB, pInfo->hKeyAxLimitPos, pInfo->pos_AxisLimit, 10 * sizeof(BOOL), 10, TID_BOOL);
-
-  */
-  /*
-  // "Destination"
-  db_find_key(hDB, 0, "/Equipment/Motors00/Settings/Destination", &pInfo->hKeyMDest[0]);
-  db_find_key(hDB, 0, "/Equipment/Motors01/Settings/Destination", &pInfo->hKeyMDest[1]);
-
-  // "Move"
-  db_find_key(hDB, 0, "/Equipment/Motors00/Settings/Move", &pInfo->hKeyMStart[0]);
-  db_find_key(hDB, 0, "/Equipment/Motors01/Settings/Move", &pInfo->hKeyMStart[1]);
-
-  // "Stop"
-  db_find_key(hDB, 0, "/Equipment/Motors00/Settings/Stop", &pInfo->hKeyMStop[0]);
-  db_find_key(hDB, 0, "/Equipment/Motors01/Settings/Stop", &pInfo->hKeyMStop[1]);
-
-  // "Moving"
-  db_find_key(hDB, 0, "/Equipment/Motors00/Variables/Moving", &pInfo->hKeyMMoving[0]);
-  db_find_key(hDB, 0, "/Equipment/Motors01/Variables/Moving", &pInfo->hKeyMMoving[1]);
-
-  // "Position"
-  db_find_key(hDB, 0, "/Equipment/Motors00/Variables/Position", &pInfo->hKeyMPos[0]);
-  db_find_key(hDB, 0, "/Equipment/Motors01/Variables/Position", &pInfo->hKeyMPos[1]);
-
-  // "Limit Pos"
-  db_find_key(hDB, 0, "/Equipment/Motors00/Variables/Limit Pos", &pInfo->hKeyMLimitPos[0]);
-  db_find_key(hDB, 0, "/Equipment/Motors01/Variables/Limit Pos", &pInfo->hKeyMLimitPos[1]);
-
-  // "Limit Neg"
-  db_find_key(hDB, 0, "/Equipment/Motors00/Variables/Limit Neg", &pInfo->hKeyMLimitNeg[0]);
-  db_find_key(hDB, 0, "/Equipment/Motors01/Variables/Limit Neg", &pInfo->hKeyMLimitNeg[1]);
-
-  // "Velocity"
-  db_find_key(hDB, 0, "/Equipment/Motors00/Settings/Velocity", &pInfo->hKeyMVel[0]);
-  db_find_key(hDB, 0, "/Equipment/Motors01/Settings/Velocity", &pInfo->hKeyMVel[1]);
-
-  // "Acceleration"
-  db_find_key(hDB, 0, "/Equipment/Motors00/Settings/Acceleration", &pInfo->hKeyMAcc[0]);
-  db_find_key(hDB, 0, "/Equipment/Motors01/Settings/Acceleration", &pInfo->hKeyMAcc[1]);
-
-  // "Accelerometer tilt"
-  db_find_key(hDB, 0, "/Equipment/Phidget00/Variables", &pInfo->hKeyPhidget[0]);
-  db_find_key(hDB, 0, "/Equipment/Phidget01/Variables", &pInfo->hKeyPhidget[1]);
-  */
-
   /// Check that the channel mapping is sensible!!!
-
-
 
 
 
   /* Set up hotlinks */
   // move_init() hotlink
-  //  db_open_record(hDB, pInfo->hKeyStart, &pInfo->Start, sizeof(BOOL), MODE_READ, move_init, pInfo);
+  //db_open_record(hDB, pInfo->hKeyStart, &pInfo->Start, sizeof(BOOL), MODE_READ, move_init, pInfo);
 
   // stop_move() hotlink
   //db_open_record(hDB, pInfo->hKeyStop, &pInfo->Stop, sizeof(BOOL), MODE_READ, stop_move, pInfo);
+
 
   // reinitialize() hotlink
   //  db_open_record(hDB, pInfo->hKeyReInit, &pInfo->ReInitialize, sizeof(BOOL), MODE_READ, reinitialize, pInfo);
@@ -383,9 +307,17 @@ INT frontend_init() {
   // Note: The variable hotlinked to monitor() is somewhat arbitrary, all that is 
   //	   really needed is a variable that gets periodically updated in feMove.
 
+  // Setup start move hotlink
+  dbwatch_reinit.connect("/Equipment/Move/Settings/Start Move");
+  dbwatch_reinit.watch(move_init);
+
+  // Setup stop move hotlink
+  dbwatch_reinit.connect("/Equipment/Move/Settings/Stop Move");
+  dbwatch_reinit.watch(stop_move);
+
   // Setup re-initialize() hotlink
   dbwatch_reinit.connect("/Equipment/Move/Settings/Reinitialize");
-  dbwatch_reinit.watch(initialize);
+  dbwatch_reinit.watch(reinitialize);
 
 
   /* Set motor velocities and accelerations to in feMotor */
@@ -416,16 +348,6 @@ INT frontend_init() {
   }
 
 
-
-  //  for (i = gantry_motor_start; i < gantry_motor_end; i++) {
-  // tempV[i] = pInfo->Velocity[i] * fabs(pInfo->mScale[i]);
-  // tempA[i] = pInfo->Acceleration[i] * fabs(pInfo->mScale[i]);
-  //}
-
-  //  channel_rw(pInfo, pInfo->hKeyMVel, (void *) tempV, TID_FLOAT, 1);
-  //channel_rw(pInfo, pInfo->hKeyMAcc, (void *) tempA, TID_FLOAT, 1);
-
-  //return FE_ERR_HW;
 
   return CM_SUCCESS;
 }
@@ -484,38 +406,81 @@ INT frontend_exit() {
 
 /*-- Move Init -----------------------------------------------------*/
 // Call generate path and start the first move
-void move_init(HNDLE hDB, HNDLE hKey, void *data) {
+void move_init(midas::odb &arg) {
 
 
+  std::cout << "Value of key \"" + arg.get_full_path() + "\" changed to " << arg << std::endl;
 
-  //  INFO *pInfo = (INFO *) data;
-  // BOOL Check_Phidgets = TRUE;
-  // HNDLE hPhidgetVars0 = 0, hPhidgetVars1 = 0;
+  if(!((bool)arg)){
+    printf("start move var set to false.  Nothing to do.\n");   
+    return;  
+  }
 
-  // FOR DEBUGGING
-  cm_msg(MDEBUG, "move_init", "Function move_init called.");
+  printf("Starting move!\n");
 
-  // Check that the user has set "Start Move" to "y"
-  //int size = sizeof(BOOL);
-  //db_get_data(hDB, pInfo->hKeyStart, &pInfo->Start, &size, TID_BOOL);
-  //if (pInfo->Start == 0) return;
 
-  // If motors are already moving, set destinations back to previous
-  // destination values and return with an error.
-  //if (pInfo->Moving) {
-  //cm_msg(MERROR, "move_init", "Error: Can't start move. Move already in progress.");
-  //return;
-  //}
+  midas::odb move_set = {
+    {"Destination", std::array<float, 2>{}},
+    {"Velocity", std::array<float, 2>{}},
+    {"Acceleration", std::array<float, 2>{}},
+    {"Motor Scaling", std::array<float, 2>{}},
+    {"Axis Channels", std::array<int, 2>{}},
+    {"Limit Positions", std::array<float, 2>{}},
+    {"Start Move", false},
+    {"Stop Move", false},
+    {"Reinitialize", false},
+    
+  };
+
+  move_set.connect("/Equipment/Move/Settings");
+
+  midas::odb move_var = {
+    {"Initializing", false},
+    {"Initialized", false},
+    {"Bad Destination", false},
+    {"Completed", false},
+    {"Moving", false},
+    {"Axis Moving", std::array<bool, 2>{}},
+    {"Position", std::array<float, 2>{}},
+    
+  };
+
+  move_var.connect("/Equipment/Move/Variables");
+
+  midas::odb motor_set = {
+    {"Move", std::array<bool, 3>{}},
+    {"Destination", std::array<float, 3>{}},
+    
+  };
+
+  motor_set.connect("/Equipment/Motors00/Settings");
+
+  midas::odb motor_var = {
+    {"Moving", std::array<bool, 3>{}},
+    {"Position", std::array<float, 3>{}},
+    {"Limit Neg", std::array<bool, 3>{}},
+  };
+
+  motor_var.connect("/Equipment/Motors00/Variables");
+
+
+  // If motors are already moving return with an error.
+  if (((bool)move_var["Moving"])) {
+    cm_msg(MERROR, "move_init", "Error: Can't start move. Move already in progress.");
+    return;
+  }
 
 
   // Check if the motors have been initialized. If not, initialize them
   // before proceeding.
-  //  db_get_data(hDB, pInfo->hKeyInit, &pInfo->Initialized, &size, TID_BOOL);
-  //cm_msg(MDEBUG, "move_init", "Checking if motors are initialized...");
-  //if (pInfo->Initialized == 0) {
-  //  cm_msg(MDEBUG, "move_init", "They aren't. Running initialization.");
-  //  initialize(pInfo);
-  // }
+  //db_get_data(hDB, pInfo->hKeyInit, &pInfo->Initialized, &size, TID_BOOL);
+  cm_msg(MDEBUG, "move_init", "Checking if motors are initialized...");
+  
+  if (((bool)move_var["Initilized"]) == false) {
+    cm_msg(MDEBUG, "move_init", "They aren't. Running initialization.");
+    initialize();
+
+  }
   // If initialization fails, return with error
   //if (pInfo->Initialized == 0) {
   //  cm_msg(MERROR, "move_init", "Error: Can't start move. Initialization failed.");
@@ -558,16 +523,7 @@ void move_init(HNDLE hDB, HNDLE hKey, void *data) {
 // position to determine the motor coordinates at the origin. If the
 // negative limit switch is disabled, the current position is set as the
 // origin for that axis.
-void initialize(midas::odb &arg) {
-
-  std::cout << "Value of key \"" + arg.get_full_path() + "\" changed to " << arg << std::endl;
-
-  if(!((bool)arg)){
-    printf("reinitialize var set to false.  Nothing to do.\n");   
-    return;  
-  }
-
-  printf("Starting re-intializization\n");
+void initialize() {
 
 
   midas::odb move_set = {
@@ -643,8 +599,11 @@ void initialize(midas::odb &arg) {
    
     motor_set["Destination"][ch] = tempPos;
 
+
+    usleep(200000);
+
     // Start the motor
-    motor_set["Move"][ch] = tempPos;
+    motor_set["Move"][ch] = true;
 
 
     // Wait for axes with enabled limit switches to hit their limits
@@ -657,7 +616,7 @@ void initialize(midas::odb &arg) {
 
       bool negLimit = (bool)motor_var["Limit Neg"][ch];
       //cm_msg(MINFO, "initialize", "Polling axes %i neg limit:%i", i,negLimit);
-      if (negLimit) break;
+      if(negLimit){ printf("Reached limit switch\n"); break; }
       else {
 	// Check that motor still moving
 	int now_pos = (int)((float)motor_var["Position"][ch]);
@@ -666,12 +625,11 @@ void initialize(midas::odb &arg) {
 	  // Recheck the negative limit 
 	  usleep(500000);
 	  negLimit = (bool)motor_var["Limit Neg"][ch];
-	  printf("Rechecking limit axes %i %i", i,negLimit);
-	  if(negLimit){break;}
-
+	  printf("Rechecking limit axes %i %i\n", i,negLimit);
+	  if(negLimit){ printf("Reached limit switch\n"); break; }
 
 	  cm_msg(MERROR, "initialize",
-		 "Axis %i not moving %i %i. Stopping initialization since limit switch must be broken.", now_pos,lastCountPos,i);
+		 "Axis %i not moving %i %i. Stopping initialization since limit switch must be broken.", i,now_pos,lastCountPos);
 	  
 	  exitFlag = 1;
 	  break;
@@ -681,93 +639,6 @@ void initialize(midas::odb &arg) {
   }
 
 
-
-
-
-  // Cycle through each pair of motors corresponding to the same axis on each arm.
-  // We want to make sure that we initialize the Z-axis first, so that the laser box is
-  // fully out of the tank before we move in X and Y.
-  /*int order[4] = {2, 0, 1, 3};
-  int itmp;
-  for (itmp = 0; itmp < 4; itmp++) {
-    i = order[itmp];
-
-    if ((tempNegLimitEnabled[i] == 1) || (tempNegLimitEnabled[i + 5] == 1)) {
-      cm_msg(MINFO, "initialize", "Initializing axes %i and %i (enabled = %i %i)", i, i + 5, tempNegLimitEnabled[i],
-             tempNegLimitEnabled[i + 5]);
-      //printf("Going to destination %f %f\n",tempPos[i],tempPos[i+5]);
-    }
-    tempStart[i] = tempNegLimitEnabled[i];
-    tempStart[i + 5] = tempNegLimitEnabled[i + 5];
-
-    channel_rw(pInfo, pInfo->hKeyMStart, (void *) tempStart, TID_BOOL, 1);
-
-    // Wait for axes with enabled limit switches to hit their limits
-    while (1) {
-      channel_rw(pInfo, pInfo->hKeyMPos, pInfo->CountPos, TID_FLOAT, 0);
-      lastCountPosArm1 = pInfo->CountPos[i];
-      lastCountPosArm2 = pInfo->CountPos[i + 5];
-      sleep(600); // Approx. polling period
-      if ((tempNegLimitEnabled[i] == 1) && (tempNegLimitEnabled[i + 5] == 1)) {// If both gantry axes are enabled.
-        cm_msg(MDEBUG, "initialize", "Polling axes %i and %i.", i, i+5);
-        channel_rw(pInfo, pInfo->hKeyMLimitNeg, (void *) pInfo->neg_AxisLimit, TID_BOOL, 0);
-        if (pInfo->neg_AxisLimit[i] && pInfo->neg_AxisLimit[i + 5]) break;
-        else {
-          channel_rw(pInfo, pInfo->hKeyMPos, pInfo->CountPos, TID_FLOAT, 0);
-          if (pInfo->CountPos[i] == lastCountPosArm1 && !pInfo->neg_AxisLimit[i]) {
-            cm_msg(MERROR, "initialize",
-                   "Axis %i not moving. Stopping initialization since limit switch must be broken.", i);
-            channel_rw(pInfo, pInfo->hKeyMStop, (void *) tempStop, TID_BOOL, 1);
-            exitFlag = 1;
-            break;
-          }
-          if (pInfo->CountPos[i + 5] == lastCountPosArm2 && !pInfo->neg_AxisLimit[i + 5]) {
-            cm_msg(MERROR, "initialize",
-                   "Axis %i not moving. Stopping initialization since limit switch must be broken.", i + 5);
-            channel_rw(pInfo, pInfo->hKeyMStop, (void *) tempStop, TID_BOOL, 1);
-            exitFlag = 1;
-            break;
-          }
-        }
-      } else if ((tempNegLimitEnabled[i] == 0) && (tempNegLimitEnabled[i + 5] == 0)) {
-        break;
-      } else if (tempNegLimitEnabled[i] == 0) {  // If only second gantry axis is enabled.
-        cm_msg(MDEBUG, "initialize", "Polling axis %i.", i + 5);
-        channel_rw(pInfo, pInfo->hKeyMLimitNeg, (void *) pInfo->neg_AxisLimit, TID_BOOL, 0);
-        if (pInfo->neg_AxisLimit[i + 5]) {
-          break;
-        } else {
-          channel_rw(pInfo, pInfo->hKeyMPos, pInfo->CountPos, TID_FLOAT, 0);
-          if (pInfo->CountPos[i + 5] == lastCountPosArm2) {
-            cm_msg(MERROR, "initialize",
-                   "Axis %i not moving. Stopping initialization since limit switch must be broken.", i + 5);
-            channel_rw(pInfo, pInfo->hKeyMStop, (void *) tempStop, TID_BOOL, 1);
-            exitFlag = 1;
-            break;
-          }
-        }
-      } else {// If only first gantry axis is enabled.
-        cm_msg(MDEBUG, "initialize", "Polling axis %i.", i);
-        channel_rw(pInfo, pInfo->hKeyMLimitNeg, (void *) pInfo->neg_AxisLimit, TID_BOOL, 0);
-        if (pInfo->neg_AxisLimit[i]) {
-          break;
-        } else {
-          channel_rw(pInfo, pInfo->hKeyMPos, pInfo->CountPos, TID_FLOAT, 0);
-          if (pInfo->CountPos[i] == lastCountPosArm1) {
-            cm_msg(MERROR, "initialize",
-                   "Axis %i not moving. Stopping initialization since limit switch must be broken.", i);
-            channel_rw(pInfo, pInfo->hKeyMStop, (void *) tempStop, TID_BOOL, 1);
-            exitFlag = 1;
-            break;
-          }
-        }
-      }
-    }
-    tempStart[i] = 0;
-    tempStart[i + 5] = 0;
-    if (exitFlag == 1) break;
-  }
-  */
 
   // Wait for all the motors to stop moving (sometimes this 
   // occurs slightly after the limit switches are triggered)
@@ -782,44 +653,26 @@ void initialize(midas::odb &arg) {
   }
 
   printf("Is motors still running?  %i\n",stillMoving);
-  
+  if(stillMoving){
+	  cm_msg(MERROR, "initialize",
+		 "One axis is still moving! Error!");
+
+  }  
 
 
-  //  while (1/*pInfo->Moving*/) {
-    //pInfo->Moving = 0;
-    //    channel_rw(pInfo, pInfo->hKeyMMoving, (void *) pInfo->AxisMoving, TID_BOOL, 0);
-    //for (i = gantry_motor_start; i < gantry_motor_end; i++) pInfo->Moving = pInfo->Moving || pInfo->AxisMoving[i];
-    //usleep(100000);
-  //}
+  // Need to cache the origin
+  for(int i = 0; i < 2; i++){
+    int ch = (int) move_set["Axis Channels"][i];    
+    mOrigin[i] = motor_var["Position"][ch];
+  }
+  printf("Origin position in counts is %f %f\n",mOrigin[0],mOrigin[1]);
 
-  /*
-  if (exitFlag == 0) {
-    // Determine the motor positions at the origin and put the results in
-    // pInfo->mOrigin
-    channel_rw(pInfo, pInfo->hKeyMPos, pInfo->CountPos, TID_FLOAT, 0);
-    for (i = 0; i < 10; i++) {
-      //for(i = gantry_motor_start; i < gantry_motor_end ; i++){
-      // only exception in flexible for loop: even if other motor is off, still initialize to LimPos...TF: safe??
-      if (tempNegLimitEnabled[i] == 1 || (i >= gantry_motor_end || i < gantry_motor_start)) {
-        // The motor origin should always be at the limit switches, since this is 
-        // a local variable
-        // MARK 
-        pInfo->mOrigin[i] = pInfo->CountPos[i];// - pInfo->LimPos[i]*pInfo->mScale[i];
-        pInfo->Position[i] = pInfo->LimPos[i];
-        cm_msg(MINFO, "initialize", "Finished initializing axis %i; Origin = %5.2f counts, Position = %5.2f m.", i,
-               pInfo->mOrigin[i], pInfo->Position[i]);
-      } else {
-        pInfo->mOrigin[i] = 0;
-        pInfo->Position[i] = 0;
-      }
-    }
-    db_set_data(pInfo->hDB, pInfo->hKeyPos, &pInfo->Position, 10 * sizeof(float), 10, TID_FLOAT);
-  }*/
+  // Write current position in meters to ODB
+  for(int i = 0; i < 2; i++){
+    move_var["Position"][i] = (float)move_set["Limit Positions"][i];
+  }
 
-  //  int exitFlagTilt = initialize_tilt(pInfo);
-
-
-
+  // Set status variables
   move_var["Initializing"] = false;
   move_set["Reinitialize"] = false;
 
@@ -842,30 +695,20 @@ void initialize(midas::odb &arg) {
 
 
 /*-- Re-Initialize -------------------------------------------------*/
-// Set initialized to 0, then start the move
-void reinitialize(HNDLE hDB, HNDLE hKey, void *data) {
+void reinitialize(midas::odb &arg) {
 
 
-  /*
-  INFO *pInfo = (INFO *) data;
-  INT size = sizeof(BOOL);
+  std::cout << "Value of key \"" + arg.get_full_path() + "\" changed to " << arg << std::endl;
 
-  db_get_data(hDB, pInfo->hKeyReInit, &pInfo->ReInitialize, &size, TID_BOOL);
-  if (!pInfo->ReInitialize) return;
+  if(!((bool)arg)){
+    printf("reinitialize var set to false.  Nothing to do.\n");   
+    return;  
+  }
 
-  pInfo->Initialized = 0;
-  db_set_data(hDB, pInfo->hKeyInit, &pInfo->Initialized, sizeof(BOOL), 1, TID_BOOL);
+  printf("Starting re-intializization\n");
+  initialize();
 
-  pInfo->Start = 1;
-  db_set_data(hDB, pInfo->hKeyStart, &pInfo->Start, sizeof(BOOL), 1, TID_BOOL);
 
-  pInfo->ReInitialize = 0;
-  db_set_data(hDB, pInfo->hKeyReInit, &pInfo->ReInitialize, sizeof(BOOL), 1, TID_BOOL);
-
-  pInfo->BadDest = 0;
-  db_set_data(hDB, pInfo->hKeyBadDest, &pInfo->BadDest, sizeof(BOOL), 1, TID_BOOL);
-
-  */
 }
 
 
@@ -1038,7 +881,7 @@ void move() {
 
 /*-- Stop_move -----------------------------------------------------*/
 // Aborts a move, and prints the reason for stopping to screen
-void stop_move(HNDLE hDB, HNDLE hKey, void *data) {
+void stop_move(midas::odb &arg) {
   //  INFO *pInfo = (INFO *) data;
 
   /*
