@@ -85,7 +85,7 @@ INT poll_trigger_event(INT count, PTYPE test);
 //INT interrupt_configure(INT cmd, PTYPE adr);
 extern void interrupt_routine(void);
 
-INT read_trigger_event(char *pevent, INT off);
+INT monitor(char *pevent, INT off);
 
 INT read_scaler_event(char *pevent, INT off);
 
@@ -93,13 +93,12 @@ INT read_scaler_event(char *pevent, INT off);
 void move_init(midas::odb &arg);
 
 
-void monitor(HNDLE hDB, HNDLE hKey, void *data);
 
 void move();
 
 void stop_move(midas::odb &arg);
 
-void initialize();
+int initialize();
 
 void reinitialize(midas::odb &arg);
 
@@ -119,12 +118,12 @@ EQUIPMENT equipment[] = {
             "MIDAS",            // format
             TRUE,               // enabled
             RO_ALWAYS,          // read x
-            10000,              // read every x millisec
+            1000,              // read every x millisec
             0,                  // stop run after this event limit
             0,                  // number of sub event
             60,                  // log history every x sec
             "", "", "",},
-        read_trigger_event, // readout routine
+        monitor, // readout routine
         NULL,               // class driver main routine
         NULL,                // device driver list
         NULL,               // init string
@@ -212,10 +211,6 @@ INT interrupt_configure(INT cmd, INT source, POINTER_T adr)
 }
 
 
-/*-- Event readout -------------------------------------------------*/
-INT read_trigger_event(char *pevent, INT off) {
-  return 0;
-}
 
 /*-- Scaler event --------------------------------------------------*/
 
@@ -279,7 +274,7 @@ INT frontend_init() {
   // Program restarted, so need to re-initialiaze
   move_var["Initialized"] = false;
 
-  mOrigin[0] = 0; mOrigin[1] = 1;
+  mOrigin[0] = 0; mOrigin[1] = 0;
 
   /* Initialize non-ODB variables */
   PathSize = 0;
@@ -290,16 +285,9 @@ INT frontend_init() {
 
 
 
-  /* Set up hotlinks */
-  // move_init() hotlink
-  //db_open_record(hDB, pInfo->hKeyStart, &pInfo->Start, sizeof(BOOL), MODE_READ, move_init, pInfo);
-
   // stop_move() hotlink
   //db_open_record(hDB, pInfo->hKeyStop, &pInfo->Stop, sizeof(BOOL), MODE_READ, stop_move, pInfo);
 
-
-  // reinitialize() hotlink
-  //  db_open_record(hDB, pInfo->hKeyReInit, &pInfo->ReInitialize, sizeof(BOOL), MODE_READ, reinitialize, pInfo);
 
   // monitor() hotlink
   //db_open_record(hDB, pInfo->hKeyMMoving[0], NULL, 8 * sizeof(BOOL), MODE_READ, monitor, pInfo);
@@ -358,66 +346,17 @@ INT frontend_exit() {
   return CM_SUCCESS;
 }
 
-/********************************************************************\
-                Main routines during frontend operation
-
-  These routines are called when hotlinked ODB variables are changed
-  during frontend operation. They operate by changing variables in 
-  "Equipment/Motor" to control the gantry operation.
-
-  move_init:      Hotlinked to the variable "Start Move", this 
-                  function generates the move path and initializes 
-                  the move.
-
-  initialize:	  This function moves the motors to the limit switches
-		  (in a guaranteed collision free manner) and determines
-		  the motor coordinates (in steps) at the origin. This
-		  value is placed in the variable pInfo->mOrigin.
-
- reinitialize:	  This function calls initialize (initializes the gantry
-                  and then starts 
-		  move_init. (i.e. it sends the motors to their limit
-		  switches, then to their destinations)
-
-  generate_path:  This function takes the current location and the
-                  desired destination and returns a series of way-
-                  points that will get the arm to the destination
-                  without collision.
-
-  move:           This function starts the axes towards the subsequent
-                  index of the generated path.
-
-  stop_move:	  This function stops all motor movement
-
-  monitor:        Hotlinked to the variables:
-   		  "/Motors00/Variables/Moving","/Motors01/Variables/Moving"
-                  this function checks for completion of a move
-                  whenever the motors stop. Depending on the result
-                  of this check, this function either initiates the
-                  next path section, sets completed to 1, or sets 
-                  completed to 0 (error).
-                  
-  channel_rw:     This function handles all communication with feMotor.
-                  Only here do we read and write to specific motor 
-                  channels.
-\********************************************************************/
-
-
 
 /*-- Move Init -----------------------------------------------------*/
 // Call generate path and start the first move
 void move_init(midas::odb &arg) {
 
+  //  std::cout << "Value of key \"" + arg.get_full_path() + "\" changed to " << arg << std::endl;
 
-  std::cout << "Value of key \"" + arg.get_full_path() + "\" changed to " << arg << std::endl;
-
-  if(!((bool)arg)){
-    printf("start move var set to false.  Nothing to do.\n");   
-    return;  
-  }
+  // Just return if start move set to false
+  if(!((bool)arg)){ return;  }
 
   printf("Starting move!\n");
-
 
   midas::odb move_set = {
     {"Destination", std::array<float, 2>{}},
@@ -473,49 +412,104 @@ void move_init(midas::odb &arg) {
 
   // Check if the motors have been initialized. If not, initialize them
   // before proceeding.
-  //db_get_data(hDB, pInfo->hKeyInit, &pInfo->Initialized, &size, TID_BOOL);
-  cm_msg(MDEBUG, "move_init", "Checking if motors are initialized...");
-  
-  if (((bool)move_var["Initilized"]) == false) {
-    cm_msg(MDEBUG, "move_init", "They aren't. Running initialization.");
-    initialize();
+  //  cm_msg(MDEBUG, "move_init", "Checking if motors are initialized...");  
+  if (((bool)move_var["Initialized"]) == false) {
+    cm_msg(MINFO, "move_init", "Motors are not initialized. Running initialization.");
+    int status = initialize();
+
+    // If initialization fails, return with error
+    if(status != 0){
+      cm_msg(MERROR, "move_init", "Error: Can't start move. Initialization failed.");
+      return;
+    }
 
   }
-  // If initialization fails, return with error
-  //if (pInfo->Initialized == 0) {
-  //  cm_msg(MERROR, "move_init", "Error: Can't start move. Initialization failed.");
-  //  return;
-  //}
 
 
-  // Load input destination into pInfo->Destination
-  //  size = 10 * sizeof(float);
-  //db_get_data(hDB, pInfo->hKeyDest, pInfo->Destination, &size, TID_FLOAT);
 
-  // Generate collision free path to pInfo->Destination
+  // Calculate the destination for both axis, in Galil counts
+  for(int i = 0; i < 2; i++){
+    float dest = ((float)move_set["Destination"][i] - (float)move_set["Limit Positions"][i]) * (float)move_set["Motor Scaling"][i]
+      + mOrigin[i];
 
-  // Simplify.  Just move in both axis at once
-  cm_msg(MINFO, "move_init", "Generating Path");
-  //  int Status = generate_path(pInfo);
+    // Galil deals with difference from current position, so need to substract that off and set the relevant ODB variable
+    int ch = (int) move_set["Axis Channels"][i];    
+    float dest_cor = dest - (float)motor_var["Position"][ch];
+    motor_set["Destination"][ch] = dest_cor;
+
+    // Start the motor
+    usleep(200000);
+    motor_set["Move"][ch] = true;
+
+  }
+
 
   
-  cm_msg(MINFO, "move_init", "Path succesfully generated");
+  move_set["Start Move"] = false;
+  move_var["Moving"] = true;
+ 
+ 
 
-  // Set the "completed" variable in the ODB to 0 (since our newly
-  // started move is still incomplete)
-  //pInfo->Completed = 0;
-  //db_set_data(hDB, pInfo->hKeyCompleted, &pInfo->Completed, sizeof(BOOL), 1, TID_BOOL);
-
-  // Move to first path index
-  //  move(pInfo);
-
-
-  // Set the ODB variable "Start Move" back to 0
-  //pInfo->Start = 0;
-  //db_set_data(hDB, pInfo->hKeyStart, &pInfo->Start, sizeof(BOOL), 1, TID_BOOL);
 }
 
+/*-- Event readout -------------------------------------------------*/
+INT monitor(char *pevent, INT off) {
 
+  midas::odb move_set = {
+    {"Motor Scaling", std::array<float, 2>{}},
+    {"Axis Channels", std::array<int, 2>{}},
+    {"Limit Positions", std::array<float, 2>{}},
+  };
+
+  move_set.connect("/Equipment/Move/Settings");
+
+  midas::odb move_var = {
+    {"Initialized", false},
+    {"Moving", false},
+    {"Position", std::array<float, 2>{}},    
+  };
+
+  move_var.connect("/Equipment/Move/Variables");
+
+  midas::odb motor_var = {
+    {"Moving", std::array<bool, 3>{}},
+    {"Position", std::array<float, 3>{}},
+  };
+
+  motor_var.connect("/Equipment/Motors00/Variables");
+
+
+  // Get current position from motor, figure out current position in meter
+  // Only do this if motor is initialized; otherwise no meaningful results possible
+  if((bool)move_var["Initialized"]){
+
+    for(int i = 0; i < 2; i++){
+      int ch = (int) move_set["Axis Channels"][i];    
+      float current_position = (((float)motor_var["Position"][ch]) - mOrigin[i])/(float)move_set["Motor Scaling"][i] 
+	+ (float)move_set["Limit Positions"][i];
+      move_var["Position"][i] = current_position;
+    }
+  }else{
+    move_var["Position"][0] = 0.0; move_var["Position"][1] = 0.0;
+  }
+  
+  // Check if any axis is moving
+  bool is_moving = false;
+  for(int i = 0; i < 2; i++){
+    int ch = (int) move_set["Axis Channels"][i];    
+    if((bool)motor_var["Moving"][ch]){ is_moving = true; }
+  }
+   
+  // Check if the gantry stopped moving
+  if((bool)move_var["Moving"] and !is_moving){
+      cm_msg(MINFO, "monitor","Gantry move is completed");
+  }
+
+  move_var["Moving"] = is_moving;
+
+  //printf("Monitor: moving = %i\n",is_moving);
+  return 0;
+}
 
 
 /*-- Initialize ----------------------------------------------------*/
@@ -523,7 +517,8 @@ void move_init(midas::odb &arg) {
 // position to determine the motor coordinates at the origin. If the
 // negative limit switch is disabled, the current position is set as the
 // origin for that axis.
-void initialize() {
+// return 0 if succesful
+int initialize() {
 
 
   midas::odb move_set = {
@@ -665,8 +660,7 @@ void initialize() {
     int ch = (int) move_set["Axis Channels"][i];    
     mOrigin[i] = motor_var["Position"][ch];
   }
-  printf("Origin position in counts is %f %f\n",mOrigin[0],mOrigin[1]);
-
+  
   // Write current position in meters to ODB
   for(int i = 0; i < 2; i++){
     move_var["Position"][i] = (float)move_set["Limit Positions"][i];
@@ -688,7 +682,7 @@ void initialize() {
   
 
 
-  return;
+  return exitFlag;
 
 
 }
@@ -698,12 +692,10 @@ void initialize() {
 void reinitialize(midas::odb &arg) {
 
 
-  std::cout << "Value of key \"" + arg.get_full_path() + "\" changed to " << arg << std::endl;
+  //std::cout << "Value of key \"" + arg.get_full_path() + "\" changed to " << arg << std::endl;
 
-  if(!((bool)arg)){
-    printf("reinitialize var set to false.  Nothing to do.\n");   
-    return;  
-  }
+  // Don't do anything if reinitialize set to 'n'
+  if(!((bool)arg)){ return; }
 
   printf("Starting re-intializization\n");
   initialize();
@@ -711,173 +703,6 @@ void reinitialize(midas::odb &arg) {
 
 }
 
-
-
-
-/*-- Move ----------------------------------------------------------*/
-// Use channel_rw to send the subsequent path index to the motors
-void move() {
-  /*  int i;
-  BOOL zerotest = 0;
-  BOOL start[10] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
-  float Motor00StartPos[8];
-  float Motor01StartPos[8];
-  float Motor00Pos[8];
-  float Motor01Pos[8];
-  float Motor00Dest[8];
-  float Motor01Dest[8];
-  BOOL Motor00LimitPos[8];
-  BOOL Motor00LimitNeg[8];
-  BOOL Motor01LimitPos[8];
-  BOOL Motor01LimitNeg[8];
-  int size_bool = sizeof(Motor00LimitPos);
-  int size_float = sizeof(Motor01Pos);
-  int waiting = 1;
-  BOOL started_moving = 0;
-  DWORD Overall_time_for_loop;
-  DWORD start_of_loop;
-  int size_phidget = sizeof(pInfo->Phidget);
-
-  //DEBUG
-  printf("Moving to path index: %i\n", pInfo->PathIndex);
-
-  // Read in axis positions (in counts)
-    channel_rw(pInfo, pInfo->hKeyMPos, (void *) pInfo->CountPos, TID_FLOAT, 0);
-
-  // Determine required destinations to be sent to the motors
-  for (i = gantry_motor_start; i < gantry_motor_end; i++) {
-    pInfo->CountDest[i] = pInfo->MovePath[i][pInfo->PathIndex] - pInfo->CountPos[i];
-
-    //DEBUG
-    printf("MD[%i]=%6.0f(%6.0f) ", i, pInfo->CountDest[i], pInfo->CountPos[i]);
-    if (i == 4 || i == 9) {
-      printf("\n");
-    }
-    zerotest = zerotest || pInfo->CountDest[i];
-  }
-
-  // This is added so that the monitor recognizes a move as completed, even
-  // when no move is required.
-  if (!zerotest) {
-    cm_msg(MINFO, "move", "Warning: No move required");
-    // This indicates to the monitor that a move has been initiated
-    // even though the motors won't start moving.
-    //TODO:: BK: Think of a better way of doing this. The Moving variable should only be used to indicate that the system is moving it could cause confusion when you set it based on other conditions.(This is me being picky)
-    pInfo->Moving = 1;
-    return;
-  }
-
-  // Start motors towards the specified destinations
-  // Write motor destinations to the ODB
-  channel_rw(pInfo, pInfo->hKeyMDest, (void *) pInfo->CountDest, TID_FLOAT, 1);
-
-  // Get the current location of the motor. This will be used to tell if a motor has started moving yet
-  db_get_data(pInfo->hDB, pInfo->hKeyMPos[0], &Motor00StartPos, &size_float, TID_FLOAT);
-  db_get_data(pInfo->hDB, pInfo->hKeyMPos[1], &Motor01StartPos, &size_float, TID_FLOAT);
-  db_get_data(pInfo->hDB, pInfo->hKeyMDest[0], &Motor00Dest, &size_float, TID_FLOAT);
-  db_get_data(pInfo->hDB, pInfo->hKeyMDest[1], &Motor01Dest, &size_float, TID_FLOAT);
-
-// Get the time at the beggining of the loop so that we can track how long we are in the loop
-  Overall_time_for_loop = ss_millitime();
-
-// Don't do anything else until the motors have started moving
-  while (!started_moving) {
-    start_of_loop = ss_millitime();
-    // DEBUG
-    printf("\nChannel_rw called at time : %lf\n", ss_millitime());
-    // Set the ODB values to start a move
-
-    channel_rw(pInfo, pInfo->hKeyMStart, (void *) start, TID_BOOL, 1);
-    sleep(100);
-
-    waiting = 1;
-    while (waiting) {
-      db_get_data(pInfo->hDB, pInfo->hKeyMPos[0], &Motor00Pos, &size_float, TID_FLOAT);
-      db_get_data(pInfo->hDB, pInfo->hKeyMPos[1], &Motor01Pos, &size_float, TID_FLOAT);
-      db_get_data(pInfo->hDB, pInfo->hKeyMLimitPos[0], &Motor00LimitPos, &size_bool, TID_BOOL);
-      db_get_data(pInfo->hDB, pInfo->hKeyMLimitNeg[0], &Motor00LimitNeg, &size_bool, TID_BOOL);
-      db_get_data(pInfo->hDB, pInfo->hKeyMLimitPos[1], &Motor01LimitPos, &size_bool, TID_BOOL);
-      db_get_data(pInfo->hDB, pInfo->hKeyMLimitNeg[1], &Motor01LimitNeg, &size_bool, TID_BOOL);
-
-      // if 300 seconds has passed and nothing has happened exit because the program is not working
-      if (ss_millitime() - Overall_time_for_loop > 1000 * 300) {
-        cm_msg(MERROR, "move", " The Motors never started Moving (last 300s)");
-        waiting = 0;
-        started_moving = 1;
-      }
-        // TF NOTE: the code below is vulnerable to which motor channels are used. Switching a cable screws this up.
-        // If any of the motors for gantry0 are no longer at their start position that means the motors are moving and the program behaved properly
-      else if (Motor00Pos[0] != Motor00StartPos[0] || Motor00Pos[1] != Motor00StartPos[1] ||
-               Motor00Pos[2] != Motor00StartPos[2]
-               || Motor00Pos[3] != Motor00StartPos[3] || Motor00Pos[4] != Motor00StartPos[4] ||
-               Motor00Pos[5] != Motor00StartPos[5]
-               || Motor00Pos[6] != Motor00StartPos[6] || Motor00Pos[7] != Motor00StartPos[7]) {
-        cm_msg(MINFO, "move", " Motors gantry 0 are Moving ");
-        waiting = 0;
-        started_moving = 1;
-        pInfo->Moving = 1;   //not necessary for long moves, but for mm moves, move can stop before monitor can check whether it's moving, so need to set here that is was really moving
-      }
-        // Same test for gantry1
-      else if (Motor01Pos[0] != Motor01StartPos[0] || Motor01Pos[1] != Motor01StartPos[1] ||
-               Motor01Pos[2] != Motor01StartPos[2]
-               || Motor01Pos[3] != Motor01StartPos[3] || Motor01Pos[4] != Motor01StartPos[4] ||
-               Motor01Pos[5] != Motor01StartPos[5]
-               || Motor01Pos[6] != Motor01StartPos[6] || Motor01Pos[7] != Motor01StartPos[7]) {
-        cm_msg(MINFO, "move", " Motors gantry 1 are Moving ");
-        waiting = 0;
-        started_moving = 1;
-        pInfo->Moving = 1;   //not necessary for long moves, but for mm moves, move can stop before monitor can check whether it's moving, so need to set here that is was really moving
-      }
-
-
-        // If a motor for gantry0 is trying to move in the positive direction but the corresponding negative limit switch is engaged,
-        // a move will not be started however no move is needed so set pinfo->moving to 1 so that the next move will be called
-      else if (((Motor00Dest[4] > 0) && Motor00LimitNeg[4]) || ((Motor00Dest[5] > 0) && Motor00LimitNeg[5])
-               || ((Motor00Dest[6] > 0) && Motor00LimitNeg[6]) || ((Motor00Dest[7] > 0) && Motor00LimitNeg[7])) {
-        cm_msg(MERROR, "move", "Move could not be started because Motor00 is at a negative limit switch");
-        waiting = 0;
-        started_moving = 1;
-        pInfo->Moving = 1;
-      }
-
-        // Now testing for move in negative direction, and hitting positive limit switch for ganty0
-      else if (((Motor00Dest[4] < 0) && Motor00LimitPos[4]) || ((Motor00Dest[5] < 0) && Motor00LimitPos[5])
-               || ((Motor00Dest[6] < 0) && Motor00LimitPos[6]) || ((Motor00Dest[7] < 0) && Motor00LimitPos[7])) {
-        cm_msg(MERROR, "move", "Move could not be started because Motor00 is at a Positive limit switch");
-        waiting = 0;
-        started_moving = 1;
-        pInfo->Moving = 1;
-      }
-
-        // Same for gantry1
-      else if (((Motor01Dest[1] > 0) && Motor01LimitNeg[1]) || ((Motor01Dest[2] > 0) && Motor01LimitNeg[2])
-               || ((Motor01Dest[3] > 0) && Motor01LimitNeg[3]) || ((Motor01Dest[4] > 0) && Motor01LimitNeg[4])) {
-        cm_msg(MERROR, "move", "Move could not be started because Motor01 is at a negative limit switch");
-        waiting = 0;
-        started_moving = 1;
-        pInfo->Moving = 1;
-      }
-
-        // Same for gantry1
-      else if (((Motor01Dest[1] < 0) && Motor01LimitPos[1]) || ((Motor01Dest[2] < 0) && Motor01LimitPos[2])
-               || ((Motor01Dest[3] < 0) && Motor01LimitPos[3]) || ((Motor01Dest[4] < 0) && Motor01LimitPos[4])) {
-        cm_msg(MERROR, "move", "Move could not be started because Motor01 is at a Positive limit switch");
-        waiting = 0;
-        started_moving = 1;
-        pInfo->Moving = 1;
-      }
-
-
-        // If 5 seconds has passed and the motors haven't started moving reset the ODB values
-        // that should initiate a move with the hope that a move will start.
-      else if (ss_millitime() - start_of_loop > 1000 * 5) {
-        cm_msg(MINFO, "move", "Calling channel_rw again after past 5s");
-        waiting = 0;
-      }
-    }
-  }
-  cm_msg(MINFO, "move", "Function Move is complete");*/
-}
 
 /*-- Stop_move -----------------------------------------------------*/
 // Aborts a move, and prints the reason for stopping to screen
@@ -907,7 +732,7 @@ void stop_move(midas::odb &arg) {
 /*-- Monitor -------------------------------------------------------*/
 // Called periodically with /Motors/Variables/Moving, this function
 // checks for completion of a move
-void monitor(HNDLE hDB, HNDLE hKey, void *data) {
+//void monitor(HNDLE hDB, HNDLE hKey, void *data) {
 
   /*
   INFO *pInfo = (INFO *) data;
@@ -999,7 +824,7 @@ void monitor(HNDLE hDB, HNDLE hKey, void *data) {
   }
 
 */
-}
+//}
 
 
 

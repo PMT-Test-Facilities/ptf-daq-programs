@@ -7,7 +7,7 @@
 
 VPATH = degauss:motor:scan:pathcalc:move
 
-CFLAGS   = -DOS_LINUX -Dextname -g -O2 -Wall -Wuninitialized -I/home1/midptf/boost_1_47_0/ -std=gnu++0x -Ipathcalc -Iscan -Imove -Imotor -Idegauss -I. -DDEBUG
+CFLAGS   = -DOS_LINUX -Dextname -g -O2 -Wall -Wuninitialized -I/home1/midptf/boost_1_47_0/ -std=gnu++0x -Ipathcalc -Iscan -Imove -Imotor -Idegauss -I. -DDEBUG  -std=c++11
 CXXFLAGS = $(CFLAGS)
 
 # MIDAS location
@@ -56,11 +56,11 @@ endif
 
 # support libraries
 
-LIBS = -lm -lz -lutil -lnsl -lpthread -lrt
+LIBS = -lm -lz -lutil -lnsl -lpthread -lrt -ldl
 
 # all: default target for "make"
 
-all:feMotor feMove feScan fePhidget feptfwiener.exe testVI feDegauss
+all:feMotor feMoveMTS feScan 
 
 
 gefvme.o: %.o: $(MIDASSYS)/drivers/vme/vmic/%.c
@@ -71,6 +71,9 @@ feMotor: $(MIDASLIBS) $(MFE) feMotor.o $(DRV_DIR)/tcpip.o cd_Galil.o
 	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS)
 
 feMove: $(MIDASLIBS) $(MFE)  feMove.o TPathCalculator.o TRotationCalculator.o TGantryConfigCalculator.o
+	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS)
+
+feMoveMTS: $(MIDASLIBS) $(MFE)  feMoveMTS.o 
 	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS)
 
 #feMoveNew: $(MIDASLIBS) $(MFE) feMove.o TPathCalculator.o TRotationCalculator.o TGantryConfigCalculator.o
