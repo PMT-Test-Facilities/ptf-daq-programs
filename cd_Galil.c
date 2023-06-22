@@ -623,6 +623,13 @@ void galil_move(INT hDB, INT hKey, void *info) {
   pequipment = (EQUIPMENT *) info;
   pInfo = (INFO *) pequipment->cd_info;
 
+  // enable relay (ie disable brake) before moving
+  printf("Enabling relay (disabling brake) before starting move\n");
+  pInfo->bDigitalOut2[0] = 1;
+  db_set_data(hDB, pInfo->hKeyDigitalOut2, pInfo->bDigitalOut2,
+              pInfo->num_channels * sizeof(BOOL), pInfo->num_channels, TID_BOOL);
+
+
   for (i = 0; i < pInfo->num_channels; i++) {
     bFalse |= pInfo->bMove[i];
     if (pInfo->bMove[i] == TRUE) {
@@ -1244,6 +1251,48 @@ void galil_digital(INT hDB, INT hKey, void *info) {
     if ((strchr(response, ':') == NULL) || (strchr(response, '?') != NULL)) {
       cm_msg(MERROR, "galil_digital", "Error in command for DigitalOut response %s", response);
     }
+  }
+}
+
+
+/**
+ * Stupid function that lets us immediately enable the out2[0] output, so that the relay is definitely active before the move starts
+ */
+void enable_out2_0(EQUIPMENT *pequipment) {
+  INFO *pInfo;
+  //EQUIPMENT *pequipment;
+  char command[256];
+  char response[256];
+  size_t writeCount, buffLength;
+  unsigned int i;
+
+  //  pequipment = (EQUIPMENT *) info;
+  pInfo = (INFO *) pequipment->cd_info;
+
+  sprintf(command,"SB 9\r");
+  
+  printf("output2[0] manually enabled (without callback)\n");
+  //for (i = 0; i < pInfo->num_channels; i++) {
+  //if (hKey == pInfo->hKeyDigitalOut1) {
+  //  sprintf(command, "%cB %d", (pInfo->bDigitalOut1[i] ? 'S' : 'C'), i + 1);
+  //  cm_msg(MINFO, "galil_digital", "DigitalOut1 request %s", command);
+  //} else if (hKey == pInfo->hKeyDigitalOut2) {
+  //  sprintf(command, "%cB %d", (pInfo->bDigitalOut2[i] ? 'S' : 'C'), i + 9);
+  //  cm_msg(MINFO, "galil_digital", "DigitalOut2 request %s", command);
+  //} else {
+  //  cm_msg(MERROR, "galil_digital", "Invalid key for digital command");
+  //  break;
+  //}
+
+  //    strcat(command, "\r");
+  buffLength = strlen(command);
+  writeCount = DRIVER(0)(CMD_WRITE, pequipment->driver[0].dd_info, command, buffLength);
+  if (writeCount != buffLength) {
+    cm_msg(MERROR, "galil_digital", "Error in device driver for digital command");
+  }
+  buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 5, ":", 500);
+  if ((strchr(response, ':') == NULL) || (strchr(response, '?') != NULL)) {
+    cm_msg(MERROR, "galil_digital", "Error in command for DigitalOut response %s", response);
   }
 }
 
@@ -2014,7 +2063,7 @@ INT galil_init(EQUIPMENT *pequipment) {
     pInfo->bDigitalOut2[i] = atoi(response);
   }
 
-  // Set the output for DigitalOut2[0] to True
+  // Set the output for DigitalOut2[0] to True (disable the motor) before move
   pInfo->bDigitalOut2[0] = 1;
   db_set_data(hDB, pInfo->hKeyDigitalOut1, pInfo->bDigitalOut1,
               pInfo->num_channels * sizeof(BOOL), pInfo->num_channels, TID_BOOL);
@@ -2327,6 +2376,9 @@ INT Move(EQUIPMENT *pequipment, INT i, float fDestination) {
   fSteps = fDestination / pInfo->fSlope[i];
   iMoveTime = (INT)(fabs(fDestination - pInfo->fPosition[i]) / pInfo->fVelocity[i] + MOVE_MIN);
 
+  // manually enable out2[0] output
+  enable_out2_0(pequipment);
+
   if (verbose)
     cm_msg(MINFO, "galil_idle", "Move of %s to %f will take max %d seconds", pInfo->names + i * NAME_LENGTH,
            fDestination, iMoveTime);
@@ -2381,6 +2433,8 @@ INT Move(EQUIPMENT *pequipment, INT i, float fDestination) {
   db_set_data_index(hDB, pInfo->hKeyVarDest,
                     &pInfo->fDestination[i], sizeof(float), i, TID_FLOAT);
 
+
+  printf("Finished move\n");
   return iMoveTime;
 }
 
