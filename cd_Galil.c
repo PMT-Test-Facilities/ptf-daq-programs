@@ -50,6 +50,8 @@ typedef struct {
 
   HNDLE hKeyTurnMotorsOff;
 
+  HNDLE hKeyEnableDO;
+
   /* globals */
   INT num_channels;
   INT format;
@@ -79,6 +81,7 @@ typedef struct {
   BOOL *bBounce;
 
   BOOL *bTurnMotorsOff;
+  BOOL *bEnableDO;
 
   float *fSlope;
   float *fOffset;
@@ -656,7 +659,7 @@ void turn_motors_off(INT hDB, INT hKey, void *info) {
   pequipment = (EQUIPMENT *) info;
   pInfo = (INFO *) pequipment->cd_info;
 
-  // Only turn off is TurnMotorsOff is y
+  // Only turn off is TurnMotorsOf is y
   if (pInfo->bTurnMotorsOff[0] == TRUE) {
 
     char command[10024];
@@ -689,14 +692,70 @@ void turn_motors_off(INT hDB, INT hKey, void *info) {
       }
       cm_msg(MINFO, "galil_init", "Second try successful. Continuing.");
     }
-
+    // usleep(10000000);
     // Set the bit back to false.
-    pInfo->bTurnMotorsOff[0] = FALSE;
-    // clear the bits after writing command (this triggers another demand but no action)
+    pInfo->bTurnMotorsOff[0] = FALSE;//Deactivate for steady point
+     // clear the bits after writing command (this triggers another demand but no action)
     db_set_data(hDB, pInfo->hKeyTurnMotorsOff, pInfo->bTurnMotorsOff,
                 sizeof(BOOL), 1, TID_BOOL);
 
   }
+
+}
+
+
+
+/**
+ * call-back to enable/disable digital output
+ */
+void enable_do(INT hDB, INT hKey, void *info) {
+
+  INFO *pInfo;
+  EQUIPMENT *pequipment;
+
+  pequipment = (EQUIPMENT *) info;
+  pInfo = (INFO *) pequipment->cd_info;
+
+  char command[10024];
+  // char buff[10024];
+  char response[10024];
+  size_t writeCount, buffLength;
+
+  // Only turn off is EnableDO is y
+  if (pInfo->bEnableDO[0] == TRUE) {
+    sprintf(command, "SB1");
+    cm_msg(MINFO, "galil_init", "Enabling digital output 1 (command \"%s\")", command);
+  }else{
+    sprintf(command, "CB1");
+    cm_msg(MINFO, "galil_init", "Disabling digital output 1 (command \"%s\")", command);
+  }
+  
+  strcat(command, "\r");
+
+  buffLength = strlen(command);
+  
+  writeCount = DRIVER(0)(CMD_WRITE, pequipment->driver[0].dd_info, command, buffLength);
+  if (writeCount != buffLength) {
+    cm_msg(MERROR, "galil_init", "Error in device driver - MO - CMD_WRITE");
+  }
+  buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 100, ":", 500);
+  response[buffLength] = 0x0;
+  printf("Response %s\n",response);
+  if ((strchr(response, ':') == NULL) || (strchr(response, '?') != NULL)) {
+    cm_msg(MERROR, "galil_init", "Bad response from SB/CB command: \"%s\"", response);
+    cm_msg(MINFO, "galil_init", "Waiting 100 ms and trying again.");
+    usleep(100000);
+    buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 100, ":", 500);
+    response[buffLength] = 0x0;
+    if ((strchr(response, ':') == NULL) || (strchr(response, '?') != NULL)) {
+      cm_msg(MERROR, "galil_init", "Bad response from M0 again: \"%s\"", response);
+      return;// FE_ERR_HW;
+    }
+    cm_msg(MINFO, "galil_init", "Second try successful. Continuing.");
+  }else{
+    printf("Good response\n");
+  }
+  
 
 }
 
@@ -1168,7 +1227,7 @@ void galil_digital(INT hDB, INT hKey, void *info) {
       sprintf(command, "%cB %d", (pInfo->bDigitalOut1[i] ? 'S' : 'C'), i + 1);
       cm_msg(MINFO, "galil_digital", "DigitalOut1 request %s", command);
     } else if (hKey == pInfo->hKeyDigitalOut2) {
-      sprintf(command, "%cB %d", (pInfo->bDigitalOut2[i] ? 'S' : 'C'), i + 5);
+      sprintf(command, "%cB %d", (pInfo->bDigitalOut2[i] ? 'S' : 'C'), i + 9);
       cm_msg(MINFO, "galil_digital", "DigitalOut2 request %s", command);
     } else {
       cm_msg(MERROR, "galil_digital", "Invalid key for digital command");
@@ -1338,6 +1397,7 @@ INT galil_init(EQUIPMENT *pequipment) {
   pInfo->bPowerOn = (BOOL *) calloc(pInfo->num_channels, sizeof(BOOL));
   pInfo->bBounce = (BOOL *) calloc(pInfo->num_channels, sizeof(BOOL));
   pInfo->bTurnMotorsOff = (BOOL *) calloc(1, sizeof(BOOL));
+  pInfo->bEnableDO = (BOOL *) calloc(1, sizeof(BOOL));
 
   pInfo->fSlope = (float *) calloc(pInfo->num_channels, sizeof(float));
   pInfo->fOffset = (float *) calloc(pInfo->num_channels, sizeof(float));
@@ -1499,6 +1559,15 @@ INT galil_init(EQUIPMENT *pequipment) {
   db_open_record(hDB, pInfo->hKeyTurnMotorsOff, pInfo->bTurnMotorsOff, sizeof(BOOL),
                  MODE_READ, turn_motors_off, pequipment);
 
+  // Add a hot-link for enabling/disabling digital output
+  db_find_key(hDB, pInfo->hKeyRoot, "Settings/EnableDO", &pInfo->hKeyEnableDO);
+  memset(pInfo->bEnableDO, 0, sizeof(BOOL));
+  db_set_data(hDB, pInfo->hKeyEnableDO, pInfo->bEnableDO,
+              sizeof(BOOL), 1, TID_BOOL);
+
+  db_open_record(hDB, pInfo->hKeyEnableDO, pInfo->bEnableDO, sizeof(BOOL),
+                 MODE_READ, enable_do, pequipment);
+
   db_merge_data(hDB, pInfo->hKeyRoot, "Settings/Destination",
                 pInfo->fDestination, pInfo->num_channels * sizeof(float), pInfo->num_channels, TID_FLOAT);
   db_find_key(hDB, pInfo->hKeyRoot, "Settings/Destination", &pInfo->hKeySetDest);
@@ -1569,7 +1638,13 @@ INT galil_init(EQUIPMENT *pequipment) {
                  MODE_READ, galil_digital, pequipment);
 
   db_find_key(hDB, pInfo->hKeyRoot, "Settings/DigitalOut2", &pInfo->hKeyDigitalOut2);
-  memset(pInfo->bDigitalOut2, 0, pInfo->num_channels * sizeof(BOOL));
+
+  // Do initial setting of the Digital output status bits
+  // Set all the outputs to 0
+  memset(pInfo->bDigitalOut2, 1, pInfo->num_channels * sizeof(BOOL));
+  // Set first output (DigitalOut2[0]) to 1
+  pInfo->bDigitalOut2[0] = 1;
+  printf("Set the first digitalout2 to true\n");
   db_set_data(hDB, pInfo->hKeyDigitalOut2, pInfo->bDigitalOut2,
               pInfo->num_channels * sizeof(BOOL), pInfo->num_channels, TID_BOOL);
 
@@ -1788,6 +1863,29 @@ INT galil_init(EQUIPMENT *pequipment) {
     return FE_ERR_HW;
   }
 
+  
+  //define encoder type
+  sprintf(command, "CE ");
+  for (i = 0; i < pInfo->num_channels; i++) {
+    sprintf(buff, "%1.0f,", 0);
+    strcat(command, buff);
+  }
+  cm_msg(MINFO, "galil_init", "%s", command);
+  strcat(command, "\r");
+
+  buffLength = strlen(command);
+  writeCount = DRIVER(0)(CMD_WRITE, pequipment->driver[0].dd_info, command, buffLength);
+  if (writeCount != buffLength) {
+    cm_msg(MERROR, "galil_init", "Error in device driver - CMD_WRITE");
+  }
+  buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 100, ":", 500);
+  response[buffLength] = 0x0;
+
+  if ((strchr(response, ':') == NULL) || (strchr(response, '?') != NULL)) {
+    cm_msg(MERROR, "galil_init", "Bad response from CE command %s", response);
+    return FE_ERR_HW;
+  }
+
   // Turn motor off (??)
   sprintf(command, "MO");
   cm_msg(MINFO, "galil_init", "%s", command);
@@ -1899,7 +1997,8 @@ INT galil_init(EQUIPMENT *pequipment) {
     }
     pInfo->bDigitalOut1[i] = atoi(response);
 
-    sprintf(command, "MG @OUT[%d]\r", i + 5);
+    sprintf(command, "MG @OUT[%d]\r", i + 9);
+    printf("Executing command %s \n",command);
     buffLength = strlen(command);
     writeCount = DRIVER(0)(CMD_WRITE, pequipment->driver[0].dd_info, command, buffLength);
     if (writeCount != buffLength) {
@@ -1911,8 +2010,12 @@ INT galil_init(EQUIPMENT *pequipment) {
       cm_msg(MERROR, "galil_init", "Invalid string length on @OUT read. Read %u chars command %s", buffLength, response);
       return FE_ERR_HW;
     }
+    printf("default setting for this output: %s\n",response);
     pInfo->bDigitalOut2[i] = atoi(response);
   }
+
+  // Set the output for DigitalOut2[0] to True
+  pInfo->bDigitalOut2[0] = 1;
   db_set_data(hDB, pInfo->hKeyDigitalOut1, pInfo->bDigitalOut1,
               pInfo->num_channels * sizeof(BOOL), pInfo->num_channels, TID_BOOL);
   db_set_data(hDB, pInfo->hKeyDigitalOut2, pInfo->bDigitalOut2,
@@ -2075,7 +2178,7 @@ INT galil_idle(EQUIPMENT *pequipment) {
   pInfo = (INFO *) pequipment->cd_info;
   cm_get_experiment_database(&hDB, NULL);
 
-  printf(".", ss_time());
+  //printf(".", ss_time());
 
   galil_read(pequipment, pInfo->last_channel);
 
