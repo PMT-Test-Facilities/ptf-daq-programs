@@ -37,6 +37,18 @@ the next move_next_position.
 #include <vector>
 #include "mfe.h"
 
+
+
+
+#include "msystem.h"
+#include "mcstd.h"
+
+#include <unistd.h>
+#include <string.h>
+#include "TPathCalculator.hxx" //Rika: See typedef for XYPoint, XYPolygon, XYLine here.                                                                                              
+#include "TRotationCalculator.hxx"
+#include "TGantryConfigCalculator.hxx" //Rika (27Mar2017): Added as a class shared between feMove & TRotationCalculator.                                                             
+
 /* make frontend functions callable from the C framework */
 
 /*-- Frontend globals ------------------------------------------------*/
@@ -53,9 +65,10 @@ HNDLE hMoveStart = 0;
 HNDLE hPhidgetVars0 = 0, hPhidgetVars1 = 0;
 HNDLE hPtfWiener = 0;
 HNDLE hMotors00 = 0, hMotors01 = 0;
+HNDLE hMotors00_output_control = 0;
 HNDLE hNScanPoints, hCurrentPoint = 0;
-//HNDLE   hReInitialize = 0;
-// HNDLE   hIniting = 0;
+HNDLE   hReInitialize = 0;
+HNDLE   hIniting = 0;
 //HndlehDVMVariables =0;
 
 extern int run_state;
@@ -328,7 +341,7 @@ INT frontend_init() {
 
   // Obtain the ODB keys for various variables
   // Note: when adding or removing variables to/from this list change the variable num_entires to change the size of the arrays used
-  const int num_entries = 11;
+  const int num_entries = 13;
   char str[num_entries][128];
   HNDLE *ODB_Handles[num_entries];
   //Move settings
@@ -343,25 +356,27 @@ INT frontend_init() {
   //Phidget Vars
   sprintf(str[4], "/Equipment/Phidget00/Variables/");
   ODB_Handles[4] = &hPhidgetVars0;
-  sprintf(str[5], "/Equipment/Phidget01/Variables/");
+  sprintf(str[5], "/Equipment/Phidget03/Variables/");
   ODB_Handles[5] = &hPhidgetVars1;
   //Wiener Power Supply
   //sprintf(str[6], "/Equipment/PtfWiener/Variables/");
   // ODB_Handles[6] = &hPtfWiener;
   //Motors
-  sprintf(str[7], "/Equipment/Motors00/Settings/TurnMotorsOff");
-  ODB_Handles[7] = &hMotors00;
-  sprintf(str[8], "/Equipment/Motors01/Settings/TurnMotorsOff");
-  ODB_Handles[8] = &hMotors01;
+  sprintf(str[6], "/Equipment/Motors00/Settings/TurnMotorsOff");
+  ODB_Handles[6] = &hMotors00;
+  sprintf(str[7], "/Equipment/Motors01/Settings/TurnMotorsOff");
+  ODB_Handles[7] = &hMotors01;
   // Scan Variables
-  sprintf(str[9], "/Equipment/Scan/Variables/NPoints");
-  ODB_Handles[9] = &hNScanPoints;
-  sprintf(str[10], "/Equipment/Scan/Variables/Current Point");
-  ODB_Handles[10] = &hCurrentPoint;
-  //sprintf(str[11], "/Equipment/Move/Control/ReInitialize");
-  //ODB_Handles[11] = &hReInitialize;
-  //sprintf(str[12], "/Equipment/Move/Variables/Initializing");
-  //ODB_Handles[12] = &hIniting;
+  sprintf(str[8], "/Equipment/Scan/Variables/NPoints");
+  ODB_Handles[8] = &hNScanPoints;
+  sprintf(str[9], "/Equipment/Scan/Variables/Current Point");
+  ODB_Handles[9] = &hCurrentPoint;
+  sprintf(str[10], "/Equipment/Move/Control/ReInitialize");
+  ODB_Handles[10] = &hReInitialize;
+  sprintf(str[11], "/Equipment/Move/Variables/Initializing");
+  ODB_Handles[11] = &hIniting;
+  sprintf(str[12], "/Equipment/Motors00/Settings/DigitalOut2");
+  ODB_Handles[12] = &hMotors00_output_control;
   // Get the above ODB Keys and produce error if unsuccessful
   int i;
   for (i = 0; i < num_entries; i++) {
@@ -408,7 +423,7 @@ INT frontend_exit() {
   - Main function for starting a new move, if we are running and
   the measurement for the last move has finished..
   BK: scan_read is called after Frontend Loop completes. This is why at certain spots you see return SUCCESS. This allows scan_read to be called and complete various tasks
-  //** indicates work in progress
+  ** indicates work in progress
 */
 INT frontend_loop() {
   INT status;
@@ -505,7 +520,7 @@ INT begin_of_run(INT run_number, char *error)
   if(status != 1) return status;
 
   //variables used to check that phidgets are connected and working
-  BOOL Check_Phidgets = TRUE; // change this to false to skip phidget check. This should only be done if you are running a scan without using the phidgets
+  BOOL Check_Phidgets = FALSE; // change this to false to skip phidget check. This should only be done if you are running a scan without using the phidgets
   double phidget_Values_Old[10];
   double phidget_Values_Now[10];
   int size_of_array = sizeof(phidget_Values_Old);
@@ -579,8 +594,8 @@ INT begin_of_run(INT run_number, char *error)
   if (Check_Phidgets) {
 
     size_of_array = sizeof(phidget_Values_Old);
-    db_get_value(hDB, hPhidgetVars0, "PH00", &phidget_Values_Old, &size_of_array, TID_DOUBLE, FALSE);
-    db_get_value(hDB, hPhidgetVars0, "PH00", &phidget_Values_Now, &size_of_array, TID_DOUBLE, FALSE);
+    db_get_value(hDB, hPhidgetVars0, "PH03", &phidget_Values_Old, &size_of_array, TID_DOUBLE, FALSE);
+    db_get_value(hDB, hPhidgetVars0, "PH03", &phidget_Values_Now, &size_of_array, TID_DOUBLE, FALSE);
 
     //Check that phidget0 is working. The phidget is working if the values change over a set period of time. When a phidget is unplugged there is no fluctuation in the values.
     time_at_start_of_check = ss_millitime();
@@ -590,7 +605,7 @@ INT begin_of_run(INT run_number, char *error)
            (phidget_Values_Old[6] == phidget_Values_Now[6]) && (phidget_Values_Old[7] == phidget_Values_Now[7]) &&
            (phidget_Values_Old[8] == phidget_Values_Now[8]) && (phidget_Values_Old[9] == phidget_Values_Now[9])) {
 
-      db_get_value(hDB, hPhidgetVars0, "PH00", &phidget_Values_Now, &size_of_array, TID_DOUBLE, FALSE);
+      db_get_value(hDB, hPhidgetVars0, "PH03", &phidget_Values_Now, &size_of_array, TID_DOUBLE, FALSE);
 
       // If 5 seconds pass without any of the values changing assume that the phidgets are not connected properly
       if (ss_millitime() - time_at_start_of_check > 1000 * 5) {
@@ -599,12 +614,14 @@ INT begin_of_run(INT run_number, char *error)
         //break;
       }
 
-      ss_sleep(1000); //wait a sec
+      //ss_sleep(1000);
+      usleep(100000); //wait a sec
+      //sleep(1);
     }
 
     //Check that the phidget1 is  working.
-    db_get_value(hDB, hPhidgetVars1, "PH01", &phidget_Values_Old, &size_of_array, TID_DOUBLE, FALSE);
-    db_get_value(hDB, hPhidgetVars1, "PH01", &phidget_Values_Now, &size_of_array, TID_DOUBLE, FALSE);
+    db_get_value(hDB, hPhidgetVars1, "PH03", &phidget_Values_Old, &size_of_array, TID_DOUBLE, FALSE);
+    db_get_value(hDB, hPhidgetVars1, "PH03", &phidget_Values_Now, &size_of_array, TID_DOUBLE, FALSE);
 
     time_at_start_of_check = ss_millitime();
     while ((phidget_Values_Old[0] == phidget_Values_Now[0]) && (phidget_Values_Old[1] == phidget_Values_Now[1]) &&
@@ -613,7 +630,7 @@ INT begin_of_run(INT run_number, char *error)
            (phidget_Values_Old[6] == phidget_Values_Now[6]) && (phidget_Values_Old[7] == phidget_Values_Now[7]) &&
            (phidget_Values_Old[8] == phidget_Values_Now[8]) && (phidget_Values_Old[9] == phidget_Values_Now[9])) {
 
-      db_get_value(hDB, hPhidgetVars1, "PH01", &phidget_Values_Now, &size_of_array, TID_DOUBLE, FALSE);
+      db_get_value(hDB, hPhidgetVars1, "PH03", &phidget_Values_Now, &size_of_array, TID_DOUBLE, FALSE);
 
       // If 5 seconds pass without any of the values changing assume that the phidgets are not connected properly
       if (ss_millitime() - time_at_start_of_check > 1000 * 5) {
@@ -634,7 +651,7 @@ INT begin_of_run(INT run_number, char *error)
     printf("Point %i Gantry0: %.4F %.4F %.4F %.4F %.4F, Gantry1: %.4F %.4F %.4F %.4F %.4F\n", i, points[i][0],
            points[i][1], points[i][2], points[i][3], points[i][4], points[i][5], points[i][6], points[i][7],
            points[i][8], points[i][9]);
-    //cm_msg(MINFO,"begin_of_run","Point %i Gantry0: %.4F %.4F %.4F %.4F %.4F, Gantry1: %.4F %.4F %.4F %.4F %.4F\n",i,points[i][0],points[i][1],points[i][2],points[i][3],points[i][4],points[i][5],points[i][6],points[i][7],points[i][8],points[i][9]);
+    cm_msg(MINFO,"begin_of_run","Point %i Gantry0: %.4F %.4F %.4F %.4F %.4F, Gantry1: %.4F %.4F %.4F %.4F %.4F\n",i,points[i][0],points[i][1],points[i][2],points[i][3],points[i][4],points[i][5],points[i][6],points[i][7],points[i][8],points[i][9]);
   }
 
   // replace with proper error later
@@ -643,9 +660,10 @@ INT begin_of_run(INT run_number, char *error)
     return DB_NO_ACCESS;
   }
 
-
-  ss_sleep(1000); /* sleep before starting loop*/
-
+  printf("Test for sleep",ss_millitime);
+  //ss_sleep(1000); /* sleep before starting loop*/
+  usleep(1000000);
+  //sleep(1);
   /* Start cycle */
   first_time = TRUE;
   gbl_current_point = 0;
@@ -718,6 +736,7 @@ INT move_next_position(void) {
   }
 
   // Start the move!
+  
   BOOL start_move[1] = {TRUE};
   printf("Moving!\n");
   status = db_set_data(hDB, hMoveStart, start_move, sizeof(start_move), 1, TID_BOOL);
@@ -729,8 +748,9 @@ INT move_next_position(void) {
   }
 
   // Check that we are moving (why for half second first)
-  ss_sleep(500); //Why is this? Should it be longer or shorter? We should change to an optimal value
-
+  //ss_sleep(500); //Why is this? Should it be longer or shorter? We should change to an optimal value
+  usleep(500000);
+  //sleep(0.5);
   printf("Check moving\n");
   BOOL moving;
   INT size_moving = sizeof(moving);
@@ -762,7 +782,9 @@ INT move_next_position(void) {
   // Loop which checks ODB until move to next point is finished
   while (!finished_moving) {
 
-    ss_sleep(50);
+    //ss_sleep(50);
+    usleep(50000);
+    //sleep(0.5);
     status = db_get_value(hDB, hMoveVariables, "Moving", &moving, &size_moving, TID_BOOL, FALSE);
     status = db_get_value(hDB, hMoveVariables, "Completed", &completed, &size_moving, TID_BOOL, FALSE);
 
@@ -773,9 +795,9 @@ INT move_next_position(void) {
     DWORD time_now = ss_millitime();
 
     //DEBUG
-    //if((INT)(time_now-time_start_move)%10000 < 100){
-    //    printf("yield %i ms\n",time_now-time_start_move);
-    //}
+    if((INT)(time_now-time_start_move)%10000 < 100){
+        printf("yield %i ms\n",time_now-time_start_move);
+    }
 
     if ((INT)(time_now - time_start_move) > timeout) {
       cm_msg(MERROR, "move_next_position", "We have waited %i ms, which is too long: Cannot finish move!",
@@ -799,14 +821,23 @@ INT move_next_position(void) {
   }
   cm_msg(MDEBUG, "move_next_position", "Bad dest: %i", bad_destination);
   if (!bad_destination) {
+
+
     //Switch off motors through hotlink with cd_galil to perform minimum noise measurement
     //Galil motors increase noise in PMT signals otherwise.
+    
+    // first disable relay which enables brake for tilt on gantry0
+    BOOL relays_off[8];
+    for(int i = 0; i < 8;i++){relays_off[i]=FALSE;}
+    db_set_data(hDB, hMotors00_output_control, &relays_off, sizeof(BOOL), 8, TID_BOOL);
 
-    BOOL turn_off = TRUE;
+    // switch motors off
+    BOOL turn_off = TRUE;//Switching that one
     db_set_data(hDB, hMotors00, &turn_off, sizeof(BOOL), 1, TID_BOOL);
     db_set_data(hDB, hMotors01, &turn_off, sizeof(BOOL), 1, TID_BOOL);
-
-    ss_sleep(50);
+    usleep(500000);
+    //ss_sleep(50);
+    //sleep(0.5);
     gbl_waiting_measurement = TRUE;
   }
   first_time = FALSE;
@@ -895,7 +926,8 @@ INT scan_read(char *pevent, INT off)
     } else {
       time_Start_read = ss_millitime();
       //Accumulate PMT data during this sleep after the EOM, and before a new BONM, through a separate stream of banks
-      ss_sleep(scan_seq.GetMeasTime());
+      //printf(scan_seq.GetMeasTime());
+      usleep(scan_seq.GetMeasTime()*1000);
       cm_msg(MDEBUG, "scan_read", "make bank");
       //cm_msg(MDEBUG,"scan_read","current %e, time %g",current, time);
 
@@ -951,7 +983,7 @@ INT scan_read(char *pevent, INT off)
 
       //switch the turn_off hotlink back to false
       BOOL turn_off = FALSE;
-      db_set_data(hDB, hMotors00, &turn_off, sizeof(BOOL), 1, TID_BOOL);
+      //db_set_data(hDB, hMotors00, &turn_off, sizeof(BOOL), 1, TID_BOOL);
       db_set_data(hDB, hMotors01, &turn_off, sizeof(BOOL), 1, TID_BOOL);
       time_Done_read = ss_millitime();
 
