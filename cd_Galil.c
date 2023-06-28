@@ -624,10 +624,10 @@ void galil_move(INT hDB, INT hKey, void *info) {
   pInfo = (INFO *) pequipment->cd_info;
 
   // enable relay (ie disable brake) before moving
-  printf("Enabling relay (disabling brake) before starting move\n");
-  pInfo->bDigitalOut2[0] = 1;
-  db_set_data(hDB, pInfo->hKeyDigitalOut2, pInfo->bDigitalOut2,
-              pInfo->num_channels * sizeof(BOOL), pInfo->num_channels, TID_BOOL);
+  //  printf("Enabling relay (disabling brake) before starting move\n");
+  //pInfo->bDigitalOut2[0] = 1;
+  //db_set_data(hDB, pInfo->hKeyDigitalOut2, pInfo->bDigitalOut2,
+  //           pInfo->num_channels * sizeof(BOOL), pInfo->num_channels, TID_BOOL);
 
 
   for (i = 0; i < pInfo->num_channels; i++) {
@@ -2376,12 +2376,14 @@ INT Move(EQUIPMENT *pequipment, INT i, float fDestination) {
   fSteps = fDestination / pInfo->fSlope[i];
   iMoveTime = (INT)(fabs(fDestination - pInfo->fPosition[i]) / pInfo->fVelocity[i] + MOVE_MIN);
 
-  // manually enable out2[0] output
-  enable_out2_0(pequipment);
 
   if (verbose)
     cm_msg(MINFO, "galil_idle", "Move of %s to %f will take max %d seconds", pInfo->names + i * NAME_LENGTH,
            fDestination, iMoveTime);
+
+  // make a different command for the tilt axis; enable out2[0] just for tilt axis movement;
+  // enable out2[0] (ie disable brake) only after SH command, so that the tilt is always 
+  // constrained in its movement.
 
   command[0] = 0x0;
   sprintf(buff, "CN %d,1,1,0;", pInfo->iLimitPolarity[i]);
@@ -2396,6 +2398,13 @@ INT Move(EQUIPMENT *pequipment, INT i, float fDestination) {
   strcat(command, buff);
   sprintf(buff, "SH %c;", 'A' + i);
   strcat(command, buff);
+
+  // only enable out2 (disable brake) only for tilt axis (axis=3)
+  if(i==3){
+    sprintf(buff, "SB 9;");
+    strcat(command, buff);
+  }
+
   sprintf(buff, "BG %c\r", 'A' + i);
   strcat(command, buff);
 
@@ -2409,7 +2418,11 @@ INT Move(EQUIPMENT *pequipment, INT i, float fDestination) {
     cm_msg(MERROR, "galil_move", "Error in device driver for move command");
     return -1;
   }
-  buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 20, ":::::::", 500);
+  if(i==3){ // different readback length for axis=3
+    buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 20, "::::::::", 500);
+  }else{
+    buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 20, ":::::::", 500);
+  }
   response[buffLength] = 0x0;
 
   if ((buffLength != 7) || (strchr(response, '?') != NULL)) {
