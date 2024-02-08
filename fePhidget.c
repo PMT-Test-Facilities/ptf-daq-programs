@@ -41,10 +41,9 @@ to accommodate multiple phidgets.
 #include <math.h>
 #include <unistd.h>
 #include <string.h>
-#include <phidget21.h>
+#include <phidget22.h>
+#include <stdint.h>
 #include <mfe.h>
-
-
 
 /*-- Globals -------------------------------------------------------*/
 
@@ -87,8 +86,7 @@ INT pause_run(INT run_number, char *error);
 INT resume_run(INT run_number, char *error);
 INT frontend_loop();
 INT poll_trigger_event(INT count, PTYPE test);
-//INT interrupt_configure(INT cmd, PTYPE adr);
-int interrupt_configure(INT cmd, INT source, PTYPE adr);
+INT interrupt_configure(INT cmd, PTYPE adr);
 INT read_trigger_event(char *pevent, INT off);
 
 
@@ -122,7 +120,6 @@ EQUIPMENT equipment[] = {
 
 
 
-
 // Keep a copy of the last spatial data event.
 double acceleration[3] = {0,0,0};
 double mag[3] = {0,0,0};
@@ -134,32 +131,39 @@ int etime_us = 0;
 // Phidget Spatial setup routines.
 
 //callback that will run if the Spatial is attached to the computer
-int CCONV AttachHandler(CPhidgetHandle spatial, void *userptr)
+static void CCONV onAttach(PhidgetHandle ch, void * ctx)
 {
   int serialNo;
-  CPhidget_getSerialNumber(spatial, &serialNo);
+  //CPhidget_getSerialNumber(spatial, &serialNo);
+  
+  Phidget_getDeviceSerialNumber(ch, &serialNo);
   cm_msg(MINFO, "AttachHandler", "Phidget Spatial attached. Serial Number = %i", serialNo);
   //Set the data rate for the spatial events
-  CPhidgetSpatial_setDataRate((CPhidgetSpatialHandle)spatial, 320);  
+  PhidgetSpatialHandle spatial_test;
+  PhidgetSpatial_create(&spatial_test);
+  PhidgetSpatial_setDataInterval(spatial_test, 320);
+  //PhidgetSpatial_setDataRate((CPhidgetSpatialHandle)spatial, 320);  
   
-  return 0;
+ 
 }
 
 //callback that will run if the Spatial is detached from the computer
-int CCONV DetachHandler(CPhidgetHandle spatial, void *userptr)
+static void CCONV onDetach(PhidgetHandle ch, void * ctx) 
 {
   int serialNo;
-  CPhidget_getSerialNumber(spatial, &serialNo);
+  Phidget_getDeviceSerialNumber(ch, &serialNo);
   cm_msg(MINFO, "DetachHandler", "Phidget Spatial detached! Serial Number = %i", serialNo);
   
-  return 0;
+ 
 }
 
 //callback that will run if the Spatial generates an error
-int CCONV ErrorHandler(CPhidgetHandle spatial, void *userptr, int ErrorCode, const char *unknown)
+static void CCONV onError(PhidgetHandle ch, void * ctx, Phidget_ErrorEventCode code, const char * description) 
 {
-  cm_msg(MINFO, "ErrorHandler", "Error handled. %d - %s", ErrorCode, unknown);
-  return 0;
+  //cm_msg(MINFO, "ErrorHandler", "Error handled. %d - %s", ErrorCode, unknown);
+  printf("Description: %s\n", description);
+  printf("----------\n");
+ 
 }
 
 
@@ -167,22 +171,23 @@ int CCONV ErrorHandler(CPhidgetHandle spatial, void *userptr, int ErrorCode, con
 //data - array of spatial event data structures that holds the spatial data packets that were sent in this event
 //count - the number of spatial data event packets included in this event
 // Save the information in global variables to be packed into bank later.
-int CCONV SpatialDataHandler(CPhidgetSpatialHandle spatial, void *userptr, CPhidgetSpatial_SpatialEventDataHandle *data, int count)
+static void CCONV onSpatial0_SpatialData(PhidgetSpatialHandle ch, void * ctx, const double temp_acceleration[3], const double temp_angularRate[3], const double temp_magneticField[3], double temp_timestamp, int count)
 {  
-
+    
   int i;
   for(i = 0; i < count; i++)
     {
 
-      // Save the results of this read for midas readout routine
-      acceleration[0] = data[i]->acceleration[0];
-      acceleration[1] = data[i]->acceleration[1];
-      acceleration[2] = data[i]->acceleration[2];
-      mag[0] = data[i]->magneticField[0];
-      mag[1] = data[i]->magneticField[1];
-      mag[2] = data[i]->magneticField[2];
+	// Save the results of this read for midas readout routine
+	acceleration[0] = temp_acceleration[0];
+	//data1[i]->acceleration[0];
+      acceleration[1] = temp_acceleration[1];
+      acceleration[2] = temp_acceleration[2];
+      mag[0] = temp_magneticField[0];
+      mag[1] = temp_magneticField[1];
+      mag[2] = temp_magneticField[2];
       tilt = 90;
-      if( data[i]->acceleration[2] != 0){
+      if( temp_acceleration[2] != 0){
 	/*previous formula:
 	//tilt = atan(sqrt(data[i]->acceleration[0]*data[i]->acceleration[0] + data[i]->acceleration[1]*data[i]->acceleration[1]) /data[i]->acceleration[2])*180/3.14159265;	
 	// Get the right sign for the angle based on the sign of the Y-acceleration; happens to 
@@ -191,36 +196,65 @@ int CCONV SpatialDataHandler(CPhidgetSpatialHandle spatial, void *userptr, CPhid
 	tilt = -tilt; */
 
 	// phidget_z is defined pointing downwards
-	tilt = atan2(-data[i]->acceleration[1],data[i]->acceleration[2])*180/3.14159265; //if X is aligned with tilt axis!
+	tilt = atan2(-temp_acceleration[1],temp_acceleration[2])*180/3.14159265; //if X is aligned with tilt axis!
 	
       }
-      etime = data[i]->timestamp.seconds;
-      etime_us = data[i]->timestamp.microseconds;
+      etime = temp_timestamp;//.seconds;
+      etime_us =temp_timestamp;//.microseconds;
 
     }
   
    
-  return 0;
+ 
+}
+
+static void CCONV onSpatial0_SpatialData(PhidgetSpatialHandle ch, void * ctx, const double temp_acceleration[3], const double temp_angularRate[3], const double temp_magneticField[3], double temp_timestamp)
+{  
+	// Save the results of this read for midas readout routine
+	acceleration[0] = temp_acceleration[0];
+  //data1[i]->acceleration[0];
+  acceleration[1] = temp_acceleration[1];
+  acceleration[2] = temp_acceleration[2];
+  mag[0] = temp_magneticField[0];
+  mag[1] = temp_magneticField[1];
+  mag[2] = temp_magneticField[2];
+  tilt = 90;
+  if( temp_acceleration[2] != 0){
+    // phidget_z is defined pointing downwards
+    tilt = atan2(-temp_acceleration[1],temp_acceleration[2])*180/3.14159265; //if X is aligned with tilt axis!
+  }
+  etime = temp_timestamp;//.seconds;
+  etime_us =temp_timestamp;//.microseconds;
+
+  
+   
+ 
 }
 
 
 //Display the properties of the attached phidget to the screen.  
 //We will be displaying the name, serial number, version of the attached device, the number of accelerometer, gyro, and compass Axes, and the current data rate
 // of the attached Spatial.
-int display_properties(CPhidgetHandle phid)
+int display_properties(PhidgetHandle phid_spatial)
 {
   int serialNo, version;
   const char* ptr;
-  int numAccelAxes, numGyroAxes, numCompassAxes, dataRateMax, dataRateMin;
-  
-  CPhidget_getDeviceType(phid, &ptr);
-  CPhidget_getSerialNumber(phid, &serialNo);
-  CPhidget_getDeviceVersion(phid, &version);
-  int status = CPhidgetSpatial_getAccelerationAxisCount((CPhidgetSpatialHandle)phid, &numAccelAxes);
-  status = CPhidgetSpatial_getGyroAxisCount((CPhidgetSpatialHandle)phid, &numGyroAxes);
-  status = CPhidgetSpatial_getCompassAxisCount((CPhidgetSpatialHandle)phid, &numCompassAxes);
-  status = CPhidgetSpatial_getDataRateMax((CPhidgetSpatialHandle)phid, &dataRateMax);
-  status = CPhidgetSpatial_getDataRateMin((CPhidgetSpatialHandle)phid, &dataRateMin);
+  int numAccelAxes, numGyroAxes, numCompassAxes;
+  PhidgetAccelerometerHandle accelerometer0;
+  PhidgetGyroscopeHandle gyroscope0;
+  PhidgetMagnetometerHandle magnetometer0;
+  PhidgetAccelerometer_create(&accelerometer0);
+  PhidgetGyroscope_create(&gyroscope0);
+  PhidgetMagnetometer_create(&magnetometer0);
+  Phidget_getDeviceName(phid_spatial, &ptr);
+  Phidget_getDeviceSerialNumber(phid_spatial, &serialNo);
+  Phidget_getDeviceVersion(phid_spatial, &version);
+  int status = PhidgetAccelerometer_getAxisCount(accelerometer0, &numAccelAxes);
+  status = PhidgetGyroscope_getAxisCount(gyroscope0, &numGyroAxes);
+  status =PhidgetMagnetometer_getAxisCount(magnetometer0, &numCompassAxes);
+  // unint32_t dataRateMax, dataRateMin;
+  //status = PhidgetSpatial_getMinDataInterval(spatial0, &dataRateMin);
+  //status = PhidgetSpatial_getMaxDataInterval(spatial0, &dataRateMax);
  
   printf("%s\n", ptr);
   cm_msg(MINFO, "display_properties", "Successfully connected to Phidget Spatial USB");
@@ -228,7 +262,7 @@ int display_properties(CPhidgetHandle phid)
   cm_msg(MINFO,"display_properties","Number of Accel Axes: %i", numAccelAxes);
   cm_msg(MINFO,"display_properties","Number of Gyro Axes: %i", numGyroAxes);
   cm_msg(MINFO,"display_properties","Number of Compass Axes: %i", numCompassAxes);
-  cm_msg(MINFO,"display_properties","datarate> Max: %d  Min: %d", dataRateMax, dataRateMin); 
+  //cm_msg(MINFO,"display_properties","datarate> Max: %d  Min: %d", dataRateMax, dataRateMin); 
 
   return 0;
 }
@@ -244,7 +278,6 @@ int display_properties(CPhidgetHandle phid)
                   to release any locked resources like memory, commu-
                   nications ports etc.
 \********************************************************************/
-
 
 
 
@@ -293,52 +326,65 @@ INT frontend_init()
   // Phidget Spatial initialization; define the call-backs.
   // Basically all copied from Spatial-Simple example program.
 
-  int result;
-  const char *err;
+  //int result;
+  //const char *err;
 
   //Declare a spatial handle
-  CPhidgetSpatialHandle spatial = 0;
-  
+  //PhidgetSpatialHandle spatial = 0;
+  PhidgetAccelerometerHandle accelerometer0;
+  PhidgetSpatialHandle spatial0;
+
   //create the spatial object
-  CPhidgetSpatial_create(&spatial);
+  PhidgetSpatial_create(&spatial0);
+  PhidgetAccelerometer_create(&accelerometer0);
   
   //Set the handlers to be run when the device is plugged in or opened from software, unplugged or closed from software, or generates an error.
-  CPhidget_set_OnAttach_Handler((CPhidgetHandle)spatial, AttachHandler, NULL);
-  CPhidget_set_OnDetach_Handler((CPhidgetHandle)spatial, DetachHandler, NULL);
-  CPhidget_set_OnError_Handler((CPhidgetHandle)spatial, ErrorHandler, NULL);
-  
+  //Phidget_set_OnAttach_Handler((PhidgetHandle)spatial0, AttachHandler, NULL);
+  //Phidget_set_OnDetach_Handler((PhidgetHandle)spatial0, DetachHandler, NULL);
+  //Phidget_set_OnError_Handler((PhidgetHandle)spatial0, ErrorHandler, NULL);
+ 
+  PhidgetSpatial_setOnSpatialDataHandler(spatial0, onSpatial0_SpatialData, NULL);
+  // PhidgetSpatial_setOnSpatialDataHandler(ch, spatialDataHandler, NULL);
+  Phidget_setOnAttachHandler((PhidgetHandle)spatial0, onAttach, NULL);
+  Phidget_setOnDetachHandler((PhidgetHandle)spatial0, onDetach, NULL);
+  Phidget_setOnErrorHandler((PhidgetHandle)spatial0, onError, NULL);
+
   //Registers a callback that will run according to the set data rate that will return the spatial data changes
   //Requires the handle for the Spatial, the callback handler function that will be called, 
   //and an arbitrary pointer that will be supplied to the callback function (may be NULL)
-  CPhidgetSpatial_set_OnSpatialData_Handler(spatial, SpatialDataHandler, NULL);
-  
+  //PhidgetSpatial_set_OnSpatialData_Handler(spatial, SpatialDataHandler, NULL);
+    
   //open the spatial object for device connections
   printf("Frontend index %i\n",get_frontend_index());
 
   // Use the serial number when opening the device.  This will ensure that this
   // front-end talks to the correct phidget.
-  CPhidget_open((CPhidgetHandle)spatial, serial_number);
+  Phidget_open((PhidgetHandle)spatial0);
+  PhidgetReturnCode ret;
+  PhidgetReturnCode errorCode;
+  const char * errorString;
+  char errorDetail[100];
+  size_t errorDetailLen = 100;
   
 
   //get the program to wait for a spatial device to be attached
   printf("Waiting for spatial to be attached.... \n");
-  if((result = CPhidget_waitForAttachment((CPhidgetHandle)spatial, 10000)))
-    {
-      CPhidget_getErrorDescription(result, &err);
-      cm_msg(MERROR, "frontend_init", "Problem waiting for attachment of Phidget with frontend index %i: %s", get_frontend_index(),err);
-      return 0;
-    }
+  ret = Phidget_openWaitForAttachment((PhidgetHandle)spatial0, 5000);
+  if (ret != EPHIDGET_OK) {
+      Phidget_getLastError(&errorCode, &errorString, errorDetail, &errorDetailLen);
+      printf("Error (%d): %s", errorCode, errorString);
+      exit(1);
+  }
+  
+
+
   
   //Display the properties of the attached spatial device
-  display_properties((CPhidgetHandle)spatial);
+  display_properties((PhidgetHandle)spatial0);
   
   //Set the data rate for the spatial events
-  CPhidgetSpatial_setDataRate(spatial, 320);  
-
-
-
-
-
+  PhidgetSpatial_setDataInterval(spatial0, 320);  
+ 
   return CM_SUCCESS;
 }
 
@@ -419,21 +465,11 @@ INT poll_event(INT source, INT count, BOOL test)
   return FALSE;
 }
 
+/*-- Interrupt configuration for trigger event ---------------------*/
 
-/*-- Interrupt configuration ---------------------------------------*/
-INT interrupt_configure(INT cmd, INT source, POINTER_T adr)
+INT interrupt_configure(INT cmd, INT source, PTYPE adr)
 {
-  switch (cmd) {
-  case CMD_INTERRUPT_ENABLE:
-    break;
-  case CMD_INTERRUPT_DISABLE:
-    break;
-  case CMD_INTERRUPT_ATTACH:
-    break;
-  case CMD_INTERRUPT_DETACH:
-    break;
-  }
-  return SUCCESS;
+  return CM_SUCCESS;
 }
 
 /*-- Event readout -------------------------------------------------*/
@@ -450,7 +486,7 @@ INT read_trigger_event(char *pevent, INT off)
   char bank_name[100];
   sprintf(bank_name,"PH%02d",get_frontend_index());
 
-  bk_create(pevent, bank_name, TID_DOUBLE, (void**)&pdata32);
+  bk_create(pevent, bank_name, TID_DOUBLE, (void **)&pdata32);
   *pdata32++ = acceleration[0];
   *pdata32++ =  acceleration[1];
   *pdata32++ =  acceleration[2];
