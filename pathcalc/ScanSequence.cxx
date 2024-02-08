@@ -94,6 +94,37 @@ int ScanSequence::GeneratePath(std::vector<std::vector<double> > &points_in){
 
 }
 
+bool ScanSequence::is_destinationvalid(const std::vector<double>& location){
+  double gx = location[0];
+  double gy = location[1];
+  double gz = location[2];
+  double gphi = location[4];
+  double r_less = round((0.104 + std::sqrt(0.263 * 0.263 - pow(0.388 - gz, 2))) * 1e3);
+  double r_more = round((0.104 + std::sqrt(0.290 * 0.290 -
+  pow(0.388 - gz, 2))) * 1e3); double Z = round(gz * 1e3); double Y = round(gy * 1e3); double X = round(gx * 1e3);
+  if (X < 0 || Y < 0 || Z < 0) { 
+    return false;
+  }else if (Z > 0.400 * 1e3 || X > 0.649 * 1e3 || Y > 0.566* 1e3) { 
+    return false;
+  }else if (round(gphi) >= -45) {
+    if (0 <= Z && Z < 180 && sqrt(pow((Z - 515), 2) + pow ((Y - 265), 2) + pow((X - 333), 2)) < 428) {
+      return false; 
+    }else if (180 <= Z && Z < 243 && sqrt(pow((X - 333), 2) + pow((Y - 265), 2)) < r_less) {
+      return false; 
+    }else if (Z >= 243 && sqrt(pow((X - 333), 2) + pow((Y - 265), 2)) <= 393) {
+      return false; 
+    }
+  }else if (round(gphi) < -45) {
+    if (0 <= Z && Z < 160 && sqrt(pow((Z - 515), 2) + pow ((Y - 265), 2) + pow((X - 333), 2)) < 455) {
+      return false; 
+    }else if (160 <= Z && Z < 216 && sqrt(pow((X - 333), 2) + pow((Y - 265), 2)) < r_more) {
+      return false; 
+    }else if (Z >= 216 && sqrt(pow((X - 333), 2) + pow((Y - 265), 2)) <= 393) {
+      return false; 
+    }
+  }
+  return true; 
+}
 
 //----------------------------------------------------------
 int ScanSequence::CylinderPath(std::vector<std::vector<double> > &points){
@@ -230,6 +261,123 @@ int ScanSequence::CylinderPath(std::vector<std::vector<double> > &points){
   return point_num;
 }
 
+int ScanSequence::TiltPath(std::vector<std::vector<double>> &points){
+  std::vector <std::vector <double >> planepoints; 
+  std::vector <std::vector <double >> points1;
+  const float step = fs.tilt_par.step; //0.002; meters
+  const float phi1 = fs.tilt_par.phi; // -45; taken from the user as input (in degrees)
+  const float phi = -phi1 * M_PI/180.0; const float theta1 = fs.tilt_par.theta;//95; taken from the user as input (in degrees)
+  const float theta = theta1 * M_PI/180.0; int nlows = 0;
+  points.clear();
+  if (-90 < theta1 && theta1 < 0) {
+    for (int i = 0; i < std::floor(0.650/step); i++){
+      points1.clear();
+      planepoints.clear();
+      for (int j = -1*std::floor(0.650/step); j<std::floor(0.650/step); j++) {
+        for (int k = -1*std::floor(0.650/step); k<std::floor(0.650/step); k++) { 
+          std::vector<double> p = {
+            std::cos(phi) * std::cos(theta) * step * i - j * step * std::sin(theta) - k * step * std::sin(phi) * std::cos(theta),
+            0.566 + std::cos(phi) * std::sin(theta) * step* i + j * step * std::cos(theta) - k * step * std::sin(phi) * std::sin(theta),
+            std::sin(phi) * step * i + k * step * std::cos (phi),
+            theta1+104, 
+            phi1, 
+            -99999, 
+            -99999, 
+            -99999, 
+            -99999,
+            -99999 
+          };
+          planepoints.push_back(p);
+        }
+      }
+      for (const auto& i : planepoints) {
+        if (is_destinationvalid(i)) { 
+          points1.push_back(i);
+        } 
+      }
+      if (points1.size() > points.size()) { 
+        points = points1;
+      }else if (points1.size() < points.size()) {
+        nlows++; 
+      }
+      if (nlows == 3) { 
+        break;
+      } 
+    }
+  }else if (90 < theta1 && theta1 < 180) {
+    for (int i = 0; i < std::floor(0.650/step); i++) {
+      points1.clear();
+      planepoints.clear();
+      for (int j = -1*std::floor(0.650/step); j < std::floor(0.650/step); j++) {
+        for (int k = -1*std::floor(0.650/step); k < std::floor(0.650/step); k++) { 
+          std::vector<double> p = { 
+              0.649 + std::cos(phi) * std::cos(theta) * step * i - j * step * std::sin(theta) - k * step * std::sin(phi) * std::cos(theta),
+              std::cos(phi) * std::sin(theta) * step * i + j * step * std::cos(theta) - k * step * std::sin(phi) * std::sin(theta),
+              std::sin(phi) * step * i + k * step * std::cos(phi), 
+              theta1-76,
+              -180 -phi1,
+               -99999, 
+               -99999, 
+               -99999, 
+               -99999, 
+               -99999
+          };
+          planepoints.push_back(p); 
+        }
+      }
+      for(const auto& i : planepoints) { 
+        if (is_destinationvalid(i)) {
+          points1.push_back(i);
+        } 
+      }
+      if (points1.size() > points.size()) { 
+        points = points1;
+      }else if (points1.size() < points.size()) { 
+        nlows++;
+      }
+      
+      if (nlows == 3) {
+        break; 
+      }
+    } 
+  }else if (0 <= theta1 && theta1 <= 90) {
+    for (int i = 0; i < std::floor(0.650/step); i++) {
+      points1.clear();
+      planepoints.clear();
+      for (int j = -1*std::floor(0.650/step); j < std::floor(0.650/step); j++) {
+        for (int k = -1*std::floor(0.650/step); k < std::floor(0.650/step); k++) { 
+          std::vector<double> p = {
+            std::cos(phi) * std::cos(theta) * step * i - j * step * std::sin(theta) - k * step * std::sin(phi) * std::cos(theta),
+            std::cos(phi) * std::sin(theta) * step * i + j* step * std::cos(theta) - k * step * std ::sin(phi)* std::sin(theta),
+            std::sin(phi)* step* i + k * step * std::cos( phi),
+            theta1-76, -180-phi1, 
+            -99999, 
+            -99999, 
+            -99999, 
+            -99999, 
+            -99999
+          };
+          planepoints.push_back(p); 
+        }
+      }
+      for (const auto& i : planepoints) {
+        if (is_destinationvalid(i)) { 
+          points1.push_back(i);
+        } 
+      }
+      if (points1.size() > points.size()) { 
+        points = points1;
+      }else if (points1.size() < points.size()) {
+        nlows++; 
+      }
+      
+      if (nlows == 3) { 
+        break;
+      } 
+    }
+  }
+  return points.size();
+}
 
 //----------------------------------------------------------
 int ScanSequence::RectangularPath(std::vector<std::vector<double> > &points){

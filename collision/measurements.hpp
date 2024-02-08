@@ -8,6 +8,8 @@
 #define GANTRY_Y_DIM 0.124
 #define GANTRY_Z_DIM 0.096
 
+#define GANTRY_0_MAX_Z 0.085
+
 #define GANTRY_0_MAX_X 0.696
 #define GANTRY_0_MAX_Y 0.696  // check!
 #define GANTRY_1_MAX_X 0.749

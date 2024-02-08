@@ -70,6 +70,7 @@ typedef enum{
   NORM_INCIDENCE
 } rect_sub_t;
 
+
 /* Merge these (and have them as limit cases) or keep separate?
 // Not necessary: h+phi define fixed point, stepsizes define what's fixed and which loop.
 typedef enum{
@@ -80,6 +81,11 @@ typedef enum{
 */
 
 typedef struct {
+  struct { 
+    float theta;
+    float phi;
+    float step;
+  } tilt_par;
   struct {
     float       height;
     float       radius;

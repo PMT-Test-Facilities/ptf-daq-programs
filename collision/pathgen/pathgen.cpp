@@ -5,7 +5,6 @@
 #include "cyl.hpp"
 #include "rect.hpp"
 
-#include <ios>
 #include <iomanip>
 
 #ifdef DEBUG
@@ -158,32 +157,66 @@ variant<vector<MovePath>, ErrorType> scan_path(ScanParams params, const vector<I
 
 
 bool is_destination_valid(
-  const Point& gantry0,
-  const Point& gantry1,
-  const vector<Intersectable>& static_geometry
-) {
+        const Point& gantry0,
+        const Point& gantry1,
+        const vector<Intersectable>& static_geometry) {
   DEBUG_ENTER(__PRETTY_FUNCTION__);
 
-  if (gantry1.position.y - gantry0.position.y < GANTRY_MIN_Y_SEPARATION) {
-    DEBUG_COUT("Y diff less than GANTRY_MIN_Y_SEPARATION.");
+  double r_less= round((0.104 + sqrt((0.263*0.263) -(0.388- gantry0.position.z)*(0.388-gantry0.position.z)))*1e3) ;
+  double r_more= round((0.104 + sqrt((0.290*0.290) -(0.388- gantry0.position.z)*(0.388-gantry0.position.z)))*1e3) ;
+  double Z = round(gantry0.position.z*1e3); double Y = round(gantry0.position.y*1e3); double X = round(gantry0.position.x*1e3);
+  if(X<0 || Y<0 || Z<0){
+    DEBUG_COUT("The value of X, Y and Z coordinates of the destination cannot be negative!"); DEBUG_LEAVE;
+    return false;
+  }else if( Z>GANTRY_0_MAX_Z || X>GANTRY_0_MAX_X || Y> GANTRY_0_MAX_Y){
+    DEBUG_COUT("ONE OF THE COORDINATE VALUE IS OUT OF BOUND! MAX X=0.700, MAX Y=0.596, MAX Z=0.400");
     DEBUG_LEAVE;
     return false;
-  }
-  else if (gantry1.position.y - gantry0.position.y < GANTRY_MIN_Y_SEPARATION_FOR_X_MIN_CHECK
-           && fabs(gantry0.position.x - gantry1.position.x) < GANTRY_MIN_X_SEPARATION) {
-    DEBUG_COUT("X diff less than GANTRY_MIN_X_SEPARATION.");
+  }else if(round(gantry0.angle.phi*1e3)>=-685){
+    if( Z>=0 && Z<180 && sqrt( (Z-515)*(Z-515) + (Y-265)*( Y-265) + (X-333)*(X-333) ) < 428){
+      DEBUG_COUT("GANTRY 0 Z OUT OF BOUNDS. Either reduce Z value or make the Gantry 0 move away from the center of the PMT");
+      DEBUG_LEAVE;  
+      return false;
+    }
+  }else if( Z>=180 && Z<243 && sqrt( (X-333)*(X-333) + (Y
+    -265)*(Y-265) ) < r_less){
+    DEBUG_COUT("GANTRY 0 Z OUT OF BOUNDS. Either reduce Z value or make the Gantry 0 move away from the center of the PMT");
     DEBUG_LEAVE;
     return false;
-  }
-  DEBUG_COUT("Distance constraints ok. Checking collisions.");
-  if (check_any_collisions(gantry0, gantry1, static_geometry)) {
-    DEBUG_COUT("Found collision.");
+  }else if( Z>=243 && sqrt( (X-333)*(X-333) + (Y-265)*(Y -265) ) <= 393){
+    DEBUG_COUT("GANTRY 0 Z OUT OF BOUNDS. Either reduce Z value or make the Gantry 0 move away from the center of the PMT");
     DEBUG_LEAVE;
     return false;
+  }else if(round(gantry0.angle.phi*1e3)<=-685){
+    if( Z>=0 && Z<160 && sqrt( (Z-515)*(Z-515) + (Y-265)*(
+    Y-265) + (X-333)*(X-333) ) < 455){ 
+        DEBUG_COUT("FOR GIVEN X and Y, GANTRY 0 Z OUT OF BOUNDS. Either reduce Z value or make the Gantry 0 move away from the center of the PMT"); 
+        DEBUG_LEAVE;
+        return false;
+    }else if( Z>=160 && Z<216 && sqrt( (X-333)*(X-333) + ( Y-265)*(Y-265) ) < r_more){
+      DEBUG_COUT("FOR GIVEN X and Y, GANTRY 0 Z OUT OF BOUNDS. Either reduce Z value or make the Gantry 0 move away from the center of the PMT");
+      DEBUG_LEAVE;
+      return false;
+    }else if( Z>=216 && sqrt( (X-333)*(X-333) + (Y-265)*(Y-265) ) <= 393){
+      DEBUG_COUT("GANTRY 0 Z OUT OF BOUNDS. Either reduce Z value or make the Gantry 0 move away from the center of the PMT"); 
+      DEBUG_LEAVE; 
+      return false;
+    }else if(round(gantry0.angle.phi*1e3)<=-685){
+      if( Z>=0 && Z<160 && sqrt( (Z-515)*(Z-515) + (Y-265)*(Y-265) + (X-333)*(X-333) ) < 455){ 
+        DEBUG_COUT("FOR GIVEN X and Y, GANTRY 0 Z OUT OF BOUNDS. Either reduce Z value or make the Gantry0 move away from the center of the PMT"); 
+        DEBUG_LEAVE;
+        return false;
+    }else if( Z>=160 && Z<216 && sqrt( (X-333)*(X-333) + ( Y-265)*(Y-265) ) < r_more){
+        DEBUG_COUT("FOR GIVEN X and Y, GANTRY 0 Z OUT OF BOUNDS. Either reduce Z value or make the Gantry 0 move away from the center of the PMT");
+        DEBUG_LEAVE;
+        return false;
+    }else if( Z>=216 && sqrt( (X-333)*(X-333) + (Y-265)*(Y-265) ) <= 393){
+      DEBUG_COUT("FOR GIVEN X and Y, GANTRY 0 Z OUT OF BOUNDS. Either reduce Z value or make the Gantry 0 move away from the center of the PMT");
+      DEBUG_LEAVE;
+      return false; 
+    }
   }
-  DEBUG_COUT("Destination seems ok.");
-  DEBUG_LEAVE;
-  return true;
+  }
 }
 
 

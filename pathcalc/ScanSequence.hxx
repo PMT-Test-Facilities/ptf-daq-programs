@@ -4,6 +4,7 @@
 #include "midas.h"    
 #include "experim_new.h"  
 #include <vector>
+#include <math.h>
 
 class ScanSequence {
   
@@ -33,18 +34,28 @@ private:
   int RectangularPath(std::vector<std::vector<double> > &points);
   int PMTSurfacePath(std::vector<std::vector<double> > &points);
   int AlignmentPath(std::vector<std::vector<double> > &points);
+
   int PassByPath(std::vector<std::vector<double> > &points);
   int ManualPath(std::vector<std::vector<double> > &points);
   int TankAvoidancePath(std::vector<std::vector<double> > &points);
   int DemoPath(std::vector<std::vector<double> > &points);
-  
   void ReturnToBase(std::vector<std::vector<double> > &points);
+
+  /*
+    Another sequence thing! 
+    tilt path 
+
+    this is by Anubhav, but I'm committing it 
+  */
+  int TiltPath(std::vector<std::vector<double>> &points);
 
   // ToDo : the above ones can call the Reflectivity function, for a reflectivity sequence for each point
   // Probably very similar to acceptance with two heads....both pointing at the PMT center...
 
-
+  /*
   
+  */
+  bool is_destinationvalid(const std::vector<double>& location);
 
   // Probably overload this: first version: getting a point in space, normal to surface 
   // goes through that point and the center of the local sphere.
