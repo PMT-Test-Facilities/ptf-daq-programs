@@ -46,6 +46,7 @@
 #include "midas.h"
 #include "msystem.h"
 #include "mcstd.h"
+#include <iostream>
 #include <math.h>
 #include <unistd.h>
 #include <string.h>

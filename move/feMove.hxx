@@ -138,7 +138,7 @@ INT pause_run(    INT run_number, char *error );
 INT resume_run(   INT run_number, char *error );
 INT frontend_loop();
 INT poll_event(INT source, INT count, BOOL test);
-INT interrupt_configure(INT cmd, INT source[], PTYPE adr);
+INT interrupt_configure(INT cmd, INT source, POINTER_T adr);
 
 INT readout_event(char* pevent, INT off);
 
