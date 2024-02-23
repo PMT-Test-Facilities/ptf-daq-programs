@@ -35,3 +35,8 @@ testVI
 .DS_Store
 *.dSYM
 .vscode
+
+feAccelerometer/fePhidgetSpatial
+feDegauss
+feScan
+
