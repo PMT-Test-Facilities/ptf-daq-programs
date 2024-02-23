@@ -149,15 +149,16 @@ INT gantry_motor_end = 10;   //TF TODO: get from ODB and make button on gantry_m
 // Gantry dimensions with buffer zones for collision avoidance
 double tiltMotorLength = 0.160;
 double gantryFrontHalfLength = 0.140; //Use 0.140m for safety; measured to be 0.114+/-0.001m (27Apr2017)
-double gantryBackHalfLength = 0.25; //0.22 Use 0.200m for safety; measured to be 0.114+0.07(pipelength)=0.184+/-0.002m (27Apr2017) // John (17Oct2019) 0.185 -> 0.22 for safety
+double gantryBackHalfLength = 0.222; //0.22 Use 0.200m for safety; measured to be 0.114+0.07(pipelength)=0.184+/-0.002m (27Apr2017) // John (17Oct2019) 0.185 -> 0.22 for safety
 double gantryOpticalBoxWidth = 0.160; //Use 0.160m for safety; measured to be 0.135+/-0.002m for optical box 0, 0.145+/-0.001m for optical box 1 // John (17Oct2019) 0.15 -> 0.2 for safety
 double gantryTiltGearWidth = 0.060; //Use 0.070 for safety; measured to be 0.060+/-0.001m
 double gantryOpticalBoxHeight = 0.095; //Use 0.110m for safety; measured to be 0.094 +/- 0.004m (27Apr2017)
 
 // Tank position & dimensions:
-double xtankCentre = 0.366; // Rika (24Apr2017): Updated to estimated new position after tank moved back into coils // Kevin (22Jan2018) estimate change from (0.360, 0.345) -> (0.401, 0.288) -> (0.366, 0.361) Feb21 -> (0.366, 0.371) Feb 23)
-double ytankCentre = 0.371;
-double tankRadius = 0.61; // radius of tank ~0.61 // John (17Oct2019) reduced from 0.61 to 0.58 to prevent collision
+double xtankCentre = 0.42; // Rika (24Apr2017): Updated to estimated new position after tank moved back into coils // Kevin (22Jan2018) estimate change from (0.360, 0.345) -> (0.401, 0.288) -> (0.366, 0.361) Feb21 -> (0.366, 0.371) Feb 23)
+// updated this again to (0.42, 0.32)
+double ytankCentre = 0.32;
+double tankRadius = 0.58; // radius of tank ~0.61 // John (17Oct2019) reduced from 0.61 to 0.58 to prevent collision
 double tankPMTholderRadius = 0.53; // max/min from center where PMT holders sit
 
 // Rika: PMT position for collision avoidance
@@ -176,7 +177,7 @@ int numPolyLayers = 0.38 /
 //      so if the gantry goes down to its maximum z height (0.534m), the tip of the optical box will be at 0.178+0.534=0.712,
 //      which is 0.712-0.390=0.372m lower than the position of the top of the PMT (so make it 0.38m to play it safe).
 // PMT height :
-double pmtHeight = 0.390; // Rika (24Apr2017): actual PMT height in gantry coordinates;
+double pmtHeight = 0.535;//Sky:originally 0.39 // Rika (24Apr2017): actual PMT height in gantry coordinates;
 // Gantry tilted 0 will hit PMT cover at z=0.3m.
 double frpHeight = 0.556; // Rika (28Apr2017): z position of the FRP case, which has a rim that is of wider diameter than the PMT.
 // Calculated from the fact that the PMT acrylic cover has a height of 16.6cm.
@@ -1118,9 +1119,9 @@ void initialize(INFO *pInfo) {
   // Cycle through each pair of motors corresponding to the same axis on each arm.
   // We want to make sure that we initialize the Z-axis first, so that the laser box is
   // fully out of the tank before we move in X and Y.
-  int order[4] = {2, 0, 1, 3};
+  int order[4] = {2, 0, 1};//{2, 0, 1,3}
   int itmp;
-  for (itmp = 0; itmp < 4; itmp++) {
+  for (itmp = 0; itmp < 3; itmp++) {//4
     i = order[itmp];
 
     if ((tempNegLimitEnabled[i] == 1) || (tempNegLimitEnabled[i + 5] == 1)) {
@@ -1140,7 +1141,7 @@ void initialize(INFO *pInfo) {
       lastCountPosArm1 = pInfo->CountPos[i];
       lastCountPosArm2 = pInfo->CountPos[i + 5];
       //sleep(5);
-      usleep(100000); // Approx. polling period
+      usleep(600000); // Approx. polling period
       if ((tempNegLimitEnabled[i] == 1) && (tempNegLimitEnabled[i + 5] == 1)) {// If both gantry axes are enabled.
         cm_msg(MDEBUG, "initialize", "Polling axes %i and %i.", i, i+5);
         channel_rw(pInfo, pInfo->hKeyMLimitNeg, (void *) pInfo->neg_AxisLimit, TID_BOOL, 0);
@@ -1381,13 +1382,13 @@ int generate_path(INFO *pInfo) {
   // tilt_min < tilt angle < tilt_max
   //double tilt_min = -105, tilt_max = 15;
 
-  double z_max_value = 0.535; // Rika (23Mar2017): gantry positive z limit switch at z = 0.534m.
+  double z_max_value = 0.08; // Rika (23Mar2017): gantry positive z limit switch at z = 0.534m.
   // John (16Oct2019): Reducing z_max from 0.535 to 0.22 for PMT scans because getting too close to acrylic
-
+  //Vincent  Reducing z_max from 0.535 to 0.05 for PMT scans because getting too close to acrylic       
   // double safeZheight = 0.260; // Rika (4Apr2017): z height at which any movement (rot & tilt) is PMT collision free.
   // (24Apr2017) updated safeZheight for new PMT position (previously 0.46m)
 
-  double tankHeight = 0.05; //actually 0.08 but play safe.
+  double tankHeight = 0.535; //Sky:0.06 originally// actually 0.08 but play safe.
 
   bool move_second_gantry_first = false;
   bool move_z1_first = false;

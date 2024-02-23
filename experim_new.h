@@ -21,6 +21,7 @@
 
  Restructured by Tom F. on Oct 24 2014
                            Jan 21 2015
+ Last modified by Anubhav Prakash on Jul 07 2023
 \********************************************************************/
 
 
@@ -48,9 +49,10 @@ NULL }
 typedef enum{
   CYLINDER,
   RECTANGULAR,
-  PMTSURFACE,
   ALIGNMENT,
+  TILT_SCAN,//Anubhav's edit
   PASS_BY,
+  PMTSURFACE,
   MANUAL,
   DEMO,
   TANKAVOIDANCE,
@@ -133,7 +135,12 @@ typedef struct {
     float       step_length;
     float       step_width;
     INT         gantry_laser;
-  } align_par;
+  } align_par;  //Anubhav's edit start
+  struct {
+    float       theta;
+    float       phi;
+    float       step;
+    } tilt_par; //Anubhav's edit end 
   struct {
     float       init_pos[5];
     float       velocity[5];
@@ -214,6 +221,11 @@ typedef struct {
 "step_width = FLOAT : 0.001",\
 "gantry_laser = INT : 0",\
 "",\
+"[TiltParams]",\
+"theta = FLOAT : 0",\			
+"phi = FLOAT : -45",\
+"step = FLOAT : 0.010",\
+"",\
 "[PassByParams]",\
 "init_pos = FLOAT[5] : ",\
 "0.0",\
@@ -239,7 +251,7 @@ typedef struct {
 "delta_h = FLOAT : 0.02",\
 "",\
 "[.]",\
-"ScanType = INT : 1",\
+"ScanType = INT : 0",\
 "meas_time = INT : 1000.",\
 "",\
 NULL }

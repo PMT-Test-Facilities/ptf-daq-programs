@@ -32,7 +32,7 @@ the next move_next_position.
 #include <math.h>
 #include <sys/time.h>
 #include "midas.h"
-//#include "experim_new.h"
+//#include "experim_new.h" 
 #include "ScanSequence.hxx"
 #include <vector>
 #include "mfe.h"
@@ -250,7 +250,15 @@ EQUIPMENT equipment[] = {
 };
 
 
-
+//---------remove------------------------
+void printScanSettings(const SCAN_SETTINGS& fs) {
+  std::cout << "Scan Type:" << fs.scan_type << std::endl;
+  std::cout << "tilt_par:" << std::endl;
+  std::cout << "  theta: " << fs.tilt_par.theta << std::endl;
+  std::cout << "  phi: " << fs.tilt_par.phi << std::endl;
+  std::cout << "  step: " << fs.tilt_par.step << std::endl;
+}
+//remove---------------------------------
 
 /*-- Interrupt configuration ---------------------------------------*/
 INT interrupt_configure(INT cmd, INT source, POINTER_T adr)
@@ -276,7 +284,9 @@ INT get_settings_parameters(){
 
   INT size = sizeof(fs);
   INT status = db_get_record(hDB, hFS, &fs, &size, 0);
+  printScanSettings(fs); //Anubhav's edit
   if (status != DB_SUCCESS) {
+    // printScanSettings(fs);
     cm_msg(MERROR, "frontend_init", "cannot retrieve %s (size of fs=%d). Try again?", "/Equipment/Scan/Settings/",
 	   size);
 	
@@ -332,9 +342,9 @@ INT frontend_init() {
     status = db_create_record(hDB, 0, "/Equipment/Scan/Settings/", strcomb(scan_settings_str));  //strcomb : see odb.c
   }
   /* Get Scan  settings */
-  status = get_settings_parameters();
-  if(status != 1) return status;
-
+  status = get_settings_parameters(); //commented by Anubhav
+  if(status != 1) return status; //commented by Anubhav
+  //printScanSettings(fs);
   printf("Scan init()\n");
   scan_seq.Init(fs, gGantryLimits);
 
@@ -516,8 +526,8 @@ INT begin_of_run(INT run_number, char *error)
   INT status, size;
 
   /* Get current Scan  settings */
-  status = get_settings_parameters();
-  if(status != 1) return status;
+  status = get_settings_parameters(); //commented by Anubhav
+  if(status != 1) return status; //commented by Anubhav
 
   //variables used to check that phidgets are connected and working
   BOOL Check_Phidgets = FALSE; // change this to false to skip phidget check. This should only be done if you are running a scan without using the phidgets
@@ -828,7 +838,9 @@ INT move_next_position(void) {
     
     // first disable relay which enables brake for tilt on gantry0
     BOOL relays_off[8];
+    
     for(int i = 0; i < 8;i++){relays_off[i]=FALSE;}
+    printf("Brake is On for tilt angle and relay is off! \n");
     db_set_data(hDB, hMotors00_output_control, &relays_off, sizeof(BOOL), 8, TID_BOOL);
 
     // switch motors off
@@ -836,6 +848,7 @@ INT move_next_position(void) {
     db_set_data(hDB, hMotors00, &turn_off, sizeof(BOOL), 1, TID_BOOL);
     db_set_data(hDB, hMotors01, &turn_off, sizeof(BOOL), 1, TID_BOOL);
     usleep(500000);
+    printf("Motors are off!\n");
     //ss_sleep(50);
     //sleep(0.5);
     gbl_waiting_measurement = TRUE;
@@ -985,6 +998,7 @@ INT scan_read(char *pevent, INT off)
       BOOL turn_off = FALSE;
       //db_set_data(hDB, hMotors00, &turn_off, sizeof(BOOL), 1, TID_BOOL);
       db_set_data(hDB, hMotors01, &turn_off, sizeof(BOOL), 1, TID_BOOL);
+      
       time_Done_read = ss_millitime();
 
       read_status = SUCCESS;

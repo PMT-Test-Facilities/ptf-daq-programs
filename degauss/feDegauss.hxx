@@ -12,6 +12,8 @@
 // #include "experim.h"
 #include "midas.h"
 #include "degauss.hxx"
+#include "msystem.h"
+#include "mcstd.h"
 #include "mfe.h"
 
 using namespace std;
@@ -31,6 +33,7 @@ using namespace boost;
 
 
 // required by MIDAS
+
 
 
 const char
@@ -54,17 +57,14 @@ INT begin_of_run(INT run_number, char *error);
 INT end_of_run(INT run_number, char *error);
 INT pause_run(INT run_number, char *error);
 INT resume_run(INT run_number, char *error);
-INT frontend_loop();
-INT poll_event(INT source, INT count, BOOL test);
-extern void interrupt_routine(void);
+//extern void interrupt_routine(void);
+// INT frontend_loop();
 
-
-BOOL equipment_common_overwrite = FALSE;
 INT degauss_readout(char* pevent, INT off);
 void degauss_activate(HNDLE hDB, HNDLE key, void* info);
 
 
-EQUIPMENT equipment[] = {{
+EQUIPMENT equipment[] = {
   "Degauss",
   {
     1,
@@ -75,7 +75,7 @@ EQUIPMENT equipment[] = {{
     "FIXED",
     TRUE,
     RO_ALWAYS,
-    1000,
+    250,
     0,
     0,
     0,
@@ -84,13 +84,13 @@ EQUIPMENT equipment[] = {{
   degauss_readout,
   NULL,
   NULL
-}};
+};
 
 
 
 
 static const char* SET_STR = 
-//"[Settings]\n"
+"[Settings]\n"
 "run = BOOL : 0\n"
 "nsteps = CHAR : 8\n"
 "targets = FLOAT[6]\n"
@@ -103,9 +103,9 @@ static const char* SET_STR =
 
 
 static const char* VAR_STR = 
-//"[Variables]\n"
+"[Variables]\n"
 "running = BOOL : 0\n"
-"stepn = CHAR : 0\n"
+"stepn = CHAR : 8\n"
 "targets = FLOAT[6]\n"
 "  [0] 0\n"
 "  [1] 0\n"
@@ -123,20 +123,23 @@ static const char
 /* Globals */
 
 
-HNDLE hkeyclient=0;
+HNDLE
+  hDB=0, hkeyclient=0;
+
+char host_name[256] = {0}, exp_name[256] = {0};
 
 
 unordered_map<string, HNDLE> SET_KEYS = {
-  {"targets", 0},
-  {"run",     0},
-  {"nsteps",  0},
+  {"coil_targets", 0},
+  {"run",          0},
+  {"nsteps",       0},
 };
 
 
 unordered_map<string, HNDLE> VAR_KEYS = {
-  {"targets", 0},
-  {"running", 0},
-  {"stepn",   0},
+  {"coil_set", 0},
+  {"running",  0},
+  {"stepn",    0},
 };
 
 
@@ -173,7 +176,7 @@ enum Error {
 
 Error ensure_odb_keys(const HNDLE hDB);
 
+
+
 }
-
-
 #endif

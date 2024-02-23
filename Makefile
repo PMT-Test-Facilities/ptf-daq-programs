@@ -7,7 +7,7 @@
 
 VPATH = degauss:motor:scan:pathcalc:move
 
-CFLAGS   = -DOS_LINUX -Dextname -g -O2 -Wall -Wuninitialized -I/home1/midptf/boost_1_47_0/ -std=gnu++0x -Ipathcalc -Iscan -Imove -Imotor -Idegauss -I. -DDEBUG
+CFLAGS   = -DOS_LINUX -Dextname -g -O2 -Wall -Wuninitialized -I/home/midptf/packages/boost_1_61_0 -std=gnu++0x -Ipathcalc -Iscan -Imove -Imotor  -I. -DDEBUG
 CXXFLAGS = $(CFLAGS)
 
 # MIDAS location
@@ -60,7 +60,7 @@ LIBS = -lm -lz -lutil -lnsl -lpthread -lrt
 
 # all: default target for "make"
 
-all:feMotor feMove_Reduced feScan fePhidget feptfwiener.exe testVI feDegauss
+all:feMotor feMove feScan fePhidget feptfwiener.exe testVI 
 
 
 gefvme.o: %.o: $(MIDASSYS)/drivers/vme/vmic/%.c
@@ -99,17 +99,17 @@ testVI: $(MIDASLIBS) coilVoltageCurrent.o
 fedvm: $(MIDASLIBS) $(MFE) fedvm.o 
 	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS)
 
-fePhidget: $(MIDASLIBS) $(MFE) fePhidget.o 
-	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS) -lphidget21
+fePhidget: $(MIDASLIBS) $(MFE) fePhidget22.o 
+	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS) -lphidget22
 
 fesimdaq.exe: $(MFE) fesimdaq.o 
 	$(CXX) -o $@ $(CFLAGS) $(OSFLAGS) $^ $(MIDASLIBS)  $(MIDASLIBS) $(LIBS)
 
 feptfwiener.exe: %.exe: fewiener.cxx $(MIDASLIBS) $(MFE)
-	$(CXX) -o $@ $(CFLAGS) $(OSFLAGS) $^ $(MIDASLIBS) $(LIBS) -DFE_NAME=\"feptfwiener\" -DEQ_NAME=\"PtfWiener\" -DEQ_EVID=EVID_PTFWIENER
+	$(CXX) -o $@ $(CFLAGS) $(OSFLAGS) $^ $(MIDASLIBS) $(LIBS) -DFE_NAME=\"feptfwiener\" -DEQ_NAME=\"PtfWiener_Old\" -DEQ_EVID=EVID_PTFWIENER
 
-feDegauss: $(MIDASLIBS) $(MFE) degauss.o feDegauss.o
-	$(CXX) -o $@ $(CFLAGS) $^ $(MIDASLIBS) $(LIBS) $(VMELIBS) -DDEBUG
+#feDegauss: $(MIDASLIBS) $(MFE) degauss.o feDegauss.o
+#	$(CXX) -o $@ $(CFLAGS) $^ $(MIDASLIBS) $(LIBS) $(VMELIBS) -DDEBUG
 
 
 %.o: $(MIDASSYS)/drivers/vme/%.c
@@ -132,6 +132,6 @@ feDegauss: $(MIDASLIBS) $(MFE) degauss.o feDegauss.o
 
 
 clean:
-	rm -f *.o *.gch *.dSYM feMotor feMove_Reduced feMoveNew feMoveOld feScan testVI fedvm fePhidget fesimdaq.exe feptfwiener.exe
+	rm -f *.o *.gch *.dSYM feMotor feMove_Reduced feMoveNew feMoveOld feScan testVI fedvm fePhidget22 fesimdaq.exe feptfwiener.exe 
 
 # end

@@ -19,7 +19,7 @@ double max_voltage(Coil coil) {
   switch(coil) {
     case Coil1:
     case Coil2:
-      return 13;
+      return 15;
     default:
       return 8;
   }
@@ -84,15 +84,6 @@ vector<double> degauss_path(double target_voltage, Coil coil, uint32_t steps) {
     ret.push_back(((i % 2) ? -1 : 1) * c * exp(-k * (double)i) + target_voltage);
   }
 
-  return ret;
-}
-
-
-double degauss_step(double target_voltage, Coil coil, uint32_t step, double c, double k) {
-  auto ret = ((step % 2) ? -1 : 1) * c * exp(-k * (double)step) + target_voltage;
-  if (ret < 0 || ret >= max_voltage(coil)) {
-    return 0;
-  }
   return ret;
 }
 

@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <cmath>
+#include <vector> //Anubhav's edit(to keep track, sorry I don't know git)
 #include <sys/time.h>
 #include <sstream>
 
@@ -28,9 +29,56 @@ void ScanSequence::Init(SCAN_SETTINGS &fs_in, float *gantryLim){
 
   fs = fs_in;
   gGantryLimits = gantryLim;
-  z_max_value = 0.57;
+  z_max_value = 0.08;
   return;
 }
+
+
+//---------Anubhav's edit(start)------------------------------------
+bool ScanSequence::is_destinationvalid(const std::vector<double>& l){
+  double gx = l[0];
+  double gy = l[1];
+  double gz = l[2];
+  double gphi = l[4];
+  double r_less = round((0.104 + std::sqrt(0.263 * 0.263 - pow(0.388 - gz, 2))) * 1e3);
+  double r_more = round((0.104 + std::sqrt(0.290 * 0.290 - pow(0.388 - gz, 2))) * 1e3);
+  double Z = round(gz * 1e3);
+  double Y = round(gy * 1e3);
+  double X = round(gx * 1e3);
+
+  if (X < 0 || Y < 0 || Z < 0) {
+    return false;
+  }
+  else if (Z > 0.400 * 1e3 || X > 0.649 * 1e3 || Y > 0.566 * 1e3) {
+    return false;
+  }
+  else if (round(gphi) >= -45) {
+    if (0 <= Z && Z < 180 && sqrt(pow((Z - 515), 2) + pow((Y - 265), 2) + pow((X - 333), 2)) < 428) {
+      return false;
+    }
+    else if (180 <= Z && Z < 243 && sqrt(pow((X - 333), 2) + pow((Y - 265), 2)) < r_less) {
+      return false;
+    }
+    else if (Z >= 243 && sqrt(pow((X - 333), 2) + pow((Y - 265), 2)) <= 393) {
+      return false;
+    }
+  }
+  else if (round(gphi) < -45) {
+    if (0 <= Z && Z < 160 && sqrt(pow((Z - 515), 2) + pow((Y - 265), 2) + pow((X - 333), 2)) < 455) {
+      return false;
+    }
+    else if (160 <= Z && Z < 216 && sqrt(pow((X - 333), 2) + pow((Y - 265), 2)) < r_more) {
+      return false;
+    }
+    else if (Z >= 216 && sqrt(pow((X - 333), 2) + pow((Y - 265), 2)) <= 393) {
+      return false;
+    }
+  }
+  return true;
+}
+
+//--Anubhav's edit(end)-----------------------------------------
+
 
 
 //----------------------------------------------------------
@@ -42,6 +90,7 @@ int ScanSequence::GeneratePath(std::vector<std::vector<double> > &points_in){
   point_num = 0;
   int non_zero_points = 0;
 
+  
   cm_msg(MINFO, "GeneratePath", "Generating path with kind %i: %s.\n", fs.scan_type,
       fs.scan_type == CYLINDER ? "cylindrical" :
       fs.scan_type == RECTANGULAR ? "rectangular" :
@@ -50,6 +99,7 @@ int ScanSequence::GeneratePath(std::vector<std::vector<double> > &points_in){
       fs.scan_type == MANUAL ? "manual" :
       fs.scan_type == TANKAVOIDANCE ? "tank avoidance" :
       fs.scan_type == ALIGNMENT ? "alignment" :
+      fs.scan_type == TILT_SCAN ? "tilt Scan" : //Anubhav's edit
       fs.scan_type == FIX_POINT ? "fixed point [NOT IMPLEMENTED]":
       "INVALID"
   );
@@ -75,6 +125,9 @@ int ScanSequence::GeneratePath(std::vector<std::vector<double> > &points_in){
     case ALIGNMENT:
       non_zero_points = AlignmentPath(points_in);
       break;
+  case TILT_SCAN: //Anubhav's edit
+      non_zero_points = TiltPath(points_in);
+      break;
     case FIX_POINT:
       //    non_zero_points = FixedPointPath(points_in);
     default:
@@ -82,7 +135,7 @@ int ScanSequence::GeneratePath(std::vector<std::vector<double> > &points_in){
       return 0;
 
   }//end switch case
-
+  
   //Return back to base
   ReturnToBase(points_in);
   non_zero_points++;
@@ -93,6 +146,152 @@ int ScanSequence::GeneratePath(std::vector<std::vector<double> > &points_in){
   return non_zero_points;
 
 }
+
+
+//--Anubhav's edit-----------------------------------------
+
+int ScanSequence::TiltPath(std::vector<std::vector<double> > &points){
+
+  std::vector<std::vector<double>> planepoints;
+  std::vector<std::vector<double>> points1;
+
+  /*
+
+  UPDATE THE BELOW 5 VARIABLES TO BE DEPENDANT UPON THE USER INPUT.
+
+  The variables "step", "phi" and "theta" are the three parameters 
+  that will be specific to a scan and has to be taken from the 
+  frontend "Scan" webpage of the midptf website!
+
+  */  
+
+  const float step = fs.tilt_par.step; //0.002;  // in meters
+  const float phi1 = fs.tilt_par.phi; //-45;    // to be taken from the user as input (in degrees)
+  const float phi = -phi1 * 3.14159/180.0;
+  const float theta1 = fs.tilt_par.theta;//95;   // to be taken from the user as input (in degrees)
+  const float theta = theta1 * 3.14159/180.0;
+  
+  int nlows = 0;
+  points.clear();
+
+  if (-90 < theta1 && theta1 < 0) {
+    for (int i = 0; i < std::floor(0.650/step); i++) {
+      points1.clear();
+      planepoints.clear();
+      for (int j = -1*std::floor(0.650/step); j < std::floor(0.650/step); j++) {
+	for (int k = -1*std::floor(0.650/step); k < std::floor(0.650/step); k++) {
+	  std::vector<double> p = {
+	    std::cos(phi) * std::cos(theta) * step * i - j * step * std::sin(theta) - k * step * std::sin(phi) * std::cos(theta),
+	    0.566 + std::cos(phi) * std::sin(theta) * step * i + j * step * std::cos(theta) - k * step * std::sin(phi) * std::sin(theta),
+	    std::sin(phi) * step * i + k * step * std::cos(phi),
+	    theta1+104,
+	    phi1,
+	    -99999,
+	    -99999,
+	    -99999,
+	    -99999,
+            -99999
+	  };
+	  planepoints.push_back(p);
+	}
+      }
+      for (const auto& i : planepoints) {
+	if (is_destinationvalid(i)) {
+	  points1.push_back(i);
+	}
+      }
+      if (points1.size() > points.size()) {
+	points = points1;
+      }
+      else if (points1.size() < points.size()) {
+	nlows++;
+      }
+      if (nlows == 3) {
+	break;
+      }
+    }
+  }
+
+  if (90 < theta1 && theta1 < 180) {
+    for (int i = 0; i < std::floor(0.650/step); i++) {
+      points1.clear();
+      planepoints.clear();
+      for (int j = -1*std::floor(0.650/step); j < std::floor(0.650/step); j++) {
+	for (int k = -1*std::floor(0.650/step); k < std::floor(0.650/step); k++) {
+	  std::vector<double> p = {
+	    0.649 + std::cos(phi) * std::cos(theta) * step * i - j * step * std::sin(theta) - k * step * std::sin(phi) * std::cos(theta),
+	    std::cos(phi) * std::sin(theta) * step * i + j * step * std::cos(theta) - k * step * std::sin(phi) * std::sin(theta),
+	    std::sin(phi) * step * i + k * step * std::cos(phi),
+	    theta1-76,
+	    -180 - phi1,
+	    -99999,
+	    -99999,
+	    -99999,
+	    -99999,
+            -99999
+	  };
+	  planepoints.push_back(p);
+	}
+      }
+      for (const auto& i : planepoints) {
+	if (is_destinationvalid(i)) {
+	  points1.push_back(i);
+	}
+      }
+      if (points1.size() > points.size()) {
+	points = points1;
+      }
+      else if (points1.size() < points.size()) {
+	nlows++;
+      }
+      if (nlows == 3) {
+	break;
+      }
+    }
+  }
+
+  if (0 <= theta1 && theta1 <= 90) {
+    for (int i = 0; i < std::floor(0.650/step); i++) {
+      points1.clear();
+      planepoints.clear();
+      for (int j = -1*std::floor(0.650/step); j < std::floor(0.650/step); j++) {
+	for (int k = -1*std::floor(0.650/step); k < std::floor(0.650/step); k++) {
+	  std::vector<double> p = {
+	    std::cos(phi) * std::cos(theta) * step * i - j * step * std::sin(theta) - k * step * std::sin(phi) * std::cos(theta),
+	    std::cos(phi) * std::sin(theta) * step * i + j * step * std::cos(theta) - k * step * std::sin(phi)* std::sin(theta),
+	    std::sin(phi)* step* i + k * step * std::cos(phi),
+	    theta1-76,
+	    -180-phi1,
+	    -99999,
+	    -99999,
+	    -99999,
+	    -99999,
+            -99999
+	  };
+	  planepoints.push_back(p);
+	}
+      }
+      for (const auto& i : planepoints) {
+	if (is_destinationvalid(i)) {
+	  points1.push_back(i);
+	}
+      }
+      if (points1.size() > points.size()) {
+	points = points1;
+      }
+      else if (points1.size() < points.size()) {
+	nlows++;
+      }
+      if (nlows == 3) {
+	break;
+      }
+    }
+  }
+
+  return points.size();
+
+}
+//--Anubhav's Edit(end)------------------------------------
 
 
 //----------------------------------------------------------
@@ -295,7 +494,7 @@ int ScanSequence::RectangularPath(std::vector<std::vector<double> > &points){
     cm_msg(MERROR,"RectangularPath","Y step size too small for motors (min resolution = 1 mm).");
     return 0;
   }
-  cm_msg(MINFO,"RectangularPath","Generating linear/plane/rectangular prism path...");
+cm_msg(MINFO,"RectangularPath","Generating linear/plane/rectangular prism path..."); 
   // Generate path
 
   // 19/Oct/2017 - Kevin Xie - added extra code to rectangular scan paths so that the entire region can be scanned. Previously, false collision messages appeared at the Y-position where the non-scanning gantry switched hemispheres

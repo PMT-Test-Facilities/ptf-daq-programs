@@ -666,7 +666,7 @@ void turn_motors_off(INT hDB, INT hKey, void *info) {
   pequipment = (EQUIPMENT *) info;
   pInfo = (INFO *) pequipment->cd_info;
 
-  // Only turn off is TurnMotorsOf is y
+  // Only turn off is TurnMotorsOff is y
   if (pInfo->bTurnMotorsOff[0] == TRUE) {
 
     char command[10024];
@@ -2063,7 +2063,7 @@ INT galil_init(EQUIPMENT *pequipment) {
     pInfo->bDigitalOut2[i] = atoi(response);
   }
 
-  // Set the output for DigitalOut2[0] to True (disable the motor) before move
+  // Set the output for DigitalOut2[0] to True (disable the tilt angle motor brakes) before move
   pInfo->bDigitalOut2[0] = 1;
   db_set_data(hDB, pInfo->hKeyDigitalOut1, pInfo->bDigitalOut1,
               pInfo->num_channels * sizeof(BOOL), pInfo->num_channels, TID_BOOL);

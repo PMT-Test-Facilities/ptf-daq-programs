@@ -37,6 +37,9 @@ private:
   int ManualPath(std::vector<std::vector<double> > &points);
   int TankAvoidancePath(std::vector<std::vector<double> > &points);
   int DemoPath(std::vector<std::vector<double> > &points);
+  int TiltPath(std::vector<std::vector<double> > &points);//Anubhav's edit
+
+  bool is_destinationvalid(const std::vector<double>& l); //Anubhav's edit
   
   void ReturnToBase(std::vector<std::vector<double> > &points);
 

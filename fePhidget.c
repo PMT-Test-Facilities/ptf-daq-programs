@@ -322,7 +322,7 @@ INT frontend_init()
 
   //get the program to wait for a spatial device to be attached
   printf("Waiting for spatial to be attached.... \n");
-  if((result = CPhidget_waitForAttachment((CPhidgetHandle)spatial, 10000)))
+  if((result = CPhidget_waitForAttachment((CPhidgetHandle)spatial, 5000)))
     {
       CPhidget_getErrorDescription(result, &err);
       cm_msg(MERROR, "frontend_init", "Problem waiting for attachment of Phidget with frontend index %i: %s", get_frontend_index(),err);

@@ -694,11 +694,11 @@ INT frontend_init() {
   setbuf(stdout, NULL);
   setbuf(stderr, NULL);
 
-  if (get_frontend_index() < 1) {
+  if (get_frontend_index() > 1) {
     cm_msg(MERROR, frontend_name, "frontend_init(): Frontend index %d is not valid, please start with \'-i 1\'",
            get_frontend_index());
     return !SUCCESS;
-  }
+    }
 
   cm_set_transition_sequence(TR_START, 0);
   cm_set_transition_sequence(TR_STOP, 0);
