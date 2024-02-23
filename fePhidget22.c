@@ -41,38 +41,44 @@ to accommodate multiple phidgets.
 #include <math.h>
 #include <unistd.h>
 #include <string.h>
-#include "phidget22.h"
+#include <phidget22.h>
 #include <stdint.h>
+#include <mfe.h>
+#include <iostream>
+
+#include <chrono>
+#include <thread>
+
 /* make frontend functions callable from the C framework            */
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /*-- Globals -------------------------------------------------------*/
 
 
 
 /* The frontend name (client name) as seen by other MIDAS clients   */
-char *frontend_name = "fePhidget";
+const char *frontend_name = "fePhidget";
 
 /* The frontend file name, don't change it                          */
-char *frontend_file_name = __FILE__;
+const char *frontend_file_name = __FILE__;
 
 /* frontend_loop is called periodically if this variable is TRUE    */
 BOOL frontend_call_loop = FALSE;
+
+BOOL equipment_common_overwrite = FALSE;
+
 
 /* a frontend status page is displayed with this frequency in ms    */
 //INT display_period = 3000;
 INT display_period = 0;
 
 /* maximum event size produced by this frontend                     */
-INT max_event_size = 3000;
+INT max_event_size = 3000000;
 
 /* buffer size to hold events                                       */
-INT event_buffer_size = 10*3000;
+INT event_buffer_size = 10*3000000;
 
 /* maximum event size for fragmented events (EQ_FRAGMENTED)         */
-INT max_event_size_frag = 5*300*300;
+INT max_event_size_frag = 5*300*3000;
 
 /*-- Info structure declaration ------------------------------------*/
 
@@ -87,7 +93,7 @@ INT pause_run(INT run_number, char *error);
 INT resume_run(INT run_number, char *error);
 INT frontend_loop();
 INT poll_trigger_event(INT count, PTYPE test);
-INT interrupt_configure(INT cmd, PTYPE adr);
+INT interrupt_configure(INT cmd, INT source, PTYPE adr);
 INT read_trigger_event(char *pevent, INT off);
 
 
@@ -119,9 +125,7 @@ EQUIPMENT equipment[] = {
   { "" }
 };
 
-#ifdef __cplusplus
-}
-#endif
+
 
 
 // Keep a copy of the last spatial data event.
@@ -140,14 +144,33 @@ static void CCONV onAttach(PhidgetHandle ch, void * ctx)
   int serialNo;
   //CPhidget_getSerialNumber(spatial, &serialNo);
   
+  std::cout << "attaching" << std::endl;  
   Phidget_getDeviceSerialNumber(ch, &serialNo);
   cm_msg(MINFO, "AttachHandler", "Phidget Spatial attached. Serial Number = %i", serialNo);
   //Set the data rate for the spatial events
-  PhidgetSpatialHandle spatial_test;
-  PhidgetSpatial_create(&spatial_test);
-  PhidgetSpatial_setDataInterval(spatial_test, 320);
-  //PhidgetSpatial_setDataRate((CPhidgetSpatialHandle)spatial, 320);  
+
+  //PhidgetSpatial_setDataInterval(spatial_test, 50);
+  PhidgetSpatial_setDataRate((PhidgetSpatialHandle)ch, 50);  
+  auto res = PhidgetSpatial_setHeatingEnabled((PhidgetSpatialHandle)ch, false);
+  if (res!=EPHIDGET_OK){
+    std::cout << "problem setting temp "<< res << std::endl;
+  }
   
+  PhidgetTemperatureSensorHandle temp_test;
+  PhidgetTemperatureSensor_create(&temp_test);
+  Phidget_openWaitForAttachment((PhidgetHandle)temp_test, PHIDGET_TIMEOUT_DEFAULT);
+
+  double read_temp=0.0;
+  std::chrono::milliseconds timespan(1000);
+  while(false){
+    res = PhidgetTemperatureSensor_getTemperature((PhidgetTemperatureSensorHandle)temp_test, &read_temp);
+    if (res!=EPHIDGET_OK){
+        std::cout << "problem reading remp "<< res << std::endl;
+    }
+    std::this_thread::sleep_for(timespan);
+    std::cout << "waiting for sensor at " <<read_temp << " to reach 50C" << std::endl;
+  }
+//  std::this_thread::sleep_for(timespan);
  
 }
 
@@ -212,6 +235,34 @@ static void CCONV onSpatial0_SpatialData(PhidgetSpatialHandle ch, void * ctx, co
  
 }
 
+static void CCONV onSpatial0_SpatialData(PhidgetSpatialHandle ch, void * ctx, const double temp_acceleration[3], const double temp_angularRate[3], const double temp_magneticField[3], double temp_timestamp)
+{  
+	// Save the results of this read for midas readout routine
+	acceleration[0] = temp_acceleration[0];
+	//data1[i]->acceleration[0];
+      acceleration[1] = temp_acceleration[1];
+      acceleration[2] = temp_acceleration[2];
+      mag[0] = temp_magneticField[0];
+      mag[1] = temp_magneticField[1];
+      mag[2] = temp_magneticField[2];
+      tilt = 90;
+      if( temp_acceleration[2] != 0){
+	/*previous formula:
+	//tilt = atan(sqrt(data[i]->acceleration[0]*data[i]->acceleration[0] + data[i]->acceleration[1]*data[i]->acceleration[1]) /data[i]->acceleration[2])*180/3.14159265;	
+	// Get the right sign for the angle based on the sign of the Y-acceleration; happens to 
+	// be switched (just depends on orientation of phidget.
+	//if(data[i]->acceleration[1] >0)
+	tilt = -tilt; */
+
+	// phidget_z is defined pointing downwards
+	tilt = atan2(-temp_acceleration[1],temp_acceleration[2])*180/3.14159265; //if X is aligned with tilt axis!
+	
+      }
+      etime = temp_timestamp;//.seconds;
+      etime_us =temp_timestamp;//.microseconds;
+
+}
+  
 
 //Display the properties of the attached phidget to the screen.  
 //We will be displaying the name, serial number, version of the attached device, the number of accelerometer, gyro, and compass Axes, and the current data rate
@@ -227,12 +278,26 @@ int display_properties(PhidgetHandle phid_spatial)
   PhidgetAccelerometer_create(&accelerometer0);
   PhidgetGyroscope_create(&gyroscope0);
   PhidgetMagnetometer_create(&magnetometer0);
+ 
+  Phidget_openWaitForAttachment((PhidgetHandle)accelerometer0, PHIDGET_TIMEOUT_DEFAULT);
+  Phidget_openWaitForAttachment((PhidgetHandle)gyroscope0, PHIDGET_TIMEOUT_DEFAULT);
+  Phidget_openWaitForAttachment((PhidgetHandle)magnetometer0, PHIDGET_TIMEOUT_DEFAULT);
+
   Phidget_getDeviceName(phid_spatial, &ptr);
   Phidget_getDeviceSerialNumber(phid_spatial, &serialNo);
   Phidget_getDeviceVersion(phid_spatial, &version);
+
+
   int status = PhidgetAccelerometer_getAxisCount(accelerometer0, &numAccelAxes);
+  if (status!=EPHIDGET_OK){
+    cm_msg(MINFO,"display_properties", "Problem... %i", status);
+  }
+
   status = PhidgetGyroscope_getAxisCount(gyroscope0, &numGyroAxes);
   status =PhidgetMagnetometer_getAxisCount(magnetometer0, &numCompassAxes);
+  if (status!=EPHIDGET_OK){
+    cm_msg(MINFO,"display_properties", "Problem with mag... %i", status);
+  }
   // unint32_t dataRateMax, dataRateMin;
   //status = PhidgetSpatial_getMinDataInterval(spatial0, &dataRateMin);
   //status = PhidgetSpatial_getMaxDataInterval(spatial0, &dataRateMax);
@@ -262,9 +327,10 @@ int display_properties(PhidgetHandle phid_spatial)
 
 
 
-extern int frontend_index;
+// extern int frontend_index_;
 
-HNDLE   hDB=0, hFS=0;
+extern HNDLE hDB;
+HNDLE   hFS=0;
 
 /*-- Frontend Init -------------------------------------------------*/
 // Initialize ODB variables and set up hotlinks in this function
@@ -291,12 +357,14 @@ INT frontend_init()
   size = sizeof(serial_number);
   
   char variable_name[100];
-  sprintf(variable_name,"/Equipment/Phidget%02d/Settings/SerialNumber",frontend_index);
+  sprintf(variable_name,"/Equipment/Phidget%02d/Settings/SerialNumber",get_frontend_index());
 
   status = db_get_value(hDB, 0, variable_name, &serial_number, &size, TID_INT, FALSE);
   if(status != DB_SUCCESS)
   {
-    cm_msg(MERROR,"frontend_init","cannot GET /Equipment/PhidgetXX/Settings/SerialNumber");
+    char error_message[100];
+    sprintf(error_message,"cannot GET /Equipment/Phidget%02d/Settings/SerialNumber",get_frontend_index());
+    cm_msg(MERROR,"frontend_init",error_message);
     return FE_ERR_ODB;
   }
   printf("Connected to phidget with serial number %i \n",serial_number);
@@ -319,6 +387,8 @@ INT frontend_init()
   PhidgetSpatial_create(&spatial0);
   PhidgetAccelerometer_create(&accelerometer0);
   
+  
+
   //Set the handlers to be run when the device is plugged in or opened from software, unplugged or closed from software, or generates an error.
   //Phidget_set_OnAttach_Handler((PhidgetHandle)spatial0, AttachHandler, NULL);
   //Phidget_set_OnDetach_Handler((PhidgetHandle)spatial0, DetachHandler, NULL);
@@ -336,7 +406,7 @@ INT frontend_init()
   //PhidgetSpatial_set_OnSpatialData_Handler(spatial, SpatialDataHandler, NULL);
     
   //open the spatial object for device connections
-  printf("Frontend index %i\n",frontend_index);
+  printf("Frontend index %i\n",get_frontend_index());
 
   // Use the serial number when opening the device.  This will ensure that this
   // front-end talks to the correct phidget.
@@ -354,9 +424,11 @@ INT frontend_init()
   if (ret != EPHIDGET_OK) {
       Phidget_getLastError(&errorCode, &errorString, errorDetail, &errorDetailLen);
       printf("Error (%d): %s", errorCode, errorString);
+      cm_msg(MINFO,"display_properties", "Problem with spatial... %i", ret);
       exit(1);
+  }else{
+    cm_msg(MINFO,"display_properties", "Should have connected successfully... %i", ret);
   }
-  
 
 
   
@@ -448,7 +520,7 @@ INT poll_event(INT source, INT count, BOOL test)
 
 /*-- Interrupt configuration for trigger event ---------------------*/
 
-INT interrupt_configure(INT cmd, PTYPE adr)
+INT interrupt_configure(INT cmd, INT source, PTYPE adr)
 {
   return CM_SUCCESS;
 }
@@ -465,9 +537,11 @@ INT read_trigger_event(char *pevent, INT off)
   double *pdata32;
 
   char bank_name[100];
-  sprintf(bank_name,"PH%02d",frontend_index);
+  sprintf(bank_name,"PH%02d",get_frontend_index());
 
-  bk_create(pevent, bank_name, TID_DOUBLE, &pdata32);
+  printf("Bankname %s\n",bank_name);
+  bk_create(pevent, bank_name, TID_DOUBLE, (void**)&pdata32);
+  std::cout << "magnitude : "<< sum_mag<<std::endl;
   *pdata32++ = acceleration[0];
   *pdata32++ =  acceleration[1];
   *pdata32++ =  acceleration[2];
