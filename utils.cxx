@@ -1,11 +1,8 @@
 
 //#include <utils.h>
-#include <midas.h>
+#include "utils.h"
 
-extern const char* frontend_name;
-extern HNDLE hDB;
-
-static int odbReadAny(const char*name,int index,int tid,void* value,int valueLength = 0)
+int odbReadAny(const char*name,int index,int tid,void* value,int valueLength )
 {
   int status;
   int size = rpc_tid_size(tid);
@@ -61,7 +58,7 @@ static int odbReadAny(const char*name,int index,int tid,void* value,int valueLen
     }
 };
 
-static int odbReadInt(const char*name,int index = 0,int defaultValue = 0)
+int odbReadInt(const char*name,int index,int defaultValue)
 {
   int value = defaultValue;
   if (odbReadAny(name,index,TID_INT,&value) == 0)
@@ -70,7 +67,7 @@ static int odbReadInt(const char*name,int index = 0,int defaultValue = 0)
     return defaultValue;
 };
 
-static uint32_t odbReadUint32(const char*name,int index = 0,uint32_t defaultValue = 0)
+uint32_t odbReadUint32(const char*name,int index,uint32_t defaultValue)
 {
   uint32_t value = defaultValue;
   if (odbReadAny(name,index,TID_DWORD,&value) == 0)
@@ -79,7 +76,7 @@ static uint32_t odbReadUint32(const char*name,int index = 0,uint32_t defaultValu
     return defaultValue;
 };
 
-static double odbReadDouble(const char*name,int index = 0,double defaultValue = 0)
+double odbReadDouble(const char*name,int index,double defaultValue)
 {
   double value = defaultValue;
   if (odbReadAny(name,index,TID_DOUBLE,&value) == 0)
@@ -88,7 +85,7 @@ static double odbReadDouble(const char*name,int index = 0,double defaultValue = 
     return defaultValue;
 };
 
-static float odbReadFloat(const char*name,int index = 0,double defaultValue = 0)
+float odbReadFloat(const char*name,int index,double defaultValue)
 {
   float value = defaultValue;
   if (odbReadAny(name,index,TID_FLOAT,&value) == 0)
@@ -97,7 +94,7 @@ static float odbReadFloat(const char*name,int index = 0,double defaultValue = 0)
     return defaultValue;
 };
 
-static bool     odbReadBool(const char*name,int index = 0,bool defaultValue = 0)
+bool     odbReadBool(const char*name,int index,bool defaultValue)
 {
   uint32_t value = defaultValue;
   if (odbReadAny(name,index,TID_BOOL,&value) == 0)
@@ -106,10 +103,10 @@ static bool     odbReadBool(const char*name,int index = 0,bool defaultValue = 0)
     return defaultValue;
 };
 
-static const char* odbReadString(const char*name,int index,const char* defaultValue,int stringLength)
+const char* odbReadString(const char*name,int index,const char* defaultValue,int stringLength)
 {
   const int bufSize = 256;
-  static char buf[bufSize];
+  char buf[bufSize];
   buf[0] = 0;
   if (defaultValue)
     strlcpy(buf, defaultValue, bufSize);
@@ -120,7 +117,7 @@ static const char* odbReadString(const char*name,int index,const char* defaultVa
     return defaultValue;
 };
 
-static int odbReadArraySize(const char*name)
+int odbReadArraySize(const char*name)
 {
   int status;
   HNDLE hdir = 0;
@@ -138,7 +135,7 @@ static int odbReadArraySize(const char*name)
   return key.num_values;
 }
 
-static int odbWriteInt(const char*name, int index, int value)
+int odbWriteInt(const char*name, int index, int value)
 {
   int status;
   HNDLE hdir = 0;
@@ -156,7 +153,7 @@ static int odbWriteInt(const char*name, int index, int value)
   return -1;
 }
 
-static int odbWriteBool(const char*name, int index, bool value)
+int odbWriteBool(const char*name, int index, bool value)
 {
   int status;
   HNDLE hdir = 0;
@@ -174,7 +171,7 @@ static int odbWriteBool(const char*name, int index, bool value)
   return -1;
 }
 
-static int odbWriteDouble(const char*name, int index, double value)
+int odbWriteDouble(const char*name, int index, double value)
 {
   int status;
   HNDLE hdir = 0;
@@ -192,7 +189,7 @@ static int odbWriteDouble(const char*name, int index, double value)
   return -1;
 }
 
-static int odbWriteString(const char*name, const char* string)
+int odbWriteString(const char*name, const char* string)
 {
   int status;
   HNDLE hdir = 0;
@@ -213,7 +210,7 @@ static int odbWriteString(const char*name, const char* string)
 
 
 
-static int odbResizeArray(const char*name, int tid, int size)
+int odbResizeArray(const char*name, int tid, int size)
 {
    int oldSize = odbReadArraySize(name);
 
