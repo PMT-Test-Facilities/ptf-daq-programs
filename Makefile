@@ -7,7 +7,7 @@
 
 VPATH = degauss:motor:scan:pathcalc:move
 
-CFLAGS   = -DOS_LINUX -Dextname -g -O2 -Wall -Wuninitialized -I/home/midptf/packages/boost_1_61_0 -std=gnu++0x -Ipathcalc -Iscan -Imove -Imotor  -I. -DDEBUG
+CFLAGS   = -DOS_LINUX -Dextname -ggdb -g3 -Wall -Wuninitialized -I/home/midptf/packages/boost_1_61_0 -std=gnu++0x -Ipathcalc -Iscan -Imove -Imotor  -I. -DDEBUG
 CXXFLAGS = $(CFLAGS)
 
 # MIDAS location
@@ -99,7 +99,7 @@ testVI: $(MIDASLIBS) coilVoltageCurrent.o
 fedvm: $(MIDASLIBS) $(MFE) fedvm.o 
 	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS)
 
-fePhidget: $(MIDASLIBS) $(MFE) fePhidget22.o 
+fePhidget: $(MIDASLIBS) $(MFE) fePhidget22.o utils.o
 	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS) -lphidget22
 
 fesimdaq.exe: $(MFE) fesimdaq.o 
@@ -132,6 +132,6 @@ feptfwiener.exe: %.exe: fewiener.cxx $(MIDASLIBS) $(MFE)
 
 
 clean:
-	rm -f *.o *.gch *.dSYM feMotor feMove_Reduced feMoveNew feMoveOld feScan testVI fedvm fePhidget22 fesimdaq.exe feptfwiener.exe 
+	rm -f *.o *.gch *.dSYM feMotor feMove_Reduced feMoveNew feMoveOld feScan testVI fedvm fePhidget22 fesimdaq.exe feptfwiener.exe feMove fePhidget 
 
 # end
