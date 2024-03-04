@@ -48,6 +48,7 @@ to accommodate multiple phidgets.
 
 #include <chrono>
 #include <thread>
+#include "utils.h"
 
 /* make frontend functions callable from the C framework            */
 
@@ -62,7 +63,7 @@ const char *frontend_name = "fePhidget";
 const char *frontend_file_name = __FILE__;
 
 /* frontend_loop is called periodically if this variable is TRUE    */
-BOOL frontend_call_loop = FALSE;
+BOOL frontend_call_loop = TRUE;
 
 BOOL equipment_common_overwrite = FALSE;
 
@@ -72,13 +73,13 @@ BOOL equipment_common_overwrite = FALSE;
 INT display_period = 0;
 
 /* maximum event size produced by this frontend                     */
-INT max_event_size = 3000000;
+INT max_event_size = 10*1024;
 
 /* buffer size to hold events                                       */
-INT event_buffer_size = 10*3000000;
+INT event_buffer_size = 1*1024*1024;
 
 /* maximum event size for fragmented events (EQ_FRAGMENTED)         */
-INT max_event_size_frag = 5*300*3000;
+INT max_event_size_frag = 10*1024;
 
 /*-- Info structure declaration ------------------------------------*/
 
@@ -111,7 +112,7 @@ EQUIPMENT equipment[] = {
   "MIDAS",            // format 
   TRUE,               // enabled 
   RO_ALWAYS,		      // read x 
-  1000,               // read every x millisec 
+  500,               // read every x millisec 
   0,                  // stop run after this event limit 
   0,                  // number of sub event 
   60,                	// log history every x sec 
@@ -134,6 +135,7 @@ double mag[3] = {0,0,0};
 double tilt = 0;
 int etime = 0;
 int etime_us = 0;
+int count = 0;
 
 // ---------------------------------------------------------------
 // Phidget Spatial setup routines.
@@ -200,36 +202,25 @@ static void CCONV onError(PhidgetHandle ch, void * ctx, Phidget_ErrorEventCode c
 // Save the information in global variables to be packed into bank later.
 static void CCONV onSpatial0_SpatialData(PhidgetSpatialHandle ch, void * ctx, const double temp_acceleration[3], const double temp_angularRate[3], const double temp_magneticField[3], double temp_timestamp, int count)
 {  
-    
+
   int i;
-  for(i = 0; i < count; i++)
-    {
-
-	// Save the results of this read for midas readout routine
-	acceleration[0] = temp_acceleration[0];
-	//data1[i]->acceleration[0];
-      acceleration[1] = temp_acceleration[1];
-      acceleration[2] = temp_acceleration[2];
-      mag[0] = temp_magneticField[0];
-      mag[1] = temp_magneticField[1];
-      mag[2] = temp_magneticField[2];
-      tilt = 90;
-      if( temp_acceleration[2] != 0){
-	/*previous formula:
-	//tilt = atan(sqrt(data[i]->acceleration[0]*data[i]->acceleration[0] + data[i]->acceleration[1]*data[i]->acceleration[1]) /data[i]->acceleration[2])*180/3.14159265;	
-	// Get the right sign for the angle based on the sign of the Y-acceleration; happens to 
-	// be switched (just depends on orientation of phidget.
-	//if(data[i]->acceleration[1] >0)
-	tilt = -tilt; */
-
-	// phidget_z is defined pointing downwards
-	tilt = atan2(-temp_acceleration[1],temp_acceleration[2])*180/3.14159265; //if X is aligned with tilt axis!
-	
-      }
-      etime = temp_timestamp;//.seconds;
-      etime_us =temp_timestamp;//.microseconds;
-
+  for(i = 0; i < count; i++){
+    // Save the results of this read for midas readout routine
+    acceleration[0] = temp_acceleration[0];
+    //data1[i]->acceleration[0];
+    acceleration[1] = temp_acceleration[1];
+    acceleration[2] = temp_acceleration[2];
+    mag[0] = temp_magneticField[0];
+    mag[1] = temp_magneticField[1];
+    mag[2] = temp_magneticField[2];
+    tilt = 90;
+    if( temp_acceleration[2] != 0){
+      tilt = atan2(-temp_acceleration[1],temp_acceleration[2])*180/3.14159265; //if X is aligned with tilt axis!
     }
+    etime = temp_timestamp;//.seconds;
+    etime_us =temp_timestamp;//.microseconds;
+
+  }
   
    
  
@@ -240,26 +231,26 @@ static void CCONV onSpatial0_SpatialData(PhidgetSpatialHandle ch, void * ctx, co
 	// Save the results of this read for midas readout routine
 	acceleration[0] = temp_acceleration[0];
 	//data1[i]->acceleration[0];
-      acceleration[1] = temp_acceleration[1];
-      acceleration[2] = temp_acceleration[2];
-      mag[0] = temp_magneticField[0];
-      mag[1] = temp_magneticField[1];
-      mag[2] = temp_magneticField[2];
-      tilt = 90;
-      if( temp_acceleration[2] != 0){
-	/*previous formula:
-	//tilt = atan(sqrt(data[i]->acceleration[0]*data[i]->acceleration[0] + data[i]->acceleration[1]*data[i]->acceleration[1]) /data[i]->acceleration[2])*180/3.14159265;	
-	// Get the right sign for the angle based on the sign of the Y-acceleration; happens to 
-	// be switched (just depends on orientation of phidget.
-	//if(data[i]->acceleration[1] >0)
-	tilt = -tilt; */
+    acceleration[1] = temp_acceleration[1];
+    acceleration[2] = temp_acceleration[2];
+    mag[0] = temp_magneticField[0];
+    mag[1] = temp_magneticField[1];
+    mag[2] = temp_magneticField[2];
+    tilt = 90;
+    if( temp_acceleration[2] != 0){
+      /*previous formula:
+      //tilt = atan(sqrt(data[i]->acceleration[0]*data[i]->acceleration[0] + data[i]->acceleration[1]*data[i]->acceleration[1]) /data[i]->acceleration[2])*180/3.14159265;	
+      // Get the right sign for the angle based on the sign of the Y-acceleration; happens to 
+      // be switched (just depends on orientation of phidget.
+      //if(data[i]->acceleration[1] >0)
+      tilt = -tilt; */
 
-	// phidget_z is defined pointing downwards
-	tilt = atan2(-temp_acceleration[1],temp_acceleration[2])*180/3.14159265; //if X is aligned with tilt axis!
+      // phidget_z is defined pointing downwards
+	    tilt = atan2(-temp_acceleration[0],temp_acceleration[1])*180/3.14159265; //if X is aligned with tilt axis!
 	
-      }
-      etime = temp_timestamp;//.seconds;
-      etime_us =temp_timestamp;//.microseconds;
+    }
+    etime = temp_timestamp;//.seconds;
+    etime_us =temp_timestamp;//.microseconds;
 
 }
   
@@ -526,6 +517,28 @@ INT interrupt_configure(INT cmd, INT source, PTYPE adr)
 }
 
 /*-- Event readout -------------------------------------------------*/
+INT read_trigger_direct(char *pevent, INT off){ //unused, keeping for posterity 
+  //odbWriteDouble
+  char str[1024];
+
+  sprintf(str, "/Equipment/Phidget%02d/Variables/PH00", get_frontend_index() );
+  double sum_mag = sqrt(mag[0]*mag[0] + mag[1]*mag[1] + mag[2]*mag[2]);
+
+  odbWriteDouble(str, 0, acceleration[0]);
+  odbWriteDouble(str, 1, acceleration[1]);
+  odbWriteDouble(str, 2, acceleration[2]);
+
+  odbWriteDouble(str, 3, mag[0]);
+  odbWriteDouble(str, 4, mag[1]);
+  odbWriteDouble(str, 5, mag[2]);
+
+  odbWriteDouble(str, 6, sum_mag);
+  odbWriteDouble(str, 7, tilt);
+  odbWriteDouble(str, 8, etime);
+  odbWriteDouble(str, 9, etime_us);
+
+}
+
 INT read_trigger_event(char *pevent, INT off)
 {
 
@@ -539,9 +552,7 @@ INT read_trigger_event(char *pevent, INT off)
   char bank_name[100];
   sprintf(bank_name,"PH%02d",get_frontend_index());
 
-  printf("Bankname %s\n",bank_name);
   bk_create(pevent, bank_name, TID_DOUBLE, (void**)&pdata32);
-  std::cout << "magnitude : "<< sum_mag<<std::endl;
   *pdata32++ = acceleration[0];
   *pdata32++ =  acceleration[1];
   *pdata32++ =  acceleration[2];
@@ -554,6 +565,7 @@ INT read_trigger_event(char *pevent, INT off)
   *pdata32++ =  etime_us;
    
   bk_close(pevent, pdata32);
+  std::cout << "tilt: "<<tilt << std::endl;
 
 
   return bk_size(pevent);
