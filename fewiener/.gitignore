@@ -1,0 +1,6 @@
+html/
+xml/
+latex/
+./hv_ptf*
+hv_ptf.*
+*.html
