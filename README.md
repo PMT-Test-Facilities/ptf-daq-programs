@@ -95,7 +95,15 @@ These are largely out of date now, however.
 # Contribution Rules
 
 It is **imperative** that any changes you make are consistently pushed to github with meaningful commit messages. It is equally important that all changes made are **documented**! 
-I cannot stress that enough.
+At least as far as docstrings and comments about what functions are supposed to do!
+
+
+**DO NOT DELETE AND RE-UPLOAD FILES.** I cannot stress this enough. **DO NOT DELETE AND RE-UPLOAD FILES.** Any commit you do like this will be reverted! Any pull request denied! 
+If you aren't sure how to make a git commit, please ask. 
+**DO NOT DELETE AND RE-UPLOAD FILES.**
+By deleting and re-uploading a file, you remove the history of the changes to the file. 
+This defeats the entire purpose of git!!! This makes debugging the effects of changes incredibly difficult and time consuming.
+
 
 Old code that isn't being used anymore? Delete it.
 If you've been committing your code, then you risk nothing by deleting it. **Do not commit any code with blocks of commented code!**
@@ -103,3 +111,5 @@ If you've been committing your code, then you risk nothing by deleting it. **Do 
 Rather than use duplicates of code, use a *method!* 
 Do you need multiple versions of a method because you have multiple data types? 
 Use a *template.*
+If you don't know what those things are, either ask me for help, or Google it! 
+There are a lot of c++ resources available online. 
