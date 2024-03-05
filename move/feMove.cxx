@@ -270,7 +270,7 @@ void initialize(INFO *pInfo);
 
 void reinitialize(HNDLE hDB, HNDLE hKey, void *data);
 
-void channel_rw(INFO *pInfo, HNDLE *hKey, void *values, DWORD type, BOOL rw);
+template <class dtype, DWORD db> void channel_rw(INFO *pInfo, HNDLE *hKey, void *values, BOOL rw);
 
 void
 getPMTpolygon(XYPolygon &poly, double pmtRadius, int polyNum, double pmtXcentre, double pmtYcentre, int numPolySides,
@@ -597,8 +597,8 @@ INT frontend_init() {
 
   }
 
-  channel_rw(pInfo, pInfo->hKeyMVel, (void *) tempV, TID_FLOAT, 1);
-  channel_rw(pInfo, pInfo->hKeyMAcc, (void *) tempA, TID_FLOAT, 1);
+  channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMVel, (void *) tempV, 1);
+  channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMAcc, (void *) tempA, 1);
 
   //  return FE_ERR_HW;
   return CM_SUCCESS;
@@ -786,8 +786,11 @@ void move_init(HNDLE hDB, HNDLE hKey, void *data) {
   size = sizeof(pInfo->Phidget);
   int tilt_start = 0, tilt_end = 2; //these are the number of gantries we have to correct
   for (int i = tilt_start; i < tilt_end; i++) {
-   int axis = (i == 0 ? 4 : 9);
-   db_get_value(pInfo->hDB, pInfo->hKeyPhidget[0], "PH01", &pInfo->Phidget, &size, TID_DOUBLE, FALSE);
+    int axis = (i == 0 ? 4 : 9);
+    if (axis==9){
+      continue; // skip gantry 1
+    }
+    db_get_value(pInfo->hDB, pInfo->hKeyPhidget[0], "PH01", &pInfo->Phidget, &size, TID_DOUBLE, FALSE);
     if (i == 1) { db_get_value(pInfo->hDB, pInfo->hKeyPhidget[1], "PH01", &pInfo->Phidget, &size, TID_DOUBLE, FALSE); }
 
     //DEBUG
@@ -795,11 +798,12 @@ void move_init(HNDLE hDB, HNDLE hKey, void *data) {
 
     //Check if  phidget tilt readings match ODB values
     if (pInfo->Position[axis] < pInfo->Phidget[7] - tilt_tolerance ||
-       pInfo->Position[axis] > pInfo->Phidget[7] + tilt_tolerance) {
-     cm_msg(MERROR, "move_init", "Phidget0%i tilt: %f ODB tilt: %f", i, pInfo->Phidget[7], pInfo->Position[axis]);
-     cm_msg(MERROR, "move_init", "ERROR: can't start move. Phidget0%i tilt and ODB tilt do not agree within tolerance",
-            i);
-      return;
+        pInfo->Position[axis] > pInfo->Phidget[7] + tilt_tolerance) {
+        cm_msg(MERROR, "move_init", "Error in axis %i ", axis);
+        cm_msg(MERROR, "move_init", "Phidget0%i tilt: %f ODB tilt: %f", i, pInfo->Phidget[7], pInfo->Position[axis]);
+        cm_msg(MERROR, "move_init", "ERROR: can't start move. Phidget0%i tilt and ODB tilt do not agree within tolerance",i);
+      
+        return;
     }
 
     //Check if phidget reading is within legal range
@@ -881,9 +885,11 @@ int initialize_tilt(INFO *pInfo) {
   for (i = tilt_start; i < tilt_end; i++) {
 
     int axis = (i == 0 ? 4 : 9);
+
     // TF TEMP
-    //if (axis == 9)
-    //  continue;
+    if (axis == 9){
+      continue;// skip gantry 1...
+    }
 
     //Get readings of phidget. 
     int status = db_get_value(pInfo->hDB, pInfo->hKeyPhidget[0], "PH01", &pInfo->Phidget, &size, TID_DOUBLE, FALSE);
@@ -937,10 +943,10 @@ int initialize_tilt(INFO *pInfo) {
   // Write the destinations to the motors
   // Note: channel_rw works for both motors, ie. write both tilt destinations at once and initialize
   // together
-  channel_rw(pInfo, pInfo->hKeyMDest, dest, TID_FLOAT, 1);
+  channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMDest, dest, 1);
 
   // Start the move
-  channel_rw(pInfo, pInfo->hKeyMStart, (void *) start, TID_BOOL, 1);
+  channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMStart, (void *) start, 1);
   usleep(600000); // TF and BK: is this to wait for galil_read to update ODB for AxisMoving??
 
 
@@ -953,22 +959,26 @@ int initialize_tilt(INFO *pInfo) {
     pInfo->Moving = 0;
 
     //TF note: this only checks whether the motors are moving!!
-    channel_rw(pInfo, pInfo->hKeyMMoving, (void *) pInfo->AxisMoving, TID_BOOL, 0);
+    channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMMoving, (void *) pInfo->AxisMoving, 0);
     pInfo->Moving = pInfo->Moving || pInfo->AxisMoving[4];
     pInfo->Moving = pInfo->Moving || pInfo->AxisMoving[9];
     if (pInfo->Moving && !startedMoving)
       startedMoving = true;
 
-    //if (pInfo->Moving && !phidget_responding(pInfo->hDB)) {
-    //  return -1;
-    //}
+    if (pInfo->Moving && !phidget_responding(pInfo->hDB)) {
+      return -1;
+    }
   }
 
-  //cm_msg(MINFO, "initialize_tilt", "Move complete.");
+  cm_msg(MINFO, "initialize_tilt", "Move complete.");
   
   tilt_ini_attempts++;
   for (i = tilt_start; i < tilt_end; i++) {
     int axis = (i == 0 ? 4 : 9);
+    if (axis==9){
+      continue; // skip gantry 1
+    }
+
 
     // Check that the final tilt is within the required tolerance
     if (i == 0) db_get_value(pInfo->hDB, pInfo->hKeyPhidget[0], "PH01", &pInfo->Phidget, &size, TID_DOUBLE, FALSE);
@@ -1002,7 +1012,7 @@ int initialize_tilt(INFO *pInfo) {
     }
 
     // Reset origin position.
-    channel_rw(pInfo, pInfo->hKeyMPos, pInfo->CountPos, TID_FLOAT, 0);
+    channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMPos, pInfo->CountPos, 0);
     pInfo->mOrigin[axis] = pInfo->CountPos[axis] - pInfo->LimPos[axis] * pInfo->mScale[axis];
     pInfo->Position[axis] = pInfo->LimPos[axis];
 
@@ -1031,6 +1041,8 @@ void initialize(INFO *pInfo) {
   BOOL exitFlag = 0;
   float lastCountPosArm1;
   float lastCountPosArm2;
+
+  int exitFlagTilt = initialize_tilt(pInfo);
 
   printf("Reinitializing motor!\n");
 
@@ -1064,15 +1076,15 @@ void initialize(INFO *pInfo) {
   }
 
   printf("channel_rw dest\n");
-  channel_rw(pInfo, pInfo->hKeyMDest, (void *) tempPos, TID_FLOAT, 1);
+  channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMDest, (void *) tempPos, 1);
   printf("channel_rw dest done %f %f %f \n",tempPos[0],tempPos[1],tempPos[2]);
 
   // Cycle through each pair of motors corresponding to the same axis on each arm.
   // We want to make sure that we initialize the Z-axis first, so that the laser box is
   // fully out of the tank before we move in X and Y.
-  int order[4] = {2, 0, 1, 3}; //, 3};
+  int order[4] = {2, 3, 0, 1}; //, 3};
   int itmp;
-  for (itmp = 0; itmp < 3; itmp++) { // was 4 earlier...
+  for (itmp = 0; itmp < 4; itmp++) { // was 4 earlier...
     i = order[itmp];
 
     if ((tempNegLimitEnabled[i] == 1) || (tempNegLimitEnabled[i + 5] == 1)) {
@@ -1084,21 +1096,21 @@ void initialize(INFO *pInfo) {
     tempStart[i + 5] = tempNegLimitEnabled[i + 5];
 
     printf("channel_rw start\n");
-    channel_rw(pInfo, pInfo->hKeyMStart, (void *) tempStart, TID_BOOL, 1);
+    channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMStart, (void *) tempStart, 1);
     printf("channel_rw start done \n");
     // Wait for axes with enabled limit switches to hit their limits
     while (1) {
-      channel_rw(pInfo, pInfo->hKeyMPos, pInfo->CountPos, TID_FLOAT, 0);
+      channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMPos, pInfo->CountPos, 0);
       lastCountPosArm1 = pInfo->CountPos[i];
       lastCountPosArm2 = pInfo->CountPos[i + 5];
       //sleep(5);
       usleep(100000); // Approx. polling period
       if ((tempNegLimitEnabled[i] == 1) && (tempNegLimitEnabled[i + 5] == 1)) {// If both gantry axes are enabled.
         cm_msg(MDEBUG, "initialize", "Polling axes %i and %i.", i, i+5);
-        channel_rw(pInfo, pInfo->hKeyMLimitNeg, (void *) pInfo->neg_AxisLimit, TID_BOOL, 0);
+        channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMLimitNeg, (void *) pInfo->neg_AxisLimit, 0);
         if (pInfo->neg_AxisLimit[i] && pInfo->neg_AxisLimit[i + 5]) break;
         else {
-          channel_rw(pInfo, pInfo->hKeyMPos, pInfo->CountPos, TID_FLOAT, 0);
+          channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMPos, pInfo->CountPos, 0);
 
           //Print tests
           printf("Pos Count1: %f\n",pInfo->CountPos[0]);
@@ -1120,14 +1132,14 @@ void initialize(INFO *pInfo) {
           if (pInfo->CountPos[i] == lastCountPosArm1 && !pInfo->neg_AxisLimit[i]) { 
             cm_msg(MERROR, "initialize",
                    "Axis %i not moving. Stopping initialization since limit switch must be broken. %f %f ", i, pInfo->CountPos[i], lastCountPosArm1);
-            channel_rw(pInfo, pInfo->hKeyMStop, (void *) tempStop, TID_BOOL, 1);
+            channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMStop, (void *) tempStop, 1);
             exitFlag = 1;
             break;
           }
           if (pInfo->CountPos[i + 5] == lastCountPosArm2 && !pInfo->neg_AxisLimit[i + 5]) {
             cm_msg(MERROR, "initialize",
                    "Axis %i not moving. Stopping initialization since limit switch must be broken. %i %i ", i + 5,pInfo->CountPos[i + 5], lastCountPosArm2,pInfo->neg_AxisLimit[i + 5] );
-            channel_rw(pInfo, pInfo->hKeyMStop, (void *) tempStop, TID_BOOL, 1);
+            channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMStop, (void *) tempStop, 1);
             exitFlag = 1;
             break;
           }
@@ -1136,30 +1148,30 @@ void initialize(INFO *pInfo) {
         break;
       } else if (tempNegLimitEnabled[i] == 0) {  // If only second gantry axis is enabled.
         cm_msg(MDEBUG, "initialize", "Polling axis %i.", i + 5);
-        channel_rw(pInfo, pInfo->hKeyMLimitNeg, (void *) pInfo->neg_AxisLimit, TID_BOOL, 0);
+        channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMLimitNeg, (void *) pInfo->neg_AxisLimit, 0);
         if (pInfo->neg_AxisLimit[i + 5]) {
           break;
         } else {
-          channel_rw(pInfo, pInfo->hKeyMPos, pInfo->CountPos, TID_FLOAT, 0);
+          channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMPos, pInfo->CountPos, 0);
           if (pInfo->CountPos[i + 5] == lastCountPosArm2) {
             cm_msg(MERROR, "initialize",
                    "Axis %i not moving. Stopping initialization since limit switch must be broken.", i + 5);
-            channel_rw(pInfo, pInfo->hKeyMStop, (void *) tempStop, TID_BOOL, 1);
+            channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMStop, (void *) tempStop, 1);
             exitFlag = 1;
             break;
           }
         }
       } else {// If only first gantry axis is enabled.
         cm_msg(MDEBUG, "initialize", "Polling axis %i.", i);
-        channel_rw(pInfo, pInfo->hKeyMLimitNeg, (void *) pInfo->neg_AxisLimit, TID_BOOL, 0);
+        channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMLimitNeg, (void *) pInfo->neg_AxisLimit, 0);
         if (pInfo->neg_AxisLimit[i]) {
           break;
         } else {
-          channel_rw(pInfo, pInfo->hKeyMPos, pInfo->CountPos, TID_FLOAT, 0);
+          channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMPos, pInfo->CountPos, 0);
           if (pInfo->CountPos[i] == lastCountPosArm1) {
             cm_msg(MERROR, "initialize",
                    "Axis %i not moving. Stopping initialization since limit switch must be broken.", i);
-            channel_rw(pInfo, pInfo->hKeyMStop, (void *) tempStop, TID_BOOL, 1);
+            channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMStop, (void *) tempStop, 1);
             exitFlag = 1;
             break;
           }
@@ -1176,14 +1188,14 @@ void initialize(INFO *pInfo) {
   pInfo->Moving = 1;
   while (pInfo->Moving) {
     pInfo->Moving = 0;
-    channel_rw(pInfo, pInfo->hKeyMMoving, (void *) pInfo->AxisMoving, TID_BOOL, 0);
+    channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMMoving, (void *) pInfo->AxisMoving, 0);
     for (i = gantry_motor_start; i < gantry_motor_end; i++) pInfo->Moving = pInfo->Moving || pInfo->AxisMoving[i];
   }
 
   if (exitFlag == 0) {
     // Determine the motor positions at the origin and put the results in
     // pInfo->mOrigin
-    channel_rw(pInfo, pInfo->hKeyMPos, pInfo->CountPos, TID_FLOAT, 0);
+    channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMPos, pInfo->CountPos, 0);
     for (i = 0; i < 10; i++) {
       //for(i = gantry_motor_start; i < gantry_motor_end ; i++){
       // only exception in flexible for loop: even if other motor is off, still initialize to LimPos...TF: safe??
@@ -1203,10 +1215,8 @@ void initialize(INFO *pInfo) {
     db_set_data(pInfo->hDB, pInfo->hKeyPos, &pInfo->Position, 10 * sizeof(float), 10, TID_FLOAT);
   }
 
-  int exitFlagTilt = initialize_tilt(pInfo);
 
-
-  if (exitFlag == 0)  { 
+  if (exitFlag == 0 && exitFlagTilt==0)  { 
     // Set Initialized to 1 and exit    
     pInfo->Initialized = 1;
     db_set_data(pInfo->hDB, pInfo->hKeyInit, &pInfo->Initialized, sizeof(BOOL), 1, TID_BOOL);
@@ -1373,13 +1383,13 @@ int generate_path(INFO *pInfo) {
   double rad = pi / 180;
 
   double gant1_rot1 = pInfo->Destination[3] * rad;
-  double gant2_rot1 = pInfo->Destination[8] * rad;
+  double gant2_rot1 = 0.0; // pInfo->Destination[8] * rad;
   double gant1_rot2 = pInfo->Position[3] * rad;
-  double gant2_rot2 = pInfo->Position[8] * rad;
+  double gant2_rot2 = 0.0; // pInfo->Position[8] * rad;
   double gant1_tilt_end = pInfo->Position[4] * rad;
-  double gant2_tilt_end = pInfo->Position[9] * rad;
+  double gant2_tilt_end = 0.0; // pInfo->Position[9] * rad;
   double gant1_tilt_start = pInfo->Destination[4] * rad;
-  double gant2_tilt_start = pInfo->Destination[9] * rad;
+  double gant2_tilt_start = 0.0; // pInfo->Destination[9] * rad;
 
   /**NEW**///Rika(31Mar2017)
   // Stores z-height from gantry to lowest point on optical box for different tilt.
@@ -1805,18 +1815,18 @@ int generate_path(INFO *pInfo) {
 
   // Rotation and tilt paths for both gantries
   std::pair<double, double> rot_path1 = std::make_pair(pInfo->Position[3], pInfo->Destination[3]);
-  std::pair<double, double> rot_path2 = std::make_pair(pInfo->Position[8], pInfo->Destination[8]);
+  std::pair<double, double> rot_path2 =std::make_pair(0.0,0.0);// std::make_pair(pInfo->Position[8], pInfo->Destination[8]);
   std::pair<double, double> rot_start1 = std::make_pair(pInfo->Position[3], pInfo->Position[3]);
-  std::pair<double, double> rot_start2 = std::make_pair(pInfo->Position[8], pInfo->Position[8]);
+  std::pair<double, double> rot_start2 = std::make_pair(0.0,0.0);//std::make_pair(pInfo->Position[8], pInfo->Position[8]);
   std::pair<double, double> rot_end1 = std::make_pair(pInfo->Destination[3], pInfo->Destination[3]);
-  std::pair<double, double> rot_end2 = std::make_pair(pInfo->Destination[8], pInfo->Destination[8]);
+  std::pair<double, double> rot_end2 = std::make_pair(0.0,0.0);//std::make_pair(pInfo->Destination[8], pInfo->Destination[8]);
 
   std::pair<double, double> tilt_path1 = std::make_pair(pInfo->Position[4], pInfo->Destination[4]);
-  std::pair<double, double> tilt_path2 = std::make_pair(pInfo->Position[9], pInfo->Destination[9]);
+  std::pair<double, double> tilt_path2 = std::make_pair(0.0,0.0);//std::make_pair(pInfo->Position[9], pInfo->Destination[9]);
   std::pair<double, double> tilt_start1 = std::make_pair(pInfo->Position[4], pInfo->Position[4]);
-  std::pair<double, double> tilt_start2 = std::make_pair(pInfo->Position[9], pInfo->Position[9]);
+  std::pair<double, double> tilt_start2 = std::make_pair(0.0,0.0);//std::make_pair(pInfo->Position[9], pInfo->Position[9]);
   std::pair<double, double> tilt_end1 = std::make_pair(pInfo->Destination[4], pInfo->Destination[4]);
-  std::pair<double, double> tilt_end2 = std::make_pair(pInfo->Destination[9], pInfo->Destination[9]);
+  std::pair<double, double> tilt_end2 = std::make_pair(0.0,0.0);//std::make_pair(pInfo->Destination[9], pInfo->Destination[9]);
 
   // determine good paths
   bool goodPath00 = false, goodPath01 = false;
@@ -2073,7 +2083,6 @@ int generate_path(INFO *pInfo) {
   // move rotation first  
  if (move_rotation_first) {
    pInfo->MovePath[3][1] = round((pInfo->Destination[3] - pInfo->LimPos[3]) * pInfo->mScale[3] + pInfo->mOrigin[3]);
-   pInfo->MovePath[8][1] = round((pInfo->Destination[8] - pInfo->LimPos[8]) * pInfo->mScale[8] + pInfo->mOrigin[8]);
  }
 
 
@@ -2081,7 +2090,6 @@ int generate_path(INFO *pInfo) {
   // Tilt first - tilt is always either increasing or decreasing boundary size
   if (tiltfirst) {
    pInfo->MovePath[4][1] = round((pInfo->Destination[4] - pInfo->LimPos[4]) * pInfo->mScale[4] + pInfo->mOrigin[4]);
-   pInfo->MovePath[9][1] = round((pInfo->Destination[9] - pInfo->LimPos[9]) * pInfo->mScale[9] + pInfo->mOrigin[9]);
   }
 
   // Set paths and ordering for gantry move 
@@ -2167,31 +2175,28 @@ int generate_path(INFO *pInfo) {
   if (!move_rotation_first) {
    pInfo->MovePath[3][path1.size() + path2.size() + 2] = round(
        (pInfo->Destination[3] - pInfo->LimPos[3]) * pInfo->mScale[3] + pInfo->mOrigin[3]);
-   pInfo->MovePath[8][path1.size() + path2.size() + 2] = round(
-       (pInfo->Destination[8] - pInfo->LimPos[8]) * pInfo->mScale[8] + pInfo->mOrigin[8]);
+  
   } else {
    pInfo->MovePath[3][path1.size() + path2.size() + 2] = pInfo->MovePath[3][path1.size() + path2.size() + 1];
-   pInfo->MovePath[8][path1.size() + path2.size() + 2] = pInfo->MovePath[8][path1.size() + path2.size() + 1];
   }
 
   // Move tilt
   if (!tiltfirst) {
    pInfo->MovePath[4][path1.size() + path2.size() + 2] = round(
        (pInfo->Destination[4] - pInfo->LimPos[4]) * pInfo->mScale[4] + pInfo->mOrigin[4]);
-   pInfo->MovePath[9][path1.size() + path2.size() + 2] = round(
-       (pInfo->Destination[9] - pInfo->LimPos[9]) * pInfo->mScale[9] + pInfo->mOrigin[9]);
+   
   } else {
    pInfo->MovePath[4][path1.size() + path2.size() + 2] = pInfo->MovePath[4][path1.size() + path2.size() + 1];
-   pInfo->MovePath[9][path1.size() + path2.size() + 2] = pInfo->MovePath[9][path1.size() + path2.size() + 1];
  }
 
   for (unsigned int i = 0; i < path1.size() + path2.size() + 3; ++i) {
     for (int j = gantry_motor_start; j < gantry_motor_end; j++) {
-		if (j==3 || j==8 ||j==4 || j==9){
-			continue;	
-		}
-	  cm_msg(MDEBUG, "generate_path", "Destination[%i][%i] = %6.3f (Count Destination = %6.0f, Remaining =  %6.0f)", j,
-             i, pInfo->Destination[j], pInfo->MovePath[j][i], pInfo->MovePath[j][i] - pInfo->CountPos[j]);
+      if (j==8 || j==9){ // skip rotation/tilt for gantry1
+        continue;
+      }
+
+      cm_msg(MDEBUG, "generate_path", "Destination[%i][%i] = %6.3f (Count Destination = %6.0f, Remaining =  %6.0f)", j,
+              i, pInfo->Destination[j], pInfo->MovePath[j][i], pInfo->MovePath[j][i] - pInfo->CountPos[j]);
 			 
     }
   }
@@ -2231,14 +2236,14 @@ void move(INFO *pInfo) {
   printf("Moving to path index: %i\n", pInfo->PathIndex);
 
   // Read in axis positions (in counts)
-  channel_rw(pInfo, pInfo->hKeyMPos, (void *) pInfo->CountPos, TID_FLOAT, 0);
+  channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMPos, (void *) pInfo->CountPos, 0);
 
   // Determine required destinations to be sent to the motors
   for (i = gantry_motor_start; i < gantry_motor_end; i++) {
-    pInfo->CountDest[i] = pInfo->MovePath[i][pInfo->PathIndex] - pInfo->CountPos[i];
-    if (i==3 || i==8 ||i==4 || i==9){
-      continue;	
+    if (i==8 || i==9){ // skip rotation/tilt for gantry1
+      continue;
     }
+    pInfo->CountDest[i] = pInfo->MovePath[i][pInfo->PathIndex] - pInfo->CountPos[i];
     //DEBUG
     printf("MD[%i]=%6.0f(%6.0f) \n", i, pInfo->CountDest[i], pInfo->CountPos[i]);
     if (i == 4 || i == 9) {
@@ -2260,7 +2265,7 @@ void move(INFO *pInfo) {
 
   // Start motors towards the specified destinations
   // Write motor destinations to the ODB
-  channel_rw(pInfo, pInfo->hKeyMDest, (void *) pInfo->CountDest, TID_FLOAT, 1);
+  channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMDest, (void *) pInfo->CountDest, 1);
 
   //More print Tests Jun-14
   printf("hKeyMPos [0]: %f",pInfo->hKeyMPos[0]);
@@ -2282,7 +2287,7 @@ void move(INFO *pInfo) {
     //    printf("\nChannel_rw called at time : %lf\n", ss_millitime());
     // Set the ODB values to start a move
 
-    channel_rw(pInfo, pInfo->hKeyMStart, (void *) start, TID_BOOL, 1);
+    channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMStart, (void *) start, 1);
     usleep(100000);//0.1 sec
 
     waiting = 1;
@@ -2380,7 +2385,7 @@ void stop_move(HNDLE hDB, HNDLE hKey, void *data) {
   INFO *pInfo = (INFO *) data;
 
   BOOL stop[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-  channel_rw(pInfo, pInfo->hKeyMStop, (void *) stop, TID_BOOL, 1);
+  channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMStop, (void *) stop, 1);
 
   switch (pInfo->AbortCode) {
     case AC_USER_INPUT:
@@ -2410,7 +2415,7 @@ void monitor(HNDLE hDB, HNDLE hKey, void *data) {
   /*-- Update variables section of ODB -----------------------------*/
 
   // Copy variable indicating if each axis is moving, and write this to ODB
-  channel_rw(pInfo, pInfo->hKeyMMoving, (void *) pInfo->AxisMoving, TID_BOOL, 0);
+  channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMMoving, (void *) pInfo->AxisMoving, 0);
   db_set_data(pInfo->hDB, pInfo->hKeyAxMoving, pInfo->AxisMoving, 10 * sizeof(float), 10, TID_BOOL);
 
   // Check if any of the axes are moving, and write this to ODB
@@ -2423,18 +2428,19 @@ void monitor(HNDLE hDB, HNDLE hKey, void *data) {
 
 
   // Get the axis positions and write to ODB
-  channel_rw(pInfo, pInfo->hKeyMPos, (void *) pInfo->CountPos, TID_FLOAT, 0);
+  channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMPos, (void *) pInfo->CountPos, 0);
   for (i = gantry_motor_start; i < gantry_motor_end; i++) {
-	if (i==3 || i==8 ||i==4 || i==9){
-		continue;	
-	}
+    if (i==8 || i==9){ // skip rotation/tilt for gantry1
+      continue;
+    }
+
     pInfo->Position[i] = (pInfo->CountPos[i] - pInfo->mOrigin[i]) / pInfo->mScale[i] + pInfo->LimPos[i];
   }
   db_set_data(pInfo->hDB, pInfo->hKeyPos, pInfo->Position, 10 * sizeof(float), 10, TID_FLOAT);
 
   // Check for limit switches triggered and write to ODB
-  channel_rw(pInfo, pInfo->hKeyMLimitNeg, (void *) pInfo->neg_AxisLimit, TID_BOOL, 0);
-  channel_rw(pInfo, pInfo->hKeyMLimitPos, (void *) pInfo->pos_AxisLimit, TID_BOOL, 0);
+  channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMLimitNeg, (void *) pInfo->neg_AxisLimit, 0);
+  channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMLimitPos, (void *) pInfo->pos_AxisLimit, 0);
   db_set_data(pInfo->hDB, pInfo->hKeyAxLimitNeg, pInfo->neg_AxisLimit, 10 * sizeof(BOOL), 10, TID_BOOL);
   db_set_data(pInfo->hDB, pInfo->hKeyAxLimitPos, pInfo->pos_AxisLimit, 10 * sizeof(BOOL), 10, TID_BOOL);
 
@@ -2498,14 +2504,6 @@ void monitor(HNDLE hDB, HNDLE hKey, void *data) {
 
 
 
-
-
-
-
-
-
-
-
 /*-- Channel Read/Write --------------------------------------------*/
 // Used to communicate with the variables in the motor frontend.
 // Arguments:
@@ -2514,199 +2512,62 @@ void monitor(HNDLE hDB, HNDLE hKey, void *data) {
 //		values: Pointer to the array from which to read/write data
 //		type: Type ID of the variable to be written (TID_FLOAT, TID_BOOL, TID_INT)
 //		rw: set to 0 for read from ODB, 1 for write to ODB
-void channel_rw(INFO *pInfo, HNDLE *hKey, void *values, DWORD type, BOOL rw) {
-
-//!!!!The Below comment is meant to help expalin how this function works as it uses "function-like" macros which people may not be famillar with. 
-
-/*
-//STORE_DATA and READ_DATA are "function-like" macros using the #define preprocessor macro (See lines 60 and 76) #define performs textual replacement. When used as a function-like macro #define will take arguments like a function. 
-//EXAMPLE:: STORE_DATA(float, values, size) is a function-like macro. The preproccesor will replace the line STORE_DATA(float); with the lines of code listed after the #define (see line 76) and everywhere that the text "TYPE" appears in those lines of code will be replaced with the text float. END EXAMPLE
-//The "function-like" are used to reduce the number of lines of code and to improve the readibility of the code. It is used to accomplish what templete functions do in C++
-//NOTE!!:: Use of template functions can be difficult when debugging this section as the code you see is not what the compiler sees. The compiler sees the code after the preproccesor has completed the text replacement. If debugging this section it may be wise to not use the macro and instead do the textual replacement yourself and then debug. Comment by Ben Krupicz  
-*/
-
+template <class dtype, DWORD db>
+void channel_rw(INFO *pInfo, HNDLE *hKey, void *values, BOOL rw) {
+  
   int size;
-  int buff_size;
   void *motor00_values;
   void *motor01_values;
 
-
-
-  switch (type) {
-    case TID_FLOAT:
-      //      printf("TID_FLOAT\n");
-      // STORE_DATA(TYPE) determines the correct value for the size value and fills  motor00_values and motor01_values with the entries in the values variable
-      //STORE_DATA(float);
-      float motor00_type_values[8];
-      float motor01_type_values[8];
-      
-      buff_size=sizeof(motor00_type_values);
-      size = sizeof(float);
-      
-      motor00_type_values[0]= 0;
-      motor00_type_values[1]= 0;
-      motor00_type_values[2]= 0;
-      motor00_type_values[3]=*((float*)(values+4*size));   // Tilt
-      motor00_type_values[4]=*((float*)(values+3*size));   // Rotary
-      motor00_type_values[5]=*((float*)(values+0*size));   // X
-      motor00_type_values[6]=*((float*)(values+1*size));   // Y
-      motor00_type_values[7]=*((float*)(values+2*size));   // Z
-        
-      motor01_type_values[0]= 0;  
-      motor01_type_values[1]=*((float*)(values+6*size));   // Y
-      motor01_type_values[2]=*((float*)(values+7*size));   // Z
-      motor01_type_values[3]= 0;
-      motor01_type_values[4]=*((float*)(values+8*size));   // Rotary
-      motor01_type_values[5]=*((float*)(values+9*size));   // Tilt
-      motor01_type_values[6]=*((float*)(values+5*size));   // X
-      motor01_type_values[7]= 0;  
-      motor00_values = motor00_type_values;
-      motor01_values = motor01_type_values;
-      
-      for(int i = 0; i<8; i++){
-	//float tmp = ((float*)motor00_values)[i];
-	printf("",i,((float*)motor00_values)[i]);
-      }      
-
-      break;
-    case TID_BOOL: 
-      //      printf("TID_BOOL\n");
-
-      BOOL motor00_bool_values[8];
-      BOOL motor01_bool_values[8];
-      
-      buff_size=sizeof(motor00_bool_values);
-      size = sizeof(BOOL);
-      
-      motor00_bool_values[0]= 0;
-      motor00_bool_values[1]= 0;
-      motor00_bool_values[2]= 0;
-      motor00_bool_values[3]=*((BOOL*)(values+4*size));   // Tilt
-      motor00_bool_values[4]=*((BOOL*)(values+3*size));   // Rotary
-      motor00_bool_values[5]=*((BOOL*)(values+0*size));   // X
-      motor00_bool_values[6]=*((BOOL*)(values+1*size));   // Y
-      motor00_bool_values[7]=*((BOOL*)(values+2*size));   // Z
-        
-      motor01_bool_values[0]= 0;  
-      motor01_bool_values[1]=*((BOOL*)(values+6*size));   // Y
-      motor01_bool_values[2]=*((BOOL*)(values+7*size));   // Z
-      motor01_bool_values[3]= 0;
-      motor01_bool_values[4]=*((BOOL*)(values+8*size));   // Rotary
-      motor01_bool_values[5]=*((BOOL*)(values+9*size));   // Tilt
-      motor01_bool_values[6]=*((BOOL*)(values+5*size));   // X
-      motor01_bool_values[7]= 0;  
-      motor00_values = motor00_bool_values;
-      motor01_values = motor01_bool_values;
-
-      for(int i = 0; i<8; i++){
-	//((float*)motor00_values)[i];
-	printf("",i,((BOOL*)motor00_values)[i]);
-      }      
-      break;
-    case TID_INT: 
-      //      printf("TID_INT\n");
-
-      int motor00_int_values[8];
-      int motor01_int_values[8];
-      
-      buff_size=sizeof(motor00_int_values);
-      size = sizeof(int);
-      
-      motor00_int_values[0]= 0;
-      motor00_int_values[1]= 0;
-      motor00_int_values[2]= 0;
-      motor00_int_values[3]=*((int*)(values+4*size));   // Tilt
-      motor00_int_values[4]=*((int*)(values+3*size));   // Rotary
-      motor00_int_values[5]=*((int*)(values+0*size));   // X
-      motor00_int_values[6]=*((int*)(values+1*size));   // Y
-      motor00_int_values[7]=*((int*)(values+2*size));   // Z
-        
-      motor01_int_values[0]= 0;  
-      motor01_int_values[1]=*((int*)(values+6*size));   // Y
-      motor01_int_values[2]=*((int*)(values+7*size));   // Z
-      motor01_int_values[3]= 0;
-      motor01_int_values[4]=*((int*)(values+8*size));   // Rotary
-      motor01_int_values[5]=*((int*)(values+9*size));   // Tilt
-      motor01_int_values[6]=*((int*)(values+5*size));   // X
-      motor01_int_values[7]= 0;  
-      motor00_values = motor00_int_values;
-      motor01_values = motor01_int_values;
-
-      for(int i = 0; i<8; i++){
-	//((float*)motor00_values)[i];
-	printf("",i,((int*)motor00_values)[i]);
-      }      
-	    
-      //STORE_DATA(int)
-      break;
-  }
-
-  if(type == TID_FLOAT){
-    //float *fvalues = (float*)motor00_values;
-    for(int i = 0; i<10; i++){
-
-      //      printf("channel_rw before float %i %f \n",i,((float*)values)[i] );
-    }
-
-    for(int i = 0; i<8; i++){
-
-      //      printf("channel_rw after float %i %f \n",i,((float*)motor00_values)[i] );
-    }
+  dtype motor00_type_values[8];
+  dtype motor01_type_values[8];
+  
+  int buff_size=sizeof(motor00_type_values);
+  size = sizeof(dtype);
+  
+  motor00_type_values[0]= 0;
+  motor00_type_values[1]= 0;
+  motor00_type_values[2]= 0;
+  motor00_type_values[3]=*((dtype*)(values+4*size));   // Tilt
+  motor00_type_values[4]=*((dtype*)(values+3*size));   // Rotary
+  motor00_type_values[5]=*((dtype*)(values+0*size));   // X
+  motor00_type_values[6]=*((dtype*)(values+1*size));   // Y
+  motor00_type_values[7]=*((dtype*)(values+2*size));   // Z
+    
+  motor01_type_values[0]= 0;  
+  motor01_type_values[1]=*((dtype*)(values+6*size));   // Y
+  motor01_type_values[2]=*((dtype*)(values+7*size));   // Z
+  motor01_type_values[3]= 0;
+  motor01_type_values[4]=*((dtype*)(values+8*size));   // Rotary
+  motor01_type_values[5]=*((dtype*)(values+9*size));   // Tilt
+  motor01_type_values[6]=*((dtype*)(values+5*size));   // X
+  motor01_type_values[7]= 0;  
+  motor00_values = motor00_type_values;
+  motor01_values = motor01_type_values;
+    
+  for(int i = 0; i<8; i++){
+    printf("",i,((dtype*)motor00_values)[i]);  
   }
 
 
   if (rw == 0) {
-    db_get_data(pInfo->hDB, hKey[0], motor00_values, &buff_size, type);
-    db_get_data(pInfo->hDB, hKey[1], motor01_values, &buff_size, type);
-
-    switch (type) {
-      case TID_FLOAT:
-        //READ_VALUES sortes the values from motor00_values and motor01_values in the values array
-
-	*((float*)(values + 0*size)) = *((float*)(motor00_values+5*size));
-	*((float*)(values + 1*size)) = *((float*)(motor00_values+6*size));
-	*((float*)(values + 2*size)) = *((float*)(motor00_values+7*size));
-	*((float*)(values + 3*size)) = *((float*)(motor00_values+4*size));
-	*((float*)(values + 4*size)) = *((float*)(motor00_values+3*size));
-	*((float*)(values + 5*size)) = *((float*)(motor01_values+6*size));
-	*((float*)(values + 6*size)) = *((float*)(motor01_values+1*size));
-	*((float*)(values + 7*size)) = *((float*)(motor01_values+2*size));
-	*((float*)(values + 8*size)) = *((float*)(motor01_values+4*size));
-	*((float*)(values + 9*size)) = *((float*)(motor01_values+5*size));
-	//	READ_VALUES(float); 
-        break;
-      case TID_BOOL: 
-	*((BOOL*)(values + 0*size)) = *((BOOL*)(motor00_values+5*size));
-	*((BOOL*)(values + 1*size)) = *((BOOL*)(motor00_values+6*size));
-	*((BOOL*)(values + 2*size)) = *((BOOL*)(motor00_values+7*size));
-	*((BOOL*)(values + 3*size)) = *((BOOL*)(motor00_values+4*size));
-	*((BOOL*)(values + 4*size)) = *((BOOL*)(motor00_values+3*size));
-	*((BOOL*)(values + 5*size)) = *((BOOL*)(motor01_values+6*size));
-	*((BOOL*)(values + 6*size)) = *((BOOL*)(motor01_values+1*size));
-	*((BOOL*)(values + 7*size)) = *((BOOL*)(motor01_values+2*size));
-	*((BOOL*)(values + 8*size)) = *((BOOL*)(motor01_values+4*size));
-	*((BOOL*)(values + 9*size)) = *((BOOL*)(motor01_values+5*size));
-	//READ_VALUES(BOOL);
-        break;
-      case TID_INT: 
-	*((int*)(values + 0*size)) = *((int*)(motor00_values+5*size));
-	*((int*)(values + 1*size)) = *((int*)(motor00_values+6*size));
-	*((int*)(values + 2*size)) = *((int*)(motor00_values+7*size));
-	*((int*)(values + 3*size)) = *((int*)(motor00_values+4*size));
-	*((int*)(values + 4*size)) = *((int*)(motor00_values+3*size));
-	*((int*)(values + 5*size)) = *((int*)(motor01_values+6*size));
-	*((int*)(values + 6*size)) = *((int*)(motor01_values+1*size));
-	*((int*)(values + 7*size)) = *((int*)(motor01_values+2*size));
-	*((int*)(values + 8*size)) = *((int*)(motor01_values+4*size));
-	*((int*)(values + 9*size)) = *((int*)(motor01_values+5*size));
-	//READ_VALUES(int);
-        break;
-    }
+    db_get_data(pInfo->hDB, hKey[0], motor00_values, &buff_size, db);
+    db_get_data(pInfo->hDB, hKey[1], motor01_values, &buff_size, db);
+    *((dtype*)(values + 0*size)) = *((dtype*)(motor00_values+5*size));
+    *((dtype*)(values + 1*size)) = *((dtype*)(motor00_values+6*size));
+    *((dtype*)(values + 2*size)) = *((dtype*)(motor00_values+7*size));
+    *((dtype*)(values + 3*size)) = *((dtype*)(motor00_values+4*size));
+    *((dtype*)(values + 4*size)) = *((dtype*)(motor00_values+3*size));
+    *((dtype*)(values + 5*size)) = *((dtype*)(motor01_values+6*size));
+    *((dtype*)(values + 6*size)) = *((dtype*)(motor01_values+1*size));
+    *((dtype*)(values + 7*size)) = *((dtype*)(motor01_values+2*size));
+    *((dtype*)(values + 8*size)) = *((dtype*)(motor01_values+4*size));
+    *((dtype*)(values + 9*size)) = *((dtype*)(motor01_values+5*size));
+    
   } else {
-
     // Write data to ODB
-    db_set_data(pInfo->hDB, hKey[0], motor00_values, buff_size, 8, type);
-    db_set_data(pInfo->hDB, hKey[1], motor01_values, buff_size, 8, type);
+    db_set_data(pInfo->hDB, hKey[0], motor00_values, buff_size, 8, db);
+    db_set_data(pInfo->hDB, hKey[1], motor01_values, buff_size, 8, db);
 
   }
 }

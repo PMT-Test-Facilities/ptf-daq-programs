@@ -38,6 +38,8 @@ If it isn't, go run the `start_daq.sh` bash script in `/home/midptf/online/bin`.
 4. Start the feMotor00  and feMotor01 frontends. Start both! Even if you're only using gantry0. 
 At the time of writing the code only works (reliably) if both gantries are movable. 
 
+Reinitializing takes a while! Give it at least 3-4 minutes. The displayed positions may show nonsense temporarily while the optical box tilts around and things don't exactly know where the gantries are 
+
 # Common Problems
 
 ## The buffer is too small
@@ -90,7 +92,14 @@ No. A wiki would be useful though.
 There are a handful of PDFs made over several years. 
 These are largely out of date now, however. 
 
-# Contributing 
+# Contribution Rules
 
 It is **imperative** that any changes you make are consistently pushed to github with meaningful commit messages. It is equally important that all changes made are **documented**! 
 I cannot stress that enough.
+
+Old code that isn't being used anymore? Delete it.
+If you've been committing your code, then you risk nothing by deleting it. **Do not commit any code with blocks of commented code!**
+
+Rather than use duplicates of code, use a *method!* 
+Do you need multiple versions of a method because you have multiple data types? 
+Use a *template.*
