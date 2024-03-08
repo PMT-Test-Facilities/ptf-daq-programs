@@ -60,7 +60,7 @@ LIBS = -lm -lz -lutil -lnsl -lpthread -lrt
 
 # all: default target for "make"
 
-all:feMotor feMove feScan fePhidget feptfwiener.exe testVI 
+all:feMotor feMove feScan fePhidget  testVI 
 
 
 gefvme.o: %.o: $(MIDASSYS)/drivers/vme/vmic/%.c
@@ -86,30 +86,17 @@ feMove: $(MIDASLIBS) $(MFE)  feMove.o TPathCalculator.o TRotationCalculator.o TG
 feScan: $(MIDASLIBS) $(MFE) feScan.o  ScanSequence.o
 	$(CXX) -o $@ $(CFLAGS) $^ $(MIDASLIBS) $(LIBS) $(VMELIBS)
 
-# DEPRECATED (from test phase)
-#feScanNew: $(MIDASLIBS) $(MFE) feScan_new.o 
-#	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS)
-
-# DEPRECATED (from test phase)
-#feScanNewNew: $(MIDASLIBS) $(MFE) feScan_newnew.o ScanSequence.o
-#	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS)
 testVI: $(MIDASLIBS) coilVoltageCurrent.o
 	$(CXX) -o $@ $(CFLAGS) $^ $(MIDASLIBS) $(LIBS) $(VMELIBS) # coilVoltageCurrent.cpp # -nostartfiles
 
 fedvm: $(MIDASLIBS) $(MFE) fedvm.o 
 	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS)
 
-fePhidget: $(MIDASLIBS) $(MFE) fePhidget22.o utils.o
+fePhidget: $(MIDASLIBS) $(MFE) fePhidget22.o 
 	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS) -lphidget22
 
 fesimdaq.exe: $(MFE) fesimdaq.o 
 	$(CXX) -o $@ $(CFLAGS) $(OSFLAGS) $^ $(MIDASLIBS)  $(MIDASLIBS) $(LIBS)
-
-feptfwiener.exe: %.exe: fewiener.cxx $(MIDASLIBS) $(MFE)
-	$(CXX) -o $@ $(CFLAGS) $(OSFLAGS) $^ $(MIDASLIBS) $(LIBS) -DFE_NAME=\"feptfwiener\" -DEQ_NAME=\"PtfWiener_Old\" -DEQ_EVID=EVID_PTFWIENER
-
-#feDegauss: $(MIDASLIBS) $(MFE) degauss.o feDegauss.o
-#	$(CXX) -o $@ $(CFLAGS) $^ $(MIDASLIBS) $(LIBS) $(VMELIBS) -DDEBUG
 
 
 %.o: $(MIDASSYS)/drivers/vme/%.c
