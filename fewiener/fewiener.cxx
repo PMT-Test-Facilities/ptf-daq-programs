@@ -25,6 +25,17 @@
 #include "midas.h"
 #include "msystem.h"
 
+/*
+   This is exceptionally confusing and should've been documented when it was originally written! 
+
+   By including this c-file, it's treated as being in the same translation unit. 
+   that way the static methods it contains can actually be used 
+
+   Since they're static, they'll also have acccess to the unique implementation of the frontend name and database handle, and no other frontends can accidentally write to the wrong place
+*/
+#include "utils.cxx"
+
+
 /* make frontend functions callable from the C framework */
 
 #ifndef FE_NAME
@@ -43,28 +54,28 @@
 /*-- Globals -------------------------------------------------------*/
 
 /* The frontend name (client name) as seen by other MIDAS clients   */
-   const char *frontend_name = FE_NAME;
+const char *frontend_name = FE_NAME;
 /* The frontend file name, don't change it */
-   const char *frontend_file_name = __FILE__;
+const char *frontend_file_name = __FILE__;
 /* frontend_loop is called periodically if this variable is TRUE    */
-   BOOL frontend_call_loop = TRUE;
+BOOL frontend_call_loop = TRUE;
 
 /* a frontend status page is displayed with this frequency in ms */
-   INT display_period = 0;
+INT display_period = 0;
 
 /* maximum event size produced by this frontend */
-   INT max_event_size = 200*1024;
+INT max_event_size = 200*1024;
 
 /* maximum event size for fragmented events (EQ_FRAGMENTED) */
-   INT max_event_size_frag = 1024*1024;
+INT max_event_size_frag = 1024*1024;
 
 /* buffer size to hold events */
-   INT event_buffer_size = 1*1024*1024;
+INT event_buffer_size = 1*1024*1024;
 
 BOOL equipment_common_overwrite = FALSE;
-  extern HNDLE hDB;
+extern HNDLE hDB;
 
-   char eq_name[256];
+char eq_name[256];
 
 /*-- Function declarations -----------------------------------------*/
   INT frontend_init();
@@ -133,7 +144,6 @@ BOOL equipment_common_overwrite = FALSE;
   resume_run:     When a run is resumed. Should enable trigger events.
 \********************************************************************/
 
-#include "utils.cxx"
 
 /*-- Global variables ----------------------------------------------*/
 
@@ -692,6 +702,7 @@ static void update_settings()
   sprintf(str, "/Equipment/%s/Settings/rampRate", eq_name);
 
   set.rampRate = odbReadFloat(str, 0, 0);
+  
 
   if (set.rampRate > 0) {
      cm_msg(MINFO, frontend_name, "Ramp rate %i", rdb.rampUpRates.empty());
@@ -1002,6 +1013,7 @@ INT frontend_init()
    char str[1024];
    sprintf(str, "/Equipment/%s/Settings/Hostname", eq_name);
 
+   std::cout << str << std::endl;
    gWienerDev = odbReadString(str, 0, "", 200);
 
    if (gWienerDev.length() < 2)
