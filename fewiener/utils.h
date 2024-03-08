@@ -1,12 +1,11 @@
-#ifndef UTILS_FILE
-#define UTILS_FILE
+
+#ifndef UTILS_FILE_INCL
+#define UTILS_FILE_INCL
 
 #include <midas.h>
 #include <cstring>
 #include <assert.h>
 
-extern const char* frontend_name;
-extern HNDLE hDB;
 
 int odbReadAny(const char*name,int index,int tid,void* value,int valueLength = 0);
 
