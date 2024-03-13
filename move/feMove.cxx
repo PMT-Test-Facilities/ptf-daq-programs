@@ -1,10 +1,8 @@
-
 //current version (working)
-/********************************************************************	\
+/********************************************************************\
  
   Name:         feMove.c 
   Created by:   Nils
-
   Contents:     Motion control frontend for PTF gantries. Implements
                 single move functionality of the gantry including path
                 planning and collision avoidance. Control of this
@@ -31,14 +29,13 @@
                    that debug messages are more helpful.
                 7. Move the limit disabling functionality to a seperate 
                    ODB variable.
-
   Revision history
   -------------------------------------------------------------------
   date         by    modification
   ---------    ---   ------------------------------------------------
   27-NOV-12    NSA   Implemented single arm simple motion
-   6-FEB-12		 NSA	 Cleaned up a bit, generalized some functionality
-										 for use with 2 arms
+   6-FEB-12 NSA Cleaned up a bit, generalized some functionality
+ for use with 2 arms
   3-APR-17    Rika   Updated code to include PMT polygon object for improved collision avoidance.
 \********************************************************************/
 #include <stdlib.h>
@@ -46,29 +43,80 @@
 #include <sys/time.h>
 #include "midas.h"
 #include "msystem.h"
-#include <iostream>
-#include <stdio.h>
 #include "mcstd.h"
+#include <stdio.h>
+#include <iostream>
 #include <math.h>
 #include <unistd.h>
 #include <string.h>
 #include "TPathCalculator.hxx" //Rika: See typedef for XYPoint, XYPolygon, XYLine here.
 #include "TRotationCalculator.hxx"
 #include "TGantryConfigCalculator.hxx" //Rika (27Mar2017): Added as a class shared between feMove & TRotationCalculator.
+
 #include "mfe.h"
 
+
+/*-- Globals -------------------------------------------------------*/
+// The two function-like macros below are used in void channel_rw(INFO *pInfo, HNDLE* hKey, void *values, DWORD type, BOOL rw);
+//Note:: See the funciton channel_rw for more information about these macros
+
+//The below preprocessor macro would only work if the "function like" macro was defined on a single line. An identical version of the marco is put in the comment below below but is properly spaced to make it possible to read the code
+#define READ_VALUES(TYPE){*((TYPE*)(values + 0*size)) = *((TYPE*)(motor00_values+5*size));*((TYPE*)(values + 1*size)) = *((TYPE*)(motor00_values+6*size));*((TYPE*)(values + 2*size)) = *((TYPE*)(motor00_values+7*size));*((TYPE*)(values + 3*size)) = *((TYPE*)(motor00_values+4*size));*((TYPE*)(values + 4*size)) = *((TYPE*)(motor00_values+3*size));*((TYPE*)(values + 5*size)) = *((TYPE*)(motor01_values+6*size));*((TYPE*)(values + 6*size)) = *((TYPE*)(motor01_values+1*size));*((TYPE*)(values + 7*size)) = *((TYPE*)(motor01_values+2*size));*((TYPE*)(values + 8*size)) = *((TYPE*)(motor01_values+4*size));*((TYPE*)(values + 9*size)) = *((TYPE*)(motor01_values+5*size));}
+
+/*#define READ_VALUES(TYPE){
+  *((TYPE*)(values + 0*size)) = *((TYPE*)(motor00_values+5*size));
+  *((TYPE*)(values + 1*size)) = *((TYPE*)(motor00_values+6*size));
+  *((TYPE*)(values + 2*size)) = *((TYPE*)(motor00_values+7*size));
+  *((TYPE*)(values + 3*size)) = *((TYPE*)(motor00_values+4*size));
+  *((TYPE*)(values + 4*size)) = *((TYPE*)(motor00_values+3*size));
+  *((TYPE*)(values + 5*size)) = *((TYPE*)(motor01_values+6*size));
+  *((TYPE*)(values + 6*size)) = *((TYPE*)(motor01_values+1*size));
+  *((TYPE*)(values + 7*size)) = *((TYPE*)(motor01_values+2*size));
+  *((TYPE*)(values + 8*size)) = *((TYPE*)(motor01_values+4*size));
+  *((TYPE*)(values + 9*size)) = *((TYPE*)(motor01_values+5*size));}*/
+
+//The below preprocessor macro would only work if the function like macro was defined on a single line. An identical version of the marco is put in the comment below but is properly spaced to make it possible to read the code
+#define STORE_DATA(TYPE) {TYPE motor00_TYPE_values[8];TYPE motor01_TYPE_values[8];buff_size=sizeof(motor00_TYPE_values);size = sizeof(TYPE);motor00_TYPE_values[0]= 0;motor00_TYPE_values[1]= 0;motor00_TYPE_values[2]= 0;motor00_TYPE_values[3]=*((TYPE*)(values+4*size));motor00_TYPE_values[4]=*((TYPE*)(values+3*size));motor00_TYPE_values[5]=*((TYPE*)(values+0*size));motor00_TYPE_values[6]=*((TYPE*)(values+1*size));motor00_TYPE_values[7]=*((TYPE*)(values+2*size));motor01_TYPE_values[0]= 0;motor01_TYPE_values[1]=*((TYPE*)(values+6*size));motor01_TYPE_values[2]=*((TYPE*)(values+7*size));motor01_TYPE_values[3]=0;motor01_TYPE_values[4]=*((TYPE*)(values+8*size));motor01_TYPE_values[5]=0;motor01_TYPE_values[6]=*((TYPE*)(values+5*size));motor01_TYPE_values[7]= 0;motor00_values = motor00_TYPE_values;motor01_values = motor01_TYPE_values;}
+
+/*
+#define STORE_DATA(TYPE) {
+  TYPE motor00_TYPE_values[8];
+  TYPE motor01_TYPE_values[8];
+  buff_size=sizeof(motor00_float_values);
+  size = sizeof(TYPE);
+  
+  motor00_TYPE_values[0]= 0;
+  motor00_TYPE_values[1]= 0;
+  motor00_TYPE_values[2]= 0;
+  motor00_TYPE_values[3]=*((TYPE*)(values+4*size));   // Tilt
+  motor00_TYPE_values[4]=*((TYPE*)(values+3*size));   // Rotary
+  motor00_TYPE_values[5]=*((TYPE*)(values+0*size));   // X
+  motor00_TYPE_values[6]=*((TYPE*)(values+1*size));   // Y
+  motor00_TYPE_values[7]=*((TYPE*)(values+2*size));   // Z
+        
+  motor01_TYPE_values[0]= 0;  
+  motor01_TYPE_values[1]=*((TYPE*)(values+6*size));   // Y
+  motor01_TYPE_values[2]=*((TYPE*)(values+7*size));   // Z
+  motor01_TYPE_values[3]= 0;
+  motor01_TYPE_values[4]=*((TYPE*)(values+8*size));   // Rotary
+  motor01_TYPE_values[5]= 0;*((TYPE*)(values+9*size));   // Tilt
+  motor01_TYPE_values[6]=*((TYPE*)(values+5*size));   // X
+  motor01_TYPE_values[7]= 0;  
+  motor00_values = motor00_TYPE_values;
+  motor01_values = motor01_TYPE_values;
+ }*/
 
 /* The generate_path return flags */
 #define GENPATH_SUCCESS  0
 #define GENPATH_BAD_DEST 1
 
-/* The Abort Codes used by stop_move 	*/
+/* The Abort Codes used by stop_move */
 #define AC_USER_INPUT 0
 #define AC_COLLISION  1
 #define AC_TIMEOUT    2
 
 /* The frontend name (client name) as seen by other MIDAS clients   */
-const char *frontend_name = "feMove";
+ const char *frontend_name = "feMove";
 
 /* The frontend file name, don't change it                          */
 const char *frontend_file_name = __FILE__;
@@ -106,8 +154,8 @@ double gantryTiltGearWidth = 0.060; //Use 0.070 for safety; measured to be 0.060
 double gantryOpticalBoxHeight = 0.095; //Use 0.110m for safety; measured to be 0.094 +/- 0.004m (27Apr2017)
 
 // Tank position & dimensions:
-double xtankCentre = 0.366; // Rika (24Apr2017): Updated to estimated new position after tank moved back into coils // Kevin (22Jan2018) estimate change from (0.360, 0.345) -> (0.401, 0.288) -> (0.366, 0.361) Feb21 -> (0.366, 0.371) Feb 23)
-double ytankCentre = 0.371;
+double xtankCentre = 0.375; // Rika (24Apr2017): Updated to estimated new position after tank moved back into coils // Kevin (22Jan2018) estimate change from (0.360, 0.345) -> (0.401, 0.288) -> (0.366, 0.361) Feb21 -> (0.366, 0.371) Feb 23)
+double ytankCentre = 0.3;
 double tankRadius = 0.61; // radius of tank ~0.61 // John (17Oct2019) reduced from 0.61 to 0.58 to prevent collision
 double tankPMTholderRadius = 0.53; // max/min from center where PMT holders sit
 
@@ -122,7 +170,7 @@ double pmtYcentre1 = 0.326; // 0.331
 int numPolySides = 12;
 double pmtPolyLayerHeight = 0.01; // 1cm thick polygons
 int numPolyLayers = 0.38 /
-                    pmtPolyLayerHeight; // Rika (27Apr2017): Inserted enough layers to cover the lowest position that the tip of the optical box can go to
+  pmtPolyLayerHeight; // Rika (27Apr2017): Inserted enough layers to cover the lowest position that the tip of the optical box can go to
 // i.e. if the optical box is tilted -40 degrees, the distance from the gantry z position to the tip of the optical box is 0.178m,
 //      so if the gantry goes down to its maximum z height (0.534m), the tip of the optical box will be at 0.178+0.534=0.712,
 //      which is 0.712-0.390=0.372m lower than the position of the top of the PMT (so make it 0.38m to play it safe).
@@ -138,6 +186,8 @@ double frpRadius = 0.322; // Rika (27Apr2017): radius of the rim of the FRP case
 // given rotation and tilt.
 TGantryConfigCalculator gantryConfigCalc(tiltMotorLength, gantryFrontHalfLength, gantryBackHalfLength,
                                          gantryOpticalBoxWidth, gantryTiltGearWidth, gantryOpticalBoxHeight);
+TGantryConfigCalculator nakedGantryConfigCalc(tiltMotorLength*0.001, gantryFrontHalfLength*0.001, gantryBackHalfLength*0.001,
+                                         gantryOpticalBoxWidth*0.001, gantryTiltGearWidth*0.001, gantryOpticalBoxHeight*0.001);
 
 // Create path calculator object
 TPathCalculator pathCalc_checkDestination(xtankCentre, ytankCentre, tankRadius, tankPMTholderRadius);
@@ -173,9 +223,9 @@ typedef struct {
   HNDLE hKeyDest, hKeyStart, hKeyStop, hKeyReInit;            // Equipment/Move/"Control"
   HNDLE hKeyVeloc, hKeyAccel, hKeyScale, hKeyChan, hKeyLimPos; // .../"Settings"
   HNDLE hKeyPos, hKeyInit, hKeySwap, hKeyBadDest, hKeyCompleted,
-      hKeyMoving, hKeyAxMoving, hKeyAxLimitNeg, hKeyAxLimitPos, hKeyInitializing; // .../"Variables"
+    hKeyMoving, hKeyAxMoving, hKeyAxLimitNeg, hKeyAxLimitPos, hKeyInitializing; // .../"Variables"
   HNDLE hKeyMDest[2], hKeyMStart[2], hKeyMStop[2], hKeyMMoving[2],
-      hKeyMPos[2], hKeyMLimitNeg[2], hKeyMLimitPos[2], hKeyMVel[2], hKeyMAcc[2]; // Motors
+    hKeyMPos[2], hKeyMLimitNeg[2], hKeyMLimitPos[2], hKeyMVel[2], hKeyMAcc[2]; // Motors
 
   HNDLE hKeyPhidget[2];
 
@@ -260,7 +310,7 @@ void move_init(HNDLE hDB, HNDLE hKey, void *data);
 
 int generate_path(INFO *pInfo);
 
-void monitor(HNDLE hDB, HNDLE hKey, void *data); 
+void monitor(HNDLE hDB, HNDLE hKey, void *data);
 
 void move(INFO *pInfo);
 
@@ -270,7 +320,7 @@ void initialize(INFO *pInfo);
 
 void reinitialize(HNDLE hDB, HNDLE hKey, void *data);
 
-template <class dtype, DWORD db> void channel_rw(INFO *pInfo, HNDLE *hKey, void *values, BOOL rw);
+void channel_rw(INFO *pInfo, HNDLE *hKey, void *values, DWORD type, BOOL rw);
 
 void
 getPMTpolygon(XYPolygon &poly, double pmtRadius, int polyNum, double pmtXcentre, double pmtYcentre, int numPolySides,
@@ -282,48 +332,41 @@ getPMTpolygon(XYPolygon &poly, double pmtRadius, int polyNum, double pmtXcentre,
 
 EQUIPMENT equipment[] = {
 
-    {"Move",            // equipment name
-        {5, 0,              // event ID, trigger mask
-            "SYSTEM",           // event buffer
-            EQ_PERIODIC,        // equipment type
-            0,                  // event source
-            "MIDAS",            // format
-            TRUE,               // enabled
-            RO_ALWAYS,          // read x
-            10000,              // read every x millisec
-            0,                  // stop run after this event limit
-            0,                  // number of sub event
-            60,                  // log history every x sec
-            "", "", "",},
-        read_trigger_event, // readout routine
-        NULL,               // class driver main routine
-        NULL,                // device driver list
-        NULL,               // init string
-    },
+  {"Move",            // equipment name
+   {5, 0,              // event ID, trigger mask
+    "SYSTEM",           // event buffer
+    EQ_PERIODIC,        // equipment type
+    0,                  // event source
+    "MIDAS",            // format
+    TRUE,               // enabled
+    RO_ALWAYS,          // read x
+    10000,              // read every x millisec
+    0,                  // stop run after this event limit
+    0,                  // number of sub event
+    60,                  // log history every x sec
+    "", "", "",},
+   read_trigger_event, // readout routine
+   NULL,               // class driver main routine
+   NULL,                // device driver list
+   NULL,               // init string
+  },
 
-    {""}
+  {""}
 };
 
 /********************************************************************\
           UNUSED callback routines for system transitions
-
 These routines are called whenever a system transition like start/
 stop of a run occurs. The routines are called on the following
 occations:
-
 *Note: Since we do not use run control with our system, none of
        these routines are being used in our code.
-
 %begin_of_run:   When a new run is started. Clear scalers, open
                  rungates, etc.
-
 %end_of_run:     Called on a request to stop a run. Can send
                  end-of-run event and close run gates.
-
 %pause_run:      When a run is paused. Should disable trigger events.
-
 %resume_run:     When a run is resumed. Should enable trigger events.
-
 \********************************************************************/
 
 /*-- Begin of Run --------------------------------------------------*/
@@ -398,7 +441,6 @@ INT read_scaler_event(char *pevent, INT off) {
 
 /********************************************************************\
              USED callback routines for system transitions
-
   frontend_init:  When the frontend program is started. This routine
                   sets up all the ODB variables and hotlink for the 
                   system. The memory for pInfo is allocated here. 
@@ -468,7 +510,7 @@ INT frontend_init() {
 
   /* Initialize "Settings" ODB variables */
   // Note: The following variables can only be changed when feMove is
-  //			 not running. If feMove is already running, changing these variables
+  // not running. If feMove is already running, changing these variables
   //       in the ODB will have no effect.
 
   // "Velocity"
@@ -568,7 +610,7 @@ INT frontend_init() {
   db_find_key(hDB, 0, "/Equipment/Motors01/Settings/Acceleration", &pInfo->hKeyMAcc[1]);
 
   // "Accelerometer tilt"
-  db_find_key(hDB, 0, "/Equipment/Phidget01/Variables", &pInfo->hKeyPhidget[0]);
+  db_find_key(hDB, 0, "/Equipment/Phidget00/Variables", &pInfo->hKeyPhidget[0]);
   db_find_key(hDB, 0, "/Equipment/Phidget01/Variables", &pInfo->hKeyPhidget[1]);
 
   /* Set up hotlinks */
@@ -585,25 +627,17 @@ INT frontend_init() {
   db_open_record(hDB, pInfo->hKeyMMoving[0], NULL, 8 * sizeof(BOOL), MODE_READ, monitor, pInfo);
   db_open_record(hDB, pInfo->hKeyMMoving[1], NULL, 8 * sizeof(BOOL), MODE_READ, monitor, pInfo);
   // Note: The variable hotlinked to monitor() is somewhat arbitrary, all that is 
-  //	   really needed is a variable that gets periodically updated in feMove.
+  //   really needed is a variable that gets periodically updated in feMove.
 
   /* Set motor velocities and accelerations to in feMotor */
-  printf("feMove init looping over %i %i\n", gantry_motor_start,gantry_motor_end);
   for (i = gantry_motor_start; i < gantry_motor_end; i++) {
     tempV[i] = pInfo->Velocity[i] * fabs(pInfo->mScale[i]);
     tempA[i] = pInfo->Acceleration[i] * fabs(pInfo->mScale[i]);
-    
-    printf("Move checks %i velo=%f accel=%f mscale=%f tempV=%f\n",i,pInfo->Velocity[i],pInfo->Acceleration[i], pInfo->mScale[i], tempV[i]);
-
   }
 
-  channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMVel, (void *) tempV, 1);
-  channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMAcc, (void *) tempA, 1);
-
-  //  return FE_ERR_HW;
+  channel_rw(pInfo, pInfo->hKeyMVel, (void *) tempV, TID_FLOAT, 1);
+  channel_rw(pInfo, pInfo->hKeyMAcc, (void *) tempA, TID_FLOAT, 1);
   return CM_SUCCESS;
-
-
 }
 
 /*-- Frontend Exit -------------------------------------------------*/
@@ -611,56 +645,40 @@ INT frontend_init() {
 INT frontend_exit() {
   return CM_SUCCESS;
 }
-double tilt_min = -105, tilt_max = 15; 
+
 /********************************************************************\
                 Main routines during frontend operation
-
   These routines are called when hotlinked ODB variables are changed
   during frontend operation. They operate by changing variables in 
   "Equipment/Motor" to control the gantry operation.
-
-  move_init:      Hotlinked to the variable "Start Move", this 
+move_init:      Hotlinked to the variable "Start Move", this 
                   function generates the move path and initializes 
                   the move.
-
-  initialize:	  This function moves the motors to the limit switches
-		  (in a guaranteed collision free manner) and determines
-		  the motor coordinates (in steps) at the origin. This
-		  value is placed in the variable pInfo->mOrigin.
-
- reinitialize:	  This function calls initialize (initializes the gantry
+initialize:  This function moves the motors to the limit switches
+(in a guaranteed collision free manner) and determines
+the motor coordinates (in steps) at the origin. This
+  value is placed in the variable pInfo->mOrigin.
+reinitialize:  This function calls initialize (initializes the gantry
                   and then starts 
-		  move_init. (i.e. it sends the motors to their limit
-		  switches, then to their destinations)
-
+move_init. (i.e. it sends the motors to their limit
+switches, then to their destinations)
   generate_path:  This function takes the current location and the
                   desired destination and returns a series of way-
                   points that will get the arm to the destination
                   without collision.
-
   move:           This function starts the axes towards the subsequent
                   index of the generated path.
-
-  stop_move:	  This function stops all motor movement
-
-  monitor:        Hotlinked to the variables:
-   		  "/Motors00/Variables/Moving","/Motors01/Variables/Moving"
-                  this function checks for completion of a move
-                  whenever the motors stop. Depending on the result
-                  of this check, this function either initiates the
-                  next path section, sets completed to 1, or sets 
-                  completed to 0 (error).
-                  
-  channel_rw:     This function handles all communication with feMotor.
+  stop_move:  This function stops all motor movement
+monitor:        Hotlinked to the variables:
+  "/Motors00/Variables/Moving",ction handles all communication with feMotor.
                   Only here do we read and write to specific motor 
                   channels.
 \********************************************************************/
 
 /*=====================Phidget Check=================================*/
 // Check to see if phidgets are responsive
-
 INT phidget_responding(HNDLE hDB) {
-  double tilt_min = -105, tilt_max = 15;
+  double tilt_min = -105, tilt_max = 0;
   HNDLE hPhidgetVars0 = 0, hPhidgetVars1 = 0;
   double phidget_Values_Old[10];
   double phidget_Values_Now[10];
@@ -669,7 +687,7 @@ INT phidget_responding(HNDLE hDB) {
 
   //cm_msg(MINFO, "move_init", "Checking Phidget Response");
   size_of_array = sizeof(phidget_Values_Old);
-  db_get_value(hDB, hPhidgetVars0, "PH01", &phidget_Values_Old, &size_of_array, TID_DOUBLE, FALSE);
+  db_get_value(hDB, hPhidgetVars0, "PH00", &phidget_Values_Old, &size_of_array, TID_DOUBLE, FALSE);
   db_get_value(hDB, hPhidgetVars0, "PH01", &phidget_Values_Now, &size_of_array, TID_DOUBLE, FALSE);
 
   //Check that phidget0 is working. The phidget is working if the values change over a set period of time. When a phidget is unplugged there is no fluctuation in the values.
@@ -680,7 +698,7 @@ INT phidget_responding(HNDLE hDB) {
          (phidget_Values_Old[6] == phidget_Values_Now[6]) && (phidget_Values_Old[7] == phidget_Values_Now[7]) &&
          (phidget_Values_Old[8] == phidget_Values_Now[8]) && (phidget_Values_Old[9] == phidget_Values_Now[9])) {
 
-    db_get_value(hDB, hPhidgetVars0, "PH01", &phidget_Values_Now, &size_of_array, TID_DOUBLE, FALSE);
+    db_get_value(hDB, hPhidgetVars0, "PH00", &phidget_Values_Now, &size_of_array, TID_DOUBLE, FALSE);
 
     if (phidget_Values_Now[7] > tilt_max || phidget_Values_Now[7] < tilt_min) {
       cm_msg(MERROR, "initialize_tilt", "gantry00 exceeded tilt limits while initializing. Currently at: %f",
@@ -691,16 +709,16 @@ INT phidget_responding(HNDLE hDB) {
     // If 5 seconds pass without any of the values changing assume that the phidgets are not connected properly
     if (ss_millitime() - time_at_start_of_check > 1000 * 5) {
       printf("The readings from Phidget0 are not changing so it is assumed that Phidget0 is not working\n");
-      //return DB_NO_ACCESS ;  //TOD : only comment if know that Phidget IS unplugged!
+      //return DB_NO_ACCESS ;  //TODO : only comment if know that Phidget IS unplugged!
       return 0;
     }
 
-    usleep(1000000); //wait a sec
+    ss_sleep(1000); //wait a sec
   }
 
   //Check that the phidget1 is  working.
-  db_get_value(hDB, hPhidgetVars1, "PH01", &phidget_Values_Old, &size_of_array, TID_DOUBLE, FALSE);
-  db_get_value(hDB, hPhidgetVars1, "PH01", &phidget_Values_Now, &size_of_array, TID_DOUBLE, FALSE);
+  db_get_value(hDB, hPhidgetVars1, "PH00", &phidget_Values_Old, &size_of_array, TID_DOUBLE, FALSE);
+  db_get_value(hDB, hPhidgetVars1, "PH00", &phidget_Values_Now, &size_of_array, TID_DOUBLE, FALSE);
 
   time_at_start_of_check = ss_millitime();
   while ((phidget_Values_Old[0] == phidget_Values_Now[0]) && (phidget_Values_Old[1] == phidget_Values_Now[1]) &&
@@ -709,7 +727,7 @@ INT phidget_responding(HNDLE hDB) {
          (phidget_Values_Old[6] == phidget_Values_Now[6]) && (phidget_Values_Old[7] == phidget_Values_Now[7]) &&
          (phidget_Values_Old[8] == phidget_Values_Now[8]) && (phidget_Values_Old[9] == phidget_Values_Now[9])) {
 
-    db_get_value(hDB, hPhidgetVars1, "PH01", &phidget_Values_Now, &size_of_array, TID_DOUBLE, FALSE);
+    db_get_value(hDB, hPhidgetVars1, "PH00", &phidget_Values_Now, &size_of_array, TID_DOUBLE, FALSE);
 
     if (phidget_Values_Now[7] > tilt_max || phidget_Values_Now[7] < tilt_min) {
       cm_msg(MERROR, "initialize_tilt", "gantry01 exceeded tilt limits while initializing. Currently at: %f",
@@ -720,11 +738,11 @@ INT phidget_responding(HNDLE hDB) {
     if (ss_millitime() - time_at_start_of_check > 1000 * 5) {
       cm_msg(MERROR, "begin_of_run",
              "The readings from Phidget1 are not changing so it is assumed that Phidget1 is not working");
-      //return DB_NO_ACCESS ; //T FEB 28 2015: reset !!!
+      //return DB_NO_ACCESS ; //TODO FEB 28 2015: reset !!!
       return 0;
     }
 
-    usleep(1000000); //delay one second
+    ss_sleep(1000);
   }
 
 
@@ -737,7 +755,7 @@ void move_init(HNDLE hDB, HNDLE hKey, void *data) {
   INFO *pInfo = (INFO *) data;
   // BOOL Check_Phidgets = TRUE;
   // HNDLE hPhidgetVars0 = 0, hPhidgetVars1 = 0;
-  //double phidget_Values_Old[10];
+  double phidget_Values_Old[10];
   // double phidget_Values_Now[10];
   // int size_of_array = sizeof(phidget_Values_Old);
   // DWORD time_at_start_of_check;
@@ -747,7 +765,7 @@ void move_init(HNDLE hDB, HNDLE hKey, void *data) {
 
   // Check that the user has set "Start Move" to "y"
   int size = sizeof(BOOL);
-  db_get_data(hDB, pInfo->hKeyStart, &pInfo->Start, &size, TID_BOOL); 
+  db_get_data(hDB, pInfo->hKeyStart, &pInfo->Start, &size, TID_BOOL);
   if (pInfo->Start == 0) return;
 
   // If motors are already moving, set destinations back to previous
@@ -782,37 +800,33 @@ void move_init(HNDLE hDB, HNDLE hKey, void *data) {
   //               if they still dont match exit
   double tilt_tolerance = 3.0;
   double tilt_min = -105, tilt_max = 15;
-  
   size = sizeof(pInfo->Phidget);
   int tilt_start = 0, tilt_end = 2; //these are the number of gantries we have to correct
   for (int i = tilt_start; i < tilt_end; i++) {
     int axis = (i == 0 ? 4 : 9);
-    if (axis==9){
-      continue; // skip gantry 1
-    }
-    db_get_value(pInfo->hDB, pInfo->hKeyPhidget[0], "PH01", &pInfo->Phidget, &size, TID_DOUBLE, FALSE);
+    //axis = 4;
+    db_get_value(pInfo->hDB, pInfo->hKeyPhidget[0], "PH00", &pInfo->Phidget, &size, TID_DOUBLE, FALSE);
     if (i == 1) { db_get_value(pInfo->hDB, pInfo->hKeyPhidget[1], "PH01", &pInfo->Phidget, &size, TID_DOUBLE, FALSE); }
 
-    //DEBUG
-    cm_msg(MINFO, "move_init", "Phidget0%i tilt: %f ODB tilt: %f", i, pInfo->Phidget[7], pInfo->Position[axis]);
+    // DEBUG
+    //cm_msg(MINFO, "move_init", "Phidget0%i tilt: %f ODB tilt: %f", i, pInfo->Phidget[7], pInfo->Position[axis]);
 
-    //Check if  phidget tilt readings match ODB values
+    // Check if  phidget tilt readings match ODB values
     if (pInfo->Position[axis] < pInfo->Phidget[7] - tilt_tolerance ||
         pInfo->Position[axis] > pInfo->Phidget[7] + tilt_tolerance) {
-        cm_msg(MERROR, "move_init", "Error in axis %i ", axis);
-        cm_msg(MERROR, "move_init", "Phidget0%i tilt: %f ODB tilt: %f", i, pInfo->Phidget[7], pInfo->Position[axis]);
-        cm_msg(MERROR, "move_init", "ERROR: can't start move. Phidget0%i tilt and ODB tilt do not agree within tolerance",i);
-      
-        return;
+      cm_msg(MERROR, "move_init", "Phidget0%i tilt: %f ODB tilt: %f", i, pInfo->Phidget[7], pInfo->Position[axis]);
+      cm_msg(MERROR, "move_init", "ERROR: can't start move. Phidget0%i tilt and ODB tilt do not agree within tolerance; axis %i",
+             i, axis);
+      return;
     }
 
-    //Check if phidget reading is within legal range
+    // Check if phidget reading is within legal range
     if (pInfo->Phidget[7] < tilt_min || pInfo->Phidget[7] > tilt_max) {
-     cm_msg(MERROR, "move_init", "ERROR: can't start move. Phidget0%i tilt: %f is in illegal range", i,
-            pInfo->Phidget[7]);
-     return;
-   }
- }
+      cm_msg(MERROR, "move_init", "ERROR: can't start move. Phidget0%i tilt: %f is in illegal range", i,
+             pInfo->Phidget[7]);
+      return;
+    }
+  }
 
   // Load input destination into pInfo->Destination
   size = 10 * sizeof(float);
@@ -824,15 +838,15 @@ void move_init(HNDLE hDB, HNDLE hKey, void *data) {
 
   // Check for unsuccesful path generation
   switch (Status) {
-    case GENPATH_SUCCESS:
-      pInfo->BadDest = 0;
-      db_set_data(hDB, pInfo->hKeyBadDest, &pInfo->BadDest, sizeof(BOOL), 1, TID_BOOL);
-      break;
-    case GENPATH_BAD_DEST:
-      cm_msg(MERROR, "move_init", " Bad destination entered in Move");
-      pInfo->BadDest = 1;
-      db_set_data(hDB, pInfo->hKeyBadDest, &pInfo->BadDest, sizeof(BOOL), 1, TID_BOOL);
-      return;
+  case GENPATH_SUCCESS:
+    pInfo->BadDest = 0;
+    db_set_data(hDB, pInfo->hKeyBadDest, &pInfo->BadDest, sizeof(BOOL), 1, TID_BOOL);
+    break;
+  case GENPATH_BAD_DEST:
+    cm_msg(MERROR, "move_init", " Bad destination entered in Move");
+    pInfo->BadDest = 1;
+    db_set_data(hDB, pInfo->hKeyBadDest, &pInfo->BadDest, sizeof(BOOL), 1, TID_BOOL);
+    return;
   }
   cm_msg(MINFO, "move_init", "Path succesfully generated");
 
@@ -853,11 +867,10 @@ void move_init(HNDLE hDB, HNDLE hKey, void *data) {
 /*-- Initialize tilt ----------------------------------------------------*/
 // We initialize the tilt motor by using the tilt measurement from the 1044 Phidget
 // accelerometer.
-
 int initialize_tilt(INFO *pInfo) {
-  std::cout <<"init tilt"<<std::endl;
+  std::cout <<"starting phidget init" << std::endl;
   int i;
-  double tolerance = 1.; //3.0;
+  double tolerance = 1.5; //3.0;
   float *dest = (float *) calloc(10, sizeof(float));
   BOOL *start = (BOOL *) calloc(10, sizeof(BOOL));
   int size = sizeof(pInfo->Phidget);
@@ -869,6 +882,9 @@ int initialize_tilt(INFO *pInfo) {
   // DWORD time_at_start_of_check;
   // HNDLE hPhidgetVars0 = 0, hPhidgetVars1 = 0;
 
+  // double tilt_min = -105;
+  // double tilt_max = 15;
+  //Only loop over the motors from the 
   //gantry we want to use
   int tilt_start = 0;
   int tilt_end = 2;
@@ -885,14 +901,15 @@ int initialize_tilt(INFO *pInfo) {
   for (i = tilt_start; i < tilt_end; i++) {
 
     int axis = (i == 0 ? 4 : 9);
-
+    //axis = 4;
+    
     // TF TEMP
-    if (axis == 9){
-      continue;// skip gantry 1...
-    }
+    //if (axis == 9){
+    //  continue;
+    //}
 
     //Get readings of phidget. 
-    int status = db_get_value(pInfo->hDB, pInfo->hKeyPhidget[0], "PH01", &pInfo->Phidget, &size, TID_DOUBLE, FALSE);
+    int status = db_get_value(pInfo->hDB, pInfo->hKeyPhidget[0], "PH00", &pInfo->Phidget, &size, TID_DOUBLE, FALSE);
     if (i == 1) {
       status = db_get_value(pInfo->hDB, pInfo->hKeyPhidget[1], "PH01", &pInfo->Phidget, &size, TID_DOUBLE, FALSE);
     }
@@ -905,11 +922,9 @@ int initialize_tilt(INFO *pInfo) {
     int time_s = pInfo->Phidget[8];
     int time_us = pInfo->Phidget[9];
 
-    std::cout <<" times are " << time_s <<", "<<time_us<<std::endl;
-
     // Make sure phidget readings change from previous value:
-    usleep(2000000); //2sec
-    if (i == 0) db_get_value(pInfo->hDB, pInfo->hKeyPhidget[0], "PH01", &pInfo->Phidget, &size, TID_DOUBLE, FALSE);
+    sleep(4); //2sec
+    if (i == 0) db_get_value(pInfo->hDB, pInfo->hKeyPhidget[0], "PH00", &pInfo->Phidget, &size, TID_DOUBLE, FALSE);
     else db_get_value(pInfo->hDB, pInfo->hKeyPhidget[1], "PH01", &pInfo->Phidget, &size, TID_DOUBLE, FALSE);
 
 
@@ -935,7 +950,6 @@ int initialize_tilt(INFO *pInfo) {
     start[axis] = 1;
 
   }
-  
 
   //DEBUG:
   printf("Destinations: Dest[4] = %f, dest[9] = %f\n", dest[4], dest[9]);
@@ -943,11 +957,11 @@ int initialize_tilt(INFO *pInfo) {
   // Write the destinations to the motors
   // Note: channel_rw works for both motors, ie. write both tilt destinations at once and initialize
   // together
-  channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMDest, dest, 1);
+  channel_rw(pInfo, pInfo->hKeyMDest, dest, TID_FLOAT, 1);
 
   // Start the move
-  channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMStart, (void *) start, 1);
-  usleep(600000); // TF and BK: is this to wait for galil_read to update ODB for AxisMoving??
+  channel_rw(pInfo, pInfo->hKeyMStart, (void *) start, TID_BOOL, 1);
+  sleep(2); // TF and BK: is this to wait for galil_read to update ODB for AxisMoving??
 
 
   // Monitor the motion until we are finished moving.
@@ -959,7 +973,7 @@ int initialize_tilt(INFO *pInfo) {
     pInfo->Moving = 0;
 
     //TF note: this only checks whether the motors are moving!!
-    channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMMoving, (void *) pInfo->AxisMoving, 0);
+    channel_rw(pInfo, pInfo->hKeyMMoving, (void *) pInfo->AxisMoving, TID_BOOL, 0);
     pInfo->Moving = pInfo->Moving || pInfo->AxisMoving[4];
     pInfo->Moving = pInfo->Moving || pInfo->AxisMoving[9];
     if (pInfo->Moving && !startedMoving)
@@ -971,17 +985,12 @@ int initialize_tilt(INFO *pInfo) {
   }
 
   cm_msg(MINFO, "initialize_tilt", "Move complete.");
-  
   tilt_ini_attempts++;
   for (i = tilt_start; i < tilt_end; i++) {
     int axis = (i == 0 ? 4 : 9);
-    if (axis==9){
-      continue; // skip gantry 1
-    }
-
 
     // Check that the final tilt is within the required tolerance
-    if (i == 0) db_get_value(pInfo->hDB, pInfo->hKeyPhidget[0], "PH01", &pInfo->Phidget, &size, TID_DOUBLE, FALSE);
+    if (i == 0) db_get_value(pInfo->hDB, pInfo->hKeyPhidget[0], "PH00", &pInfo->Phidget, &size, TID_DOUBLE, FALSE);
     else db_get_value(pInfo->hDB, pInfo->hKeyPhidget[1], "PH01", &pInfo->Phidget, &size, TID_DOUBLE, FALSE);
 
     //NaN check:
@@ -1012,9 +1021,9 @@ int initialize_tilt(INFO *pInfo) {
     }
 
     // Reset origin position.
-    channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMPos, pInfo->CountPos, 0);
+    channel_rw(pInfo, pInfo->hKeyMPos, pInfo->CountPos, TID_FLOAT, 0);
     pInfo->mOrigin[axis] = pInfo->CountPos[axis] - pInfo->LimPos[axis] * pInfo->mScale[axis];
-    pInfo->Position[axis] = pInfo->LimPos[axis];
+    pInfo->Position[axis] = 0.0; // pInfo->LimPos[axis];
 
     cm_msg(MINFO, "initialize_tilt", "Finished initializing axis %i; Origin = %5.2f counts, Position = %5.2f deg", axis,
            pInfo->mOrigin[axis], pInfo->Position[axis]);
@@ -1025,14 +1034,12 @@ int initialize_tilt(INFO *pInfo) {
 
 }
 
-
 /*-- Initialize ----------------------------------------------------*/
 // Move motors to limit switches. Use the motor coordinates at this
 // position to determine the motor coordinates at the origin. If the
 // negative limit switch is disabled, the current position is set as the
 // origin for that axis.
 void initialize(INFO *pInfo) {
-  std::cout << "initialize func" << std::endl;
   int i;
   BOOL *tempStart = (BOOL *) calloc(10, sizeof(BOOL));
   BOOL *tempNegLimitEnabled = (BOOL *) calloc(10, sizeof(BOOL));
@@ -1042,9 +1049,6 @@ void initialize(INFO *pInfo) {
   float lastCountPosArm1;
   float lastCountPosArm2;
 
-  int exitFlagTilt = initialize_tilt(pInfo);
-
-  printf("Reinitializing motor!\n");
 
   cm_msg(MINFO, "initialize", "Initializing motors");
   BOOL initing = 1;
@@ -1056,8 +1060,6 @@ void initialize(INFO *pInfo) {
   // the tilt measurement from the phidget.
   //for(i=0;i<10;i++){
   for (i = gantry_motor_start; i < gantry_motor_end; i++) {
-
-    printf("Motor start\n");
     if (i == 4 || i == 9) {
       //Do nothing, tilt should already be initialized
       tempPos[i] = 0;
@@ -1075,16 +1077,14 @@ void initialize(INFO *pInfo) {
     }
   }
 
-  printf("channel_rw dest\n");
-  channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMDest, (void *) tempPos, 1);
-  printf("channel_rw dest done %f %f %f \n",tempPos[0],tempPos[1],tempPos[2]);
+  channel_rw(pInfo, pInfo->hKeyMDest, (void *) tempPos, TID_FLOAT, 1);
 
   // Cycle through each pair of motors corresponding to the same axis on each arm.
   // We want to make sure that we initialize the Z-axis first, so that the laser box is
   // fully out of the tank before we move in X and Y.
-  int order[4] = {2, 3, 0, 1}; //, 3};
+  int order[4] = {2, 0, 1, 3};
   int itmp;
-  for (itmp = 0; itmp < 4; itmp++) { // was 4 earlier...
+  for (itmp = 0; itmp < 4; itmp++) {
     i = order[itmp];
 
     if ((tempNegLimitEnabled[i] == 1) || (tempNegLimitEnabled[i + 5] == 1)) {
@@ -1095,51 +1095,31 @@ void initialize(INFO *pInfo) {
     tempStart[i] = tempNegLimitEnabled[i];
     tempStart[i + 5] = tempNegLimitEnabled[i + 5];
 
-    printf("channel_rw start\n");
-    channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMStart, (void *) tempStart, 1);
-    printf("channel_rw start done \n");
+    channel_rw(pInfo, pInfo->hKeyMStart, (void *) tempStart, TID_BOOL, 1);
+
     // Wait for axes with enabled limit switches to hit their limits
     while (1) {
-      channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMPos, pInfo->CountPos, 0);
+      channel_rw(pInfo, pInfo->hKeyMPos, pInfo->CountPos, TID_FLOAT, 0);
       lastCountPosArm1 = pInfo->CountPos[i];
       lastCountPosArm2 = pInfo->CountPos[i + 5];
-      //sleep(5);
-      usleep(100000); // Approx. polling period
+      sleep(5); // Approx. polling period
       if ((tempNegLimitEnabled[i] == 1) && (tempNegLimitEnabled[i + 5] == 1)) {// If both gantry axes are enabled.
         cm_msg(MDEBUG, "initialize", "Polling axes %i and %i.", i, i+5);
-        channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMLimitNeg, (void *) pInfo->neg_AxisLimit, 0);
+        channel_rw(pInfo, pInfo->hKeyMLimitNeg, (void *) pInfo->neg_AxisLimit, TID_BOOL, 0);
         if (pInfo->neg_AxisLimit[i] && pInfo->neg_AxisLimit[i + 5]) break;
         else {
-          channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMPos, pInfo->CountPos, 0);
-
-          //Print tests
-          printf("Pos Count1: %f\n",pInfo->CountPos[0]);
-          printf("Pos Count2: %f\n",pInfo->CountPos[1]);
-          printf("Pos Count3: %f\n",pInfo->CountPos[2]);
-          printf("Pos Count1: %f\n",pInfo->CountPos[3]);
-          printf("Pos Count2: %f\n",pInfo->CountPos[4]);
-          printf("Pos Count3: %f\n",pInfo->CountPos[5]);
-          printf("Pos Count1: %f\n",pInfo->CountPos[6]);
-          printf("Pos Count2: %f\n",pInfo->CountPos[7]);
-          printf("Pos Count3: %f\n",pInfo->CountPos[8]);
-          printf("Pos Count3: %f\n",pInfo->CountPos[9]);
-
-          printf("Pos Count: %f\n",lastCountPosArm1);
-          printf("Pos Count: %f\n",pInfo->neg_AxisLimit[i]);
-          //printf();
-          
-          //Changed while testing Jun 14th 
-          if (pInfo->CountPos[i] == lastCountPosArm1 && !pInfo->neg_AxisLimit[i]) { 
+          channel_rw(pInfo, pInfo->hKeyMPos, pInfo->CountPos, TID_FLOAT, 0);
+          if (pInfo->CountPos[i] == lastCountPosArm1 && !pInfo->neg_AxisLimit[i]) {
             cm_msg(MERROR, "initialize",
-                   "Axis %i not moving. Stopping initialization since limit switch must be broken. %f %f ", i, pInfo->CountPos[i], lastCountPosArm1);
-            channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMStop, (void *) tempStop, 1);
+                   "Axis %i not moving. Stopping initialization since limit switch must be broken.", i);
+            channel_rw(pInfo, pInfo->hKeyMStop, (void *) tempStop, TID_BOOL, 1);
             exitFlag = 1;
             break;
           }
           if (pInfo->CountPos[i + 5] == lastCountPosArm2 && !pInfo->neg_AxisLimit[i + 5]) {
             cm_msg(MERROR, "initialize",
-                   "Axis %i not moving. Stopping initialization since limit switch must be broken. %i %i ", i + 5,pInfo->CountPos[i + 5], lastCountPosArm2,pInfo->neg_AxisLimit[i + 5] );
-            channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMStop, (void *) tempStop, 1);
+                   "Axis %i not moving. Stopping initialization since limit switch must be broken.", i + 5);
+            channel_rw(pInfo, pInfo->hKeyMStop, (void *) tempStop, TID_BOOL, 1);
             exitFlag = 1;
             break;
           }
@@ -1148,30 +1128,30 @@ void initialize(INFO *pInfo) {
         break;
       } else if (tempNegLimitEnabled[i] == 0) {  // If only second gantry axis is enabled.
         cm_msg(MDEBUG, "initialize", "Polling axis %i.", i + 5);
-        channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMLimitNeg, (void *) pInfo->neg_AxisLimit, 0);
+        channel_rw(pInfo, pInfo->hKeyMLimitNeg, (void *) pInfo->neg_AxisLimit, TID_BOOL, 0);
         if (pInfo->neg_AxisLimit[i + 5]) {
           break;
         } else {
-          channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMPos, pInfo->CountPos, 0);
+          channel_rw(pInfo, pInfo->hKeyMPos, pInfo->CountPos, TID_FLOAT, 0);
           if (pInfo->CountPos[i + 5] == lastCountPosArm2) {
             cm_msg(MERROR, "initialize",
                    "Axis %i not moving. Stopping initialization since limit switch must be broken.", i + 5);
-            channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMStop, (void *) tempStop, 1);
+            channel_rw(pInfo, pInfo->hKeyMStop, (void *) tempStop, TID_BOOL, 1);
             exitFlag = 1;
             break;
           }
         }
       } else {// If only first gantry axis is enabled.
         cm_msg(MDEBUG, "initialize", "Polling axis %i.", i);
-        channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMLimitNeg, (void *) pInfo->neg_AxisLimit, 0);
+        channel_rw(pInfo, pInfo->hKeyMLimitNeg, (void *) pInfo->neg_AxisLimit, TID_BOOL, 0);
         if (pInfo->neg_AxisLimit[i]) {
           break;
         } else {
-          channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMPos, pInfo->CountPos, 0);
+          channel_rw(pInfo, pInfo->hKeyMPos, pInfo->CountPos, TID_FLOAT, 0);
           if (pInfo->CountPos[i] == lastCountPosArm1) {
             cm_msg(MERROR, "initialize",
                    "Axis %i not moving. Stopping initialization since limit switch must be broken.", i);
-            channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMStop, (void *) tempStop, 1);
+            channel_rw(pInfo, pInfo->hKeyMStop, (void *) tempStop, TID_BOOL, 1);
             exitFlag = 1;
             break;
           }
@@ -1188,14 +1168,14 @@ void initialize(INFO *pInfo) {
   pInfo->Moving = 1;
   while (pInfo->Moving) {
     pInfo->Moving = 0;
-    channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMMoving, (void *) pInfo->AxisMoving, 0);
+    channel_rw(pInfo, pInfo->hKeyMMoving, (void *) pInfo->AxisMoving, TID_BOOL, 0);
     for (i = gantry_motor_start; i < gantry_motor_end; i++) pInfo->Moving = pInfo->Moving || pInfo->AxisMoving[i];
   }
 
   if (exitFlag == 0) {
     // Determine the motor positions at the origin and put the results in
     // pInfo->mOrigin
-    channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMPos, pInfo->CountPos, 0);
+    channel_rw(pInfo, pInfo->hKeyMPos, pInfo->CountPos, TID_FLOAT, 0);
     for (i = 0; i < 10; i++) {
       //for(i = gantry_motor_start; i < gantry_motor_end ; i++){
       // only exception in flexible for loop: even if other motor is off, still initialize to LimPos...TF: safe??
@@ -1215,17 +1195,19 @@ void initialize(INFO *pInfo) {
     db_set_data(pInfo->hDB, pInfo->hKeyPos, &pInfo->Position, 10 * sizeof(float), 10, TID_FLOAT);
   }
 
+  int exitFlagTilt = initialize_tilt(pInfo);
 
-  if (exitFlag == 0 && exitFlagTilt==0)  { 
+
+  if (exitFlag == 0 && exitFlagTilt == 0) {
     // Set Initialized to 1 and exit    
     pInfo->Initialized = 1;
     db_set_data(pInfo->hDB, pInfo->hKeyInit, &pInfo->Initialized, sizeof(BOOL), 1, TID_BOOL);
-  }//exitFlagTilt == 0) {
+  }
 
   initing = 0;
   db_set_data(pInfo->hDB, pInfo->hKeyInitializing, &initing, sizeof(BOOL), 1, TID_BOOL);
 
-  usleep(100000);//0.1 sec
+  sleep(2);
   cm_msg(MINFO, "move_init", "Initialization of Gantries is Complete");
 
   /* Rika (20Apr2017): Moved initialization of PMT to initialize() method */
@@ -1272,7 +1254,6 @@ void initialize(INFO *pInfo) {
 /*-- Re-Initialize -------------------------------------------------*/
 // Set initialized to 0, then start the move
 void reinitialize(HNDLE hDB, HNDLE hKey, void *data) {
-  std::cout << "reinitialize func" << std::endl;
 
   INFO *pInfo = (INFO *) data;
   INT size = sizeof(BOOL);
@@ -1296,45 +1277,45 @@ void reinitialize(HNDLE hDB, HNDLE hKey, void *data) {
 /*-- Generate Path -------------------------------------------------*/
 // Generate collision-free path, put the path data into pInfo->MovePath
 // Aaron: insert path generator here:
-//				- Destination (in physical units) found in pInfo->Destination
-//				- Determine required stepper motor coordinates using motor
-//					scaling found in pInfo->mScale
-//			  - Find collision-free waypoints to get to this point
-//			  - Put generated path in pInfo->MovePath (10 X N_Waypoints)
-//						**Allocate first**
-//				- Set pInfo->PathSize to the number of waypoints
-//				- set pInfo->PathIndex to 0
-//				- Return Value:
-//							GENPATH_SUCCESS: path successfully generated, no swap needed
-//							GENPATH_BAD_DEST: impossible destination given as input
+//- Destination (in physical units) found in pInfo->Destination
+//- Determine required stepper motor coordinates using motor
+//scaling found in pInfo->mScale
+//  - Find collision-free waypoints to get to this point
+//  - Put generated path in pInfo->MovePath (10 X N_Waypoints)
+//**Allocate first**
+//- Set pInfo->PathSize to the number of waypoints
+//- set pInfo->PathIndex to 0
+//- Return Value:
+//GENPATH_SUCCESS: path successfully generated, no swap needed
+//GENPATH_BAD_DEST: impossible destination given as input
 // Shaun: Constrained boundaries of box by adding rotation & tilt dependance
-// 		-gantry 1 & 2 have 1-2 cm safety margin
-// 		-the eight possible permutations that system can undertake are:
+// -gantry 1 & 2 have 1-2 cm safety margin
+// -the eight possible permutations that system can undertake are:
 //                    1) gantry 1 move first, rotation first, tilt first;
-// 										2) gantry 1 move first, rotation second, tilt first; 
-// 										3) gantry 2 move first, rotation first, tilt first; 
-// 										4) gantry 2 move first, rotation second, tilt first
-// 										5) gantry 1 move first, rotation first, tilt second; 
-// 		                6) gantry 1 move first, rotation second, tilt second;
-// 		                7) gantry 2 move first, rotation first, tilt second;
-// 		                8) gantry 2 move first, rotation second, tilt second
+// 2) gantry 1 move first, rotation second, tilt first; 
+// 3) gantry 2 move first, rotation first, tilt first; 
+// 4) gantry 2 move first, rotation second, tilt first
+// 5) gantry 1 move first, rotation first, tilt second; 
+//                 6) gantry 1 move first, rotation second, tilt second;
+//                 7) gantry 2 move first, rotation first, tilt second;
+//                 8) gantry 2 move first, rotation second, tilt second
 //
-// 		-the system will move in Z-direction first if the endpoint z is outside the water tank
-//		-paths are calculated for the 8 possible permutations to see if any are possible w/o collision
-//		-for permutations 1-4 tilt is completed at beginning of run, for 5-8 tilt is completed at end of run 
-//				-1) w/ gantry 2 in start position and final rotation, gantry 1 in rotated position can move from start to destination (TPathCalculator)
-//				    w/ gantry 1 at destination and final rotation, gantry 2 in rotated position can move from start to destination (TPathCalculator)
-//				    gantry 1 & 2 can rotate from initial rotation at start position to final location at start position (TRotationCalculator)
-//				-2) w/ gantry 2 in start position and initial rotation, gantry 1 in initial rotated position can move from start to destination (TPathCalculator)
-//				    w/ gantry 1 at destination and initial rotation, gantry 2 in initial rotated position can move from start to destination (TPathCalculator)
-//				    gantry 1 & 2 can rotate from initial rotation at destination to final rotation at destination (TRotationCalculator)
-//				-3) w/ gantry 1 in start position and final rotation, gantry 2 in rotated position can move from start to destination (TPathCalculator)
-//				    w/ gantry 2 at destination and final rotation, gantry 1 in rotated position can move from start to destination (TPathCalculator)
-//				    gantry 1 & 2 can rotate from initial rotation at start position to final location at start position (TRotationCalculator)
-//				-4) w/ gantry 1 in start position and initial rotation, gantry 2 in initial rotated position can move from start to destination (TPathCalculator)
-//				    w/ gantry 2 at destination and initial rotation, gantry 1 in initial rotated position can move from start to destination (TPathCalculator)
-//				    gantry 1 & 2 can rotate from initial rotation at destination to final rotation at destination (TRotationCalculator)
-//		-to ensure intermediate roation positions will not collide with other gantry or water tank (in case where initial and final rotation is good but intermediate value is not) TRotationCalculator is constructed
+// -the system will move in Z-direction first if the endpoint z is outside the water tank
+//-paths are calculated for the 8 possible permutations to see if any are possible w/o collision
+//-for permutations 1-4 tilt is completed at beginning of run, for 5-8 tilt is completed at end of run 
+//-1) w/ gantry 2 in start position and final rotation, gantry 1 in rotated position can move from start to destination (TPathCalculator)
+//    w/ gantry 1 at destination and final rotation, gantry 2 in rotated position can move from start to destination (TPathCalculator)
+//    gantry 1 & 2 can rotate from initial rotation at start position to final location at start position (TRotationCalculator)
+//-2) w/ gantry 2 in start position and initial rotation, gantry 1 in initial rotated position can move from start to destination (TPathCalculator)
+//    w/ gantry 1 at destination and initial rotation, gantry 2 in initial rotated position can move from start to destination (TPathCalculator)
+//    gantry 1 & 2 can rotate from initial rotation at destination to final rotation at destination (TRotationCalculator)
+//-3) w/ gantry 1 in start position and final rotation, gantry 2 in rotated position can move from start to destination (TPathCalculator)
+//    w/ gantry 2 at destination and final rotation, gantry 1 in rotated position can move from start to destination (TPathCalculator)
+//    gantry 1 & 2 can rotate from initial rotation at start position to final location at start position (TRotationCalculator)
+//-4) w/ gantry 1 in start position and initial rotation, gantry 2 in initial rotated position can move from start to destination (TPathCalculator)
+//    w/ gantry 2 at destination and initial rotation, gantry 1 in initial rotated position can move from start to destination (TPathCalculator)
+//    gantry 1 & 2 can rotate from initial rotation at destination to final rotation at destination (TRotationCalculator)
+//-to ensure intermediate roation positions will not collide with other gantry or water tank (in case where initial and final rotation is good but intermediate value is not) TRotationCalculator is constructed
 int generate_path(INFO *pInfo) {
 
   // Check for illegal destinations.  Currently just check:
@@ -1342,7 +1323,7 @@ int generate_path(INFO *pInfo) {
   double rot_min = -100, rot_max = 120; //Rotation limited to values equal to or greater than -100 degrees
   //to avoid triggering limit switch during scan; updated Feb 28, 2017
   // tilt_min < tilt angle < tilt_max
-  //double tilt_min = -105, tilt_max = 15;
+  double tilt_min = -105, tilt_max = 15;
 
   double z_max_value = 0.535; // Rika (23Mar2017): gantry positive z limit switch at z = 0.534m.
   // John (16Oct2019): Reducing z_max from 0.535 to 0.22 for PMT scans because getting too close to acrylic
@@ -1357,7 +1338,7 @@ int generate_path(INFO *pInfo) {
   bool move_z2_first = false;
   bool move_rotation_first = false;
   bool gant2_movefirst = false;
-  bool tiltfirst = false; //Look tiltfirst ?
+  bool tiltfirst = false;
   const double pi = boost::math::constants::pi<double>();
 
   double gantry1XPos = pInfo->Position[0];
@@ -1444,7 +1425,6 @@ int generate_path(INFO *pInfo) {
 
   //Note: typedef std::vector<std::pair<double, double> > XYPolygon; defined in TPathCalculator.hxx
   // Gantry
-  
   XYPolygon gantry1_startpos_rotfirst_tiltfirst;
   XYPolygon gantry1_startpos_rotsecond_tiltfirst;
   XYPolygon gantry1_endpos_rotfirst_tiltfirst;
@@ -1503,21 +1483,21 @@ int generate_path(INFO *pInfo) {
   box0_endpos_rotsecond_tiltfirst = gantryConfigCalc.GetOpticalBoxConfig(0, gant1_rot2, gant1_tilt_start, gantry1XDes,
                                                                          gantry1YDes);
   // Final state of gantry0 & gantry1, before rotation with XY limit corners with tilt dependence
-  gantry2_startpos_rotfirst_tiltfirst = gantryConfigCalc.GetGantryConfig(1, gant2_rot1, gant2_tilt_start, gantry2XPos,
+  gantry2_startpos_rotfirst_tiltfirst = nakedGantryConfigCalc.GetGantryConfig(1, gant2_rot1, gant2_tilt_start, gantry2XPos,
                                                                          gantry2YPos);
-  gantry2_startpos_rotsecond_tiltfirst = gantryConfigCalc.GetGantryConfig(1, gant2_rot2, gant2_tilt_start, gantry2XPos,
+  gantry2_startpos_rotsecond_tiltfirst = nakedGantryConfigCalc.GetGantryConfig(1, gant2_rot2, gant2_tilt_start, gantry2XPos,
                                                                           gantry2YPos);
-  gantry2_endpos_rotfirst_tiltfirst = gantryConfigCalc.GetGantryConfig(1, gant2_rot1, gant2_tilt_start, gantry2XDes,
+  gantry2_endpos_rotfirst_tiltfirst = nakedGantryConfigCalc.GetGantryConfig(1, gant2_rot1, gant2_tilt_start, gantry2XDes,
                                                                        gantry2YDes);
-  gantry2_endpos_rotsecond_tiltfirst = gantryConfigCalc.GetGantryConfig(1, gant2_rot2, gant2_tilt_start, gantry2XDes,
+  gantry2_endpos_rotsecond_tiltfirst = nakedGantryConfigCalc.GetGantryConfig(1, gant2_rot2, gant2_tilt_start, gantry2XDes,
                                                                         gantry2YDes);
-  box1_startpos_rotfirst_tiltfirst = gantryConfigCalc.GetOpticalBoxConfig(1, gant2_rot1, gant2_tilt_start, gantry2XPos,
+  box1_startpos_rotfirst_tiltfirst = nakedGantryConfigCalc.GetOpticalBoxConfig(1, gant2_rot1, gant2_tilt_start, gantry2XPos,
                                                                           gantry2YPos);
-  box1_startpos_rotsecond_tiltfirst = gantryConfigCalc.GetOpticalBoxConfig(1, gant2_rot2, gant2_tilt_start, gantry2XPos,
+  box1_startpos_rotsecond_tiltfirst = nakedGantryConfigCalc.GetOpticalBoxConfig(1, gant2_rot2, gant2_tilt_start, gantry2XPos,
                                                                            gantry2YPos);
-  box1_endpos_rotfirst_tiltfirst = gantryConfigCalc.GetOpticalBoxConfig(1, gant2_rot1, gant2_tilt_start, gantry2XDes,
+  box1_endpos_rotfirst_tiltfirst = nakedGantryConfigCalc.GetOpticalBoxConfig(1, gant2_rot1, gant2_tilt_start, gantry2XDes,
                                                                         gantry2YDes);
-  box1_endpos_rotsecond_tiltfirst = gantryConfigCalc.GetOpticalBoxConfig(1, gant2_rot2, gant2_tilt_start, gantry2XDes,
+  box1_endpos_rotsecond_tiltfirst = nakedGantryConfigCalc.GetOpticalBoxConfig(1, gant2_rot2, gant2_tilt_start, gantry2XDes,
                                                                          gantry2YDes);
   //Tilt second
   //Final state of gantry0 & gantry1, after rotation with XY limit corners with tilt dependence
@@ -1538,21 +1518,21 @@ int generate_path(INFO *pInfo) {
   box0_endpos_rotsecond_tiltsecond = gantryConfigCalc.GetOpticalBoxConfig(0, gant1_rot2, gant1_tilt_end, gantry1XDes,
                                                                           gantry1YDes);
   // Final state of gantry0 & gantry1, before rotation with XY limit corners with tilt dependence
-  gantry2_startpos_rotfirst_tiltsecond = gantryConfigCalc.GetGantryConfig(1, gant2_rot1, gant2_tilt_end, gantry2XPos,
+  gantry2_startpos_rotfirst_tiltsecond = nakedGantryConfigCalc.GetGantryConfig(1, gant2_rot1, gant2_tilt_end, gantry2XPos,
                                                                           gantry2YPos);
-  gantry2_startpos_rotsecond_tiltsecond = gantryConfigCalc.GetGantryConfig(1, gant2_rot2, gant2_tilt_end, gantry2XPos,
+  gantry2_startpos_rotsecond_tiltsecond = nakedGantryConfigCalc.GetGantryConfig(1, gant2_rot2, gant2_tilt_end, gantry2XPos,
                                                                            gantry2YPos);
-  gantry2_endpos_rotfirst_tiltsecond = gantryConfigCalc.GetGantryConfig(1, gant2_rot1, gant2_tilt_end, gantry2XDes,
+  gantry2_endpos_rotfirst_tiltsecond = nakedGantryConfigCalc.GetGantryConfig(1, gant2_rot1, gant2_tilt_end, gantry2XDes,
                                                                         gantry2YDes);
-  gantry2_endpos_rotsecond_tiltsecond = gantryConfigCalc.GetGantryConfig(1, gant2_rot2, gant2_tilt_end, gantry2XDes,
+  gantry2_endpos_rotsecond_tiltsecond = nakedGantryConfigCalc.GetGantryConfig(1, gant2_rot2, gant2_tilt_end, gantry2XDes,
                                                                          gantry2YDes);
-  box1_startpos_rotfirst_tiltsecond = gantryConfigCalc.GetOpticalBoxConfig(1, gant2_rot1, gant2_tilt_end, gantry2XPos,
+  box1_startpos_rotfirst_tiltsecond = nakedGantryConfigCalc.GetOpticalBoxConfig(1, gant2_rot1, gant2_tilt_end, gantry2XPos,
                                                                            gantry2YPos);
-  box1_startpos_rotsecond_tiltsecond = gantryConfigCalc.GetOpticalBoxConfig(1, gant2_rot2, gant2_tilt_end, gantry2XPos,
+  box1_startpos_rotsecond_tiltsecond = nakedGantryConfigCalc.GetOpticalBoxConfig(1, gant2_rot2, gant2_tilt_end, gantry2XPos,
                                                                             gantry2YPos);
-  box1_endpos_rotfirst_tiltsecond = gantryConfigCalc.GetOpticalBoxConfig(1, gant2_rot1, gant2_tilt_end, gantry2XDes,
+  box1_endpos_rotfirst_tiltsecond = nakedGantryConfigCalc.GetOpticalBoxConfig(1, gant2_rot1, gant2_tilt_end, gantry2XDes,
                                                                          gantry2YDes);
-  box1_endpos_rotsecond_tiltsecond = gantryConfigCalc.GetOpticalBoxConfig(1, gant2_rot2, gant2_tilt_end, gantry2XDes,
+  box1_endpos_rotsecond_tiltsecond = nakedGantryConfigCalc.GetOpticalBoxConfig(1, gant2_rot2, gant2_tilt_end, gantry2XDes,
                                                                           gantry2YDes);
 
   // Path calculator checks if destination is inside the other gantry or outside the tank, but doesn't check rotation
@@ -1614,7 +1594,7 @@ int generate_path(INFO *pInfo) {
   if (tankheight_gantend1) move_z1_first = true;
   if (tankheight_gantend2) move_z2_first = true;
 
-  //std::cout << "Move z first:  " << move_z1_first << "  " << move_z2_first << std::endl;
+  std::cout << "Move z first:  " << move_z1_first << "  " << move_z2_first << std::endl;
 
   // First check: beams should never cross each other
   if(pInfo->Destination[0] + 0.05 >= pInfo->Destination[5]){ // conservative
@@ -1642,10 +1622,17 @@ int generate_path(INFO *pInfo) {
                                                                      gantry1_endpos_rotfirst_tiltfirst,
                                                                      tankheight_gantend2);
 
+/* this just... doesn't work??? 
   if (!(validDestination_box0 && validDestination_box1)) {
     cm_msg(MERROR, "generate_path", "Invalid destination: gantries will collide with each other or with tank.");
+    if (!validDestination_box0){
+      std::cout << "Destination box0 is bad" << std::endl;
+    }else{
+      std::cout << "Destination box1 is bad" << std::endl;
+    }
     return GENPATH_BAD_DEST;
   }
+*/
 
   // Check PMT:
   if (finalZ_box0_lo >= 0) {
@@ -1669,12 +1656,12 @@ int generate_path(INFO *pInfo) {
     }
   }
   // Remove comments
-  
+  /*
   if (!(validDestination_box0 && validDestination_box1)) {
     cm_msg(MERROR, "generate_path", "Invalid destination: gantry will collide with PMT.");
     return GENPATH_BAD_DEST;
   }
-  
+  */
 
   // Define xy plane in terms of z heights at which path will be checked for collision avoidance.
   double gantry1Z = gantry1ZDes;
@@ -1703,10 +1690,10 @@ int generate_path(INFO *pInfo) {
   // therefore lowest point is the first of the two doubles.
   // Tilt first
   opticalBox0_height[0] = gantryConfigCalc.GetOpticalBoxZ(0, gant1_tilt_start, gantry1Z);
-  opticalBox1_height[0] = gantryConfigCalc.GetOpticalBoxZ(1, gant2_tilt_start, gantry2Z);
+  opticalBox1_height[0] = nakedGantryConfigCalc.GetOpticalBoxZ(1, gant2_tilt_start, gantry2Z);
   // Tilt second
   opticalBox0_height[1] = gantryConfigCalc.GetOpticalBoxZ(0, gant1_tilt_end, gantry1Z);
-  opticalBox1_height[1] = gantryConfigCalc.GetOpticalBoxZ(1, gant2_tilt_end, gantry2Z);
+  opticalBox1_height[1] = nakedGantryConfigCalc.GetOpticalBoxZ(1, gant2_tilt_end, gantry2Z);
   for (int tilt = 0; tilt < 2; tilt++) {
     opticalBox0_lo_Z[tilt] = (opticalBox0_height[tilt].first - pmtHeight) / pmtPolyLayerHeight;
     opticalBox0_up_Z[tilt] = (opticalBox0_height[tilt].second - pmtHeight) / pmtPolyLayerHeight;
@@ -1815,18 +1802,18 @@ int generate_path(INFO *pInfo) {
 
   // Rotation and tilt paths for both gantries
   std::pair<double, double> rot_path1 = std::make_pair(pInfo->Position[3], pInfo->Destination[3]);
-  std::pair<double, double> rot_path2 =std::make_pair(0.0,0.0);// std::make_pair(pInfo->Position[8], pInfo->Destination[8]);
+  std::pair<double, double> rot_path2 = std::make_pair(0.0, 0.0); // std::make_pair(pInfo->Position[8], pInfo->Destination[8]);
   std::pair<double, double> rot_start1 = std::make_pair(pInfo->Position[3], pInfo->Position[3]);
-  std::pair<double, double> rot_start2 = std::make_pair(0.0,0.0);//std::make_pair(pInfo->Position[8], pInfo->Position[8]);
+  std::pair<double, double> rot_start2 = std::make_pair(0.0, 0.0); //std::make_pair(pInfo->Position[8], pInfo->Position[8]);
   std::pair<double, double> rot_end1 = std::make_pair(pInfo->Destination[3], pInfo->Destination[3]);
-  std::pair<double, double> rot_end2 = std::make_pair(0.0,0.0);//std::make_pair(pInfo->Destination[8], pInfo->Destination[8]);
+  std::pair<double, double> rot_end2 = std::make_pair(0.0, 0.0); //std::make_pair(pInfo->Destination[8], pInfo->Destination[8]);
 
   std::pair<double, double> tilt_path1 = std::make_pair(pInfo->Position[4], pInfo->Destination[4]);
-  std::pair<double, double> tilt_path2 = std::make_pair(0.0,0.0);//std::make_pair(pInfo->Position[9], pInfo->Destination[9]);
+  std::pair<double, double> tilt_path2 = std::make_pair(0.0, 0.0); //std::make_pair(pInfo->Position[9], pInfo->Destination[9]);
   std::pair<double, double> tilt_start1 = std::make_pair(pInfo->Position[4], pInfo->Position[4]);
-  std::pair<double, double> tilt_start2 = std::make_pair(0.0,0.0);//std::make_pair(pInfo->Position[9], pInfo->Position[9]);
+  std::pair<double, double> tilt_start2 = std::make_pair(0.0, 0.0); //std::make_pair(pInfo->Position[9], pInfo->Position[9]);
   std::pair<double, double> tilt_end1 = std::make_pair(pInfo->Destination[4], pInfo->Destination[4]);
-  std::pair<double, double> tilt_end2 = std::make_pair(0.0,0.0);//std::make_pair(pInfo->Destination[9], pInfo->Destination[9]);
+  std::pair<double, double> tilt_end2 = std::make_pair(0.0, 0.0); //std::make_pair(pInfo->Destination[9], pInfo->Destination[9]);
 
   // determine good paths
   bool goodPath00 = false, goodPath01 = false;
@@ -1885,7 +1872,7 @@ int generate_path(INFO *pInfo) {
                                                                               start_tank, end_tank);
 
   //Check whether we are not crossing a beam, because PathCalculator does not know about the beam
-  //  //if(pInfo->Destination[0] + 0.05 >= gantry2XPos){   //conservative
+  //if(pInfo->Destination[0] + 0.05 >= gantry2XPos){   //conservative
   if (pInfo->Destination[0] - 0.05 >= gantry2XPos) {     // closest possible
     cm_msg(MINFO, "generate_path",
            "Illegal value for X destination gantry1: will collide against beam gantry 2. Only possible if you move gantry2 out of the way first");
@@ -2081,15 +2068,17 @@ int generate_path(INFO *pInfo) {
   }
 
   // move rotation first  
- if (move_rotation_first) {
-   pInfo->MovePath[3][1] = round((pInfo->Destination[3] - pInfo->LimPos[3]) * pInfo->mScale[3] + pInfo->mOrigin[3]);
- }
+  if (move_rotation_first) {
+    pInfo->MovePath[3][1] = round((pInfo->Destination[3] - pInfo->LimPos[3]) * pInfo->mScale[3] + pInfo->mOrigin[3]);
+    pInfo->MovePath[8][1] = round((pInfo->Destination[8] - pInfo->LimPos[8]) * pInfo->mScale[8] + pInfo->mOrigin[8]);
+  }
 
 
 
   // Tilt first - tilt is always either increasing or decreasing boundary size
   if (tiltfirst) {
-   pInfo->MovePath[4][1] = round((pInfo->Destination[4] - pInfo->LimPos[4]) * pInfo->mScale[4] + pInfo->mOrigin[4]);
+    pInfo->MovePath[4][1] = round((pInfo->Destination[4] - pInfo->LimPos[4]) * pInfo->mScale[4] + pInfo->mOrigin[4]);
+    pInfo->MovePath[9][1] = round((pInfo->Destination[9] - pInfo->LimPos[9]) * pInfo->mScale[9] + pInfo->mOrigin[9]);
   }
 
   // Set paths and ordering for gantry move 
@@ -2114,10 +2103,10 @@ int generate_path(INFO *pInfo) {
         // Move in X or Y according to determined path for first gantry
         if (i == 5)
           pInfo->MovePath[i][j + 1 + path1.size()] = round(
-              pInfo->MovePath[i][j + path1.size()] + path2[j - 1].first * pInfo->mScale[i]);
+							   pInfo->MovePath[i][j + path1.size()] + path2[j - 1].first * pInfo->mScale[i]);
         else if (i == 6)
           pInfo->MovePath[i][j + 1 + path1.size()] = round(
-              pInfo->MovePath[i][j + path1.size()] + path2[j - 1].second * pInfo->mScale[i]);
+							   pInfo->MovePath[i][j + path1.size()] + path2[j - 1].second * pInfo->mScale[i]);
         else pInfo->MovePath[i][j + 1 + path1.size()] = pInfo->MovePath[i][j + path1.size()];
       }
       //}
@@ -2142,10 +2131,10 @@ int generate_path(INFO *pInfo) {
         // Move in X or Y according to determined path for first gantry
         if (i == 0)
           pInfo->MovePath[i][j + 1 + path2.size()] = round(
-              pInfo->MovePath[i][j + path2.size()] + path1[j - 1].first * pInfo->mScale[i]);
+							   pInfo->MovePath[i][j + path2.size()] + path1[j - 1].first * pInfo->mScale[i]);
         else if (i == 1)
           pInfo->MovePath[i][j + 1 + path2.size()] = round(
-              pInfo->MovePath[i][j + path2.size()] + path1[j - 1].second * pInfo->mScale[i]);
+							   pInfo->MovePath[i][j + path2.size()] + path1[j - 1].second * pInfo->mScale[i]);
         else pInfo->MovePath[i][j + 1 + path2.size()] = pInfo->MovePath[i][j + path2.size()];
       }
       //}
@@ -2161,46 +2150,45 @@ int generate_path(INFO *pInfo) {
   // Lower gantry heads at end and rotate
   if (!move_z1_first)
     pInfo->MovePath[2][path1.size() + path2.size() + 2] = round(
-        (pInfo->Destination[2] - pInfo->LimPos[2]) * pInfo->mScale[2] + pInfo->mOrigin[2]);
+								(pInfo->Destination[2] - pInfo->LimPos[2]) * pInfo->mScale[2] + pInfo->mOrigin[2]);
   else
     pInfo->MovePath[2][path1.size() + path2.size() + 2] = pInfo->MovePath[2][path1.size() + path2.size() + 1];
   if (!move_z2_first)
     pInfo->MovePath[7][path1.size() + path2.size() + 2] = round(
-        (pInfo->Destination[7] - pInfo->LimPos[7]) * pInfo->mScale[7] + pInfo->mOrigin[7]);
+								(pInfo->Destination[7] - pInfo->LimPos[7]) * pInfo->mScale[7] + pInfo->mOrigin[7]);
   else
     pInfo->MovePath[7][path1.size() + path2.size() + 2] = pInfo->MovePath[7][path1.size() + path2.size() + 1];
 
 
   // Move rotation
   if (!move_rotation_first) {
-   pInfo->MovePath[3][path1.size() + path2.size() + 2] = round(
-       (pInfo->Destination[3] - pInfo->LimPos[3]) * pInfo->mScale[3] + pInfo->mOrigin[3]);
-  
+    pInfo->MovePath[3][path1.size() + path2.size() + 2] = round(
+								(pInfo->Destination[3] - pInfo->LimPos[3]) * pInfo->mScale[3] + pInfo->mOrigin[3]);
+    pInfo->MovePath[8][path1.size() + path2.size() + 2] = round(
+								(pInfo->Destination[8] - pInfo->LimPos[8]) * pInfo->mScale[8] + pInfo->mOrigin[8]);
   } else {
-   pInfo->MovePath[3][path1.size() + path2.size() + 2] = pInfo->MovePath[3][path1.size() + path2.size() + 1];
+    pInfo->MovePath[3][path1.size() + path2.size() + 2] = pInfo->MovePath[3][path1.size() + path2.size() + 1];
+    pInfo->MovePath[8][path1.size() + path2.size() + 2] = pInfo->MovePath[8][path1.size() + path2.size() + 1];
   }
 
   // Move tilt
   if (!tiltfirst) {
-   pInfo->MovePath[4][path1.size() + path2.size() + 2] = round(
-       (pInfo->Destination[4] - pInfo->LimPos[4]) * pInfo->mScale[4] + pInfo->mOrigin[4]);
-   
+    pInfo->MovePath[4][path1.size() + path2.size() + 2] = round(
+								(pInfo->Destination[4] - pInfo->LimPos[4]) * pInfo->mScale[4] + pInfo->mOrigin[4]);
+    pInfo->MovePath[9][path1.size() + path2.size() + 2] = round(
+								(pInfo->Destination[9] - pInfo->LimPos[9]) * pInfo->mScale[9] + pInfo->mOrigin[9]);
   } else {
-   pInfo->MovePath[4][path1.size() + path2.size() + 2] = pInfo->MovePath[4][path1.size() + path2.size() + 1];
- }
+    pInfo->MovePath[4][path1.size() + path2.size() + 2] = pInfo->MovePath[4][path1.size() + path2.size() + 1];
+    pInfo->MovePath[9][path1.size() + path2.size() + 2] = pInfo->MovePath[9][path1.size() + path2.size() + 1];
+  }
 
   for (unsigned int i = 0; i < path1.size() + path2.size() + 3; ++i) {
     for (int j = gantry_motor_start; j < gantry_motor_end; j++) {
-      if (j==8 || j==9){ // skip rotation/tilt for gantry1
-        continue;
-      }
-
       cm_msg(MDEBUG, "generate_path", "Destination[%i][%i] = %6.3f (Count Destination = %6.0f, Remaining =  %6.0f)", j,
-              i, pInfo->Destination[j], pInfo->MovePath[j][i], pInfo->MovePath[j][i] - pInfo->CountPos[j]);
-			 
+             i, pInfo->Destination[j], pInfo->MovePath[j][i], pInfo->MovePath[j][i] - pInfo->CountPos[j]);
     }
   }
-  
+
   pInfo->PathSize = path1.size() + path2.size() + 3;
   pInfo->PathIndex = 0;
 
@@ -2236,16 +2224,14 @@ void move(INFO *pInfo) {
   printf("Moving to path index: %i\n", pInfo->PathIndex);
 
   // Read in axis positions (in counts)
-  channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMPos, (void *) pInfo->CountPos, 0);
+  channel_rw(pInfo, pInfo->hKeyMPos, (void *) pInfo->CountPos, TID_FLOAT, 0);
 
   // Determine required destinations to be sent to the motors
   for (i = gantry_motor_start; i < gantry_motor_end; i++) {
-    if (i==8 || i==9){ // skip rotation/tilt for gantry1
-      continue;
-    }
     pInfo->CountDest[i] = pInfo->MovePath[i][pInfo->PathIndex] - pInfo->CountPos[i];
+
     //DEBUG
-    printf("MD[%i]=%6.0f(%6.0f) \n", i, pInfo->CountDest[i], pInfo->CountPos[i]);
+    printf("MD[%i]=%6.0f(%6.0f) ", i, pInfo->CountDest[i], pInfo->CountPos[i]);
     if (i == 4 || i == 9) {
       printf("\n");
     }
@@ -2255,7 +2241,7 @@ void move(INFO *pInfo) {
   // This is added so that the monitor recognizes a move as completed, even
   // when no move is required.
   if (!zerotest) {
-    cm_msg(MINFO, "move", "Warning: No move required\n");
+    cm_msg(MINFO, "move", "Warning: No move required");
     // This indicates to the monitor that a move has been initiated
     // even though the motors won't start moving.
     //TODO:: BK: Think of a better way of doing this. The Moving variable should only be used to indicate that the system is moving it could cause confusion when you set it based on other conditions.(This is me being picky)
@@ -2265,11 +2251,7 @@ void move(INFO *pInfo) {
 
   // Start motors towards the specified destinations
   // Write motor destinations to the ODB
-  channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMDest, (void *) pInfo->CountDest, 1);
-
-  //More print Tests Jun-14
-  printf("hKeyMPos [0]: %f",pInfo->hKeyMPos[0]);
-  printf("hKeyMPos [1]: %f",pInfo->hKeyMPos[1]);
+  channel_rw(pInfo, pInfo->hKeyMDest, (void *) pInfo->CountDest, TID_FLOAT, 1);
 
   // Get the current location of the motor. This will be used to tell if a motor has started moving yet
   db_get_data(pInfo->hDB, pInfo->hKeyMPos[0], &Motor00StartPos, &size_float, TID_FLOAT);
@@ -2277,18 +2259,18 @@ void move(INFO *pInfo) {
   db_get_data(pInfo->hDB, pInfo->hKeyMDest[0], &Motor00Dest, &size_float, TID_FLOAT);
   db_get_data(pInfo->hDB, pInfo->hKeyMDest[1], &Motor01Dest, &size_float, TID_FLOAT);
 
-// Get the time at the beggining of the loop so that we can track how long we are in the loop
+  // Get the time at the beggining of the loop so that we can track how long we are in the loop
   Overall_time_for_loop = ss_millitime();
 
-// Don't do anything else until the motors have started moving
+  // Don't do anything else until the motors have started moving
   while (!started_moving) {
     start_of_loop = ss_millitime();
     // DEBUG
-    //    printf("\nChannel_rw called at time : %lf\n", ss_millitime());
+    printf("\nChannel_rw called at time : %lf\n", ss_millitime());
     // Set the ODB values to start a move
 
-    channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMStart, (void *) start, 1);
-    usleep(100000);//0.1 sec
+    channel_rw(pInfo, pInfo->hKeyMStart, (void *) start, TID_BOOL, 1);
+    sleep(2);
 
     waiting = 1;
     while (waiting) {
@@ -2305,8 +2287,8 @@ void move(INFO *pInfo) {
         waiting = 0;
         started_moving = 1;
       }
-        // TF NOTE: the code below is vulnerable to which motor channels are used. Switching a cable screws this up.
-        // If any of the motors for gantry0 are no longer at their start position that means the motors are moving and the program behaved properly
+      // TF NOTE: the code below is vulnerable to which motor channels are used. Switching a cable screws this up.
+      // If any of the motors for gantry0 are no longer at their start position that means the motors are moving and the program behaved properly
       else if (Motor00Pos[0] != Motor00StartPos[0] || Motor00Pos[1] != Motor00StartPos[1] ||
                Motor00Pos[2] != Motor00StartPos[2]
                || Motor00Pos[3] != Motor00StartPos[3] || Motor00Pos[4] != Motor00StartPos[4] ||
@@ -2317,7 +2299,7 @@ void move(INFO *pInfo) {
         started_moving = 1;
         pInfo->Moving = 1;   //not necessary for long moves, but for mm moves, move can stop before monitor can check whether it's moving, so need to set here that is was really moving
       }
-        // Same test for gantry1
+      // Same test for gantry1
       else if (Motor01Pos[0] != Motor01StartPos[0] || Motor01Pos[1] != Motor01StartPos[1] ||
                Motor01Pos[2] != Motor01StartPos[2]
                || Motor01Pos[3] != Motor01StartPos[3] || Motor01Pos[4] != Motor01StartPos[4] ||
@@ -2330,8 +2312,8 @@ void move(INFO *pInfo) {
       }
 
 
-        // If a motor for gantry0 is trying to move in the positive direction but the corresponding negative limit switch is engaged,
-        // a move will not be started however no move is needed so set pinfo->moving to 1 so that the next move will be called
+      // If a motor for gantry0 is trying to move in the positive direction but the corresponding negative limit switch is engaged,
+      // a move will not be started however no move is needed so set pinfo->moving to 1 so that the next move will be called
       else if (((Motor00Dest[4] > 0) && Motor00LimitNeg[4]) || ((Motor00Dest[5] > 0) && Motor00LimitNeg[5])
                || ((Motor00Dest[6] > 0) && Motor00LimitNeg[6]) || ((Motor00Dest[7] > 0) && Motor00LimitNeg[7])) {
         cm_msg(MERROR, "move", "Move could not be started because Motor00 is at a negative limit switch");
@@ -2340,7 +2322,7 @@ void move(INFO *pInfo) {
         pInfo->Moving = 1;
       }
 
-        // Now testing for move in negative direction, and hitting positive limit switch for ganty0
+      // Now testing for move in negative direction, and hitting positive limit switch for ganty0
       else if (((Motor00Dest[4] < 0) && Motor00LimitPos[4]) || ((Motor00Dest[5] < 0) && Motor00LimitPos[5])
                || ((Motor00Dest[6] < 0) && Motor00LimitPos[6]) || ((Motor00Dest[7] < 0) && Motor00LimitPos[7])) {
         cm_msg(MERROR, "move", "Move could not be started because Motor00 is at a Positive limit switch");
@@ -2349,7 +2331,7 @@ void move(INFO *pInfo) {
         pInfo->Moving = 1;
       }
 
-        // Same for gantry1
+      // Same for gantry1
       else if (((Motor01Dest[1] > 0) && Motor01LimitNeg[1]) || ((Motor01Dest[2] > 0) && Motor01LimitNeg[2])
                || ((Motor01Dest[3] > 0) && Motor01LimitNeg[3]) || ((Motor01Dest[4] > 0) && Motor01LimitNeg[4])) {
         cm_msg(MERROR, "move", "Move could not be started because Motor01 is at a negative limit switch");
@@ -2358,7 +2340,7 @@ void move(INFO *pInfo) {
         pInfo->Moving = 1;
       }
 
-        // Same for gantry1
+      // Same for gantry1
       else if (((Motor01Dest[1] < 0) && Motor01LimitPos[1]) || ((Motor01Dest[2] < 0) && Motor01LimitPos[2])
                || ((Motor01Dest[3] < 0) && Motor01LimitPos[3]) || ((Motor01Dest[4] < 0) && Motor01LimitPos[4])) {
         cm_msg(MERROR, "move", "Move could not be started because Motor01 is at a Positive limit switch");
@@ -2368,8 +2350,8 @@ void move(INFO *pInfo) {
       }
 
 
-        // If 5 seconds has passed and the motors haven't started moving reset the ODB values
-        // that should initiate a move with the hope that a move will start.
+      // If 5 seconds has passed and the motors haven't started moving reset the ODB values
+      // that should initiate a move with the hope that a move will start.
       else if (ss_millitime() - start_of_loop > 1000 * 5) {
         cm_msg(MINFO, "move", "Calling channel_rw again after past 5s");
         waiting = 0;
@@ -2385,17 +2367,17 @@ void stop_move(HNDLE hDB, HNDLE hKey, void *data) {
   INFO *pInfo = (INFO *) data;
 
   BOOL stop[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-  channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMStop, (void *) stop, 1);
+  channel_rw(pInfo, pInfo->hKeyMStop, (void *) stop, TID_BOOL, 1);
 
   switch (pInfo->AbortCode) {
-    case AC_USER_INPUT:
-      cm_msg(MERROR, "stop_move", "Move aborted due to user input");
-      break;
-    case AC_COLLISION:
-      cm_msg(MERROR, "stop_move", "Move aborted due to collision detected");
-      break;
-    case AC_TIMEOUT:
-      cm_msg(MERROR, "stop_move", "Move aborted due to move timeout");
+  case AC_USER_INPUT:
+    cm_msg(MERROR, "stop_move", "Move aborted due to user input");
+    break;
+  case AC_COLLISION:
+    cm_msg(MERROR, "stop_move", "Move aborted due to collision detected");
+    break;
+  case AC_TIMEOUT:
+    cm_msg(MERROR, "stop_move", "Move aborted due to move timeout");
   }
 
   pInfo->AbortCode = AC_USER_INPUT; // reset the abort code to default (user input)
@@ -2411,11 +2393,10 @@ void monitor(HNDLE hDB, HNDLE hKey, void *data) {
   BOOL OldMov = pInfo->Moving; //Store the old value of pInfo->Moving for comparison to see if the value changes 
   int i = 0;
 
-  //printf("x");
   /*-- Update variables section of ODB -----------------------------*/
 
   // Copy variable indicating if each axis is moving, and write this to ODB
-  channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMMoving, (void *) pInfo->AxisMoving, 0);
+  channel_rw(pInfo, pInfo->hKeyMMoving, (void *) pInfo->AxisMoving, TID_BOOL, 0);
   db_set_data(pInfo->hDB, pInfo->hKeyAxMoving, pInfo->AxisMoving, 10 * sizeof(float), 10, TID_BOOL);
 
   // Check if any of the axes are moving, and write this to ODB
@@ -2428,19 +2409,16 @@ void monitor(HNDLE hDB, HNDLE hKey, void *data) {
 
 
   // Get the axis positions and write to ODB
-  channel_rw<float, TID_FLOAT>(pInfo, pInfo->hKeyMPos, (void *) pInfo->CountPos, 0);
+  channel_rw(pInfo, pInfo->hKeyMPos, (void *) pInfo->CountPos, TID_FLOAT, 0);
   for (i = gantry_motor_start; i < gantry_motor_end; i++) {
-    if (i==8 || i==9){ // skip rotation/tilt for gantry1
-      continue;
-    }
-
     pInfo->Position[i] = (pInfo->CountPos[i] - pInfo->mOrigin[i]) / pInfo->mScale[i] + pInfo->LimPos[i];
+
   }
   db_set_data(pInfo->hDB, pInfo->hKeyPos, pInfo->Position, 10 * sizeof(float), 10, TID_FLOAT);
 
   // Check for limit switches triggered and write to ODB
-  channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMLimitNeg, (void *) pInfo->neg_AxisLimit, 0);
-  channel_rw<BOOL, TID_BOOL>(pInfo, pInfo->hKeyMLimitPos, (void *) pInfo->pos_AxisLimit, 0);
+  channel_rw(pInfo, pInfo->hKeyMLimitNeg, (void *) pInfo->neg_AxisLimit, TID_BOOL, 0);
+  channel_rw(pInfo, pInfo->hKeyMLimitPos, (void *) pInfo->pos_AxisLimit, TID_BOOL, 0);
   db_set_data(pInfo->hDB, pInfo->hKeyAxLimitNeg, pInfo->neg_AxisLimit, 10 * sizeof(BOOL), 10, TID_BOOL);
   db_set_data(pInfo->hDB, pInfo->hKeyAxLimitPos, pInfo->pos_AxisLimit, 10 * sizeof(BOOL), 10, TID_BOOL);
 
@@ -2475,7 +2453,7 @@ void monitor(HNDLE hDB, HNDLE hKey, void *data) {
           } else {
             if (!stoppedDueToLimit) {
               cm_msg(MERROR, "monitor", "Move failed at i=%d, pathindex=%d : %6.2f, %6.2f", i, pInfo->PathIndex,
-                  pInfo->MovePath[i][pInfo->PathIndex], pInfo->CountPos[i]);
+		     pInfo->MovePath[i][pInfo->PathIndex], pInfo->CountPos[i]);
               return;
             }
           }
@@ -2504,70 +2482,69 @@ void monitor(HNDLE hDB, HNDLE hKey, void *data) {
 
 
 
+
+
+
+
+
+
+
+
 /*-- Channel Read/Write --------------------------------------------*/
 // Used to communicate with the variables in the motor frontend.
 // Arguments:
-// 		pInfo: Info structure
-//		hKey: Pointer to the ODB handle array to be read from/written to
-//		values: Pointer to the array from which to read/write data
-//		type: Type ID of the variable to be written (TID_FLOAT, TID_BOOL, TID_INT)
-//		rw: set to 0 for read from ODB, 1 for write to ODB
-template <class dtype, DWORD db>
-void channel_rw(INFO *pInfo, HNDLE *hKey, void *values, BOOL rw) {
-  
+// pInfo: Info structure
+//hKey: Pointer to the ODB handle array to be read from/written to
+//values: Pointer to the array from which to read/write data
+//type: Type ID of the variable to be written (TID_FLOAT, TID_BOOL, TID_INT)
+//rw: set to 0 for read from ODB, 1 for write to ODB
+void channel_rw(INFO *pInfo, HNDLE *hKey, void *values, DWORD type, BOOL rw) {
+
+  //!!!!The Below comment is meant to help expalin how this function works as it uses "function-like" macros which people may not be famillar with. 
+
+  /*
+//STORE_DATA and READ_DATA are "function-like" macros using the #define preprocessor macro (See lines 60 and 76) #define performs textual replacement. When used as a function-like macro #define will take arguments like a function. 
+//EXAMPLE:: STORE_DATA(float, values, size) is a function-like macro. The preproccesor will replace the line STORE_DATA(float); with the lines of code listed after the #define (see line 76) and everywhere that the text "TYPE" appears in those lines of code will be replaced with the text float. END EXAMPLE
+//The "function-like" are used to reduce the number of lines of code and to improve the readibility of the code. It is used to accomplish what templete functions do in C++
+//NOTE!!:: Use of template functions can be difficult when debugging this section as the code you see is not what the compiler sees. The compiler sees the code after the preproccesor has completed the text replacement. If debugging this section it may be wise to not use the macro and instead do the textual replacement yourself and then debug. Comment by Ben Krupicz  
+*/
+
   int size;
+  int buff_size;
   void *motor00_values;
   void *motor01_values;
 
-  dtype motor00_type_values[8];
-  dtype motor01_type_values[8];
-  
-  int buff_size=sizeof(motor00_type_values);
-  size = sizeof(dtype);
-  
-  motor00_type_values[0]= 0;
-  motor00_type_values[1]= 0;
-  motor00_type_values[2]= 0;
-  motor00_type_values[3]=*((dtype*)(values+4*size));   // Tilt
-  motor00_type_values[4]=*((dtype*)(values+3*size));   // Rotary
-  motor00_type_values[5]=*((dtype*)(values+0*size));   // X
-  motor00_type_values[6]=*((dtype*)(values+1*size));   // Y
-  motor00_type_values[7]=*((dtype*)(values+2*size));   // Z
-    
-  motor01_type_values[0]= 0;  
-  motor01_type_values[1]=*((dtype*)(values+6*size));   // Y
-  motor01_type_values[2]=*((dtype*)(values+7*size));   // Z
-  motor01_type_values[3]= 0;
-  motor01_type_values[4]=*((dtype*)(values+8*size));   // Rotary
-  motor01_type_values[5]=*((dtype*)(values+9*size));   // Tilt
-  motor01_type_values[6]=*((dtype*)(values+5*size));   // X
-  motor01_type_values[7]= 0;  
-  motor00_values = motor00_type_values;
-  motor01_values = motor01_type_values;
-    
-  for(int i = 0; i<8; i++){
-    printf("",i,((dtype*)motor00_values)[i]);  
+
+  switch (type) {
+  case TID_FLOAT:
+    // STORE_DATA(TYPE) determines the correct value for the size value and fills  motor00_values and motor01_values with the entries in the values variable
+    STORE_DATA(float);
+    break;
+  case TID_BOOL: STORE_DATA(BOOL);
+    break;
+  case TID_INT: STORE_DATA(int)
+      break;
   }
 
-
   if (rw == 0) {
-    db_get_data(pInfo->hDB, hKey[0], motor00_values, &buff_size, db);
-    db_get_data(pInfo->hDB, hKey[1], motor01_values, &buff_size, db);
-    *((dtype*)(values + 0*size)) = *((dtype*)(motor00_values+5*size));
-    *((dtype*)(values + 1*size)) = *((dtype*)(motor00_values+6*size));
-    *((dtype*)(values + 2*size)) = *((dtype*)(motor00_values+7*size));
-    *((dtype*)(values + 3*size)) = *((dtype*)(motor00_values+4*size));
-    *((dtype*)(values + 4*size)) = *((dtype*)(motor00_values+3*size));
-    *((dtype*)(values + 5*size)) = *((dtype*)(motor01_values+6*size));
-    *((dtype*)(values + 6*size)) = *((dtype*)(motor01_values+1*size));
-    *((dtype*)(values + 7*size)) = *((dtype*)(motor01_values+2*size));
-    *((dtype*)(values + 8*size)) = *((dtype*)(motor01_values+4*size));
-    *((dtype*)(values + 9*size)) = *((dtype*)(motor01_values+5*size));
-    
+    db_get_data(pInfo->hDB, hKey[0], motor00_values, &buff_size, type);
+    db_get_data(pInfo->hDB, hKey[1], motor01_values, &buff_size, type);
+
+    switch (type) {
+    case TID_FLOAT:
+      //READ_VALUES sortes the values from motor00_values and motor01_values in the values array
+      READ_VALUES(float);
+      break;
+    case TID_BOOL: READ_VALUES(BOOL);
+      break;
+    case TID_INT: READ_VALUES(int);
+      break;
+    }
   } else {
+
     // Write data to ODB
-    db_set_data(pInfo->hDB, hKey[0], motor00_values, buff_size, 8, db);
-    db_set_data(pInfo->hDB, hKey[1], motor01_values, buff_size, 8, db);
+    db_set_data(pInfo->hDB, hKey[0], motor00_values, buff_size, 8, type);
+    db_set_data(pInfo->hDB, hKey[1], motor01_values, buff_size, 8, type);
 
   }
 }
@@ -2593,7 +2570,7 @@ getPMTpolygon(XYPolygon &poly, double pmtRadius, int polyNum, double pmtXcentre,
   double yFromCentre;
   double zFromCentre = pmtRadius - polyHeight * polyNum;
   double radiusOfEnclosingCircle =
-      sqrt(pmtRadius * pmtRadius - zFromCentre * zFromCentre) / cos(PI / numPolySides) + 0.001;
+    sqrt(pmtRadius * pmtRadius - zFromCentre * zFromCentre) / cos(PI / numPolySides) + 0.001;
   // EnclosingCircle is the circle that encloses the polygon at the z-height,
   // without the polygon intersecting the PMT cross-section
   // Rika (23Mar2017): added 0.001m to round up.
