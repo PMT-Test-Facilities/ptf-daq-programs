@@ -4,6 +4,8 @@
 #include "midas.h"    
 #include "experim_new.h"  
 #include <vector>
+#include "norm_calc/norm_eval.h"
+
 
 class ScanSequence {
   
@@ -38,6 +40,8 @@ private:
   int TankAvoidancePath(std::vector<std::vector<double> > &points);
   int DemoPath(std::vector<std::vector<double> > &points);
   int TiltPath(std::vector<std::vector<double> > &points);//Anubhav's edit
+  int SpinPath(std::vector<std::vector<double>> &points);
+  int PatchPath(std::vector<std::vector<double>> &points);
 
   bool is_destinationvalid(const std::vector<double>& l); //Anubhav's edit
   
@@ -72,6 +76,8 @@ private:
   // NOW: do a resize beforehand for more efficient mem usage..
   int point_num;
   float z_max_value;
+
+  NormCalc pmt_norm;
   
 };
 

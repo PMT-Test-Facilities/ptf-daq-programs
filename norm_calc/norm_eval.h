@@ -1,0 +1,38 @@
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <string>
+#include <math.h> //abs
+#include <algorithm> // used for upper_bound
+
+#include <cmath> // nan
+
+const  double CLOSE_ENOUGH = 1e-7;
+
+int binary_search( double value, std::vector< double> points);
+
+class NormCalc{
+    public:
+        NormCalc();
+        std::vector< double> evaluate_norm( double theta,  double phi);
+         double evaluate_radius( double theta,  double phi);
+        void test_print();
+
+    private:
+
+        void add_angle( double angle, std::vector< double>& point_list);
+
+        std::vector< double> phi_points; 
+        std::vector< double> theta_points; 
+        // organized as theta/phi 
+        std::vector<std::vector< double>> norm_x;
+        std::vector<std::vector< double>> norm_y;
+        std::vector<std::vector< double>> norm_z;
+        std::vector<std::vector< double>> radius;
+
+         double biliner_inerpolation( double theta,  double phi,const std::vector<std::vector< double>>& point_vecs);
+
+        const std::string filename = "spline_fit_data.dat"; 
+
+};

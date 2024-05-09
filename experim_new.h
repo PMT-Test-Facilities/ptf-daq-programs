@@ -51,12 +51,15 @@ typedef enum{
   RECTANGULAR,
   ALIGNMENT,
   TILT_SCAN,//Anubhav's edit
+  SPIN_SCAN, // this is a fixed point and it spins around 
+  PATCH_SCAN, // the takenaka-san scan type 
   PASS_BY,
   PMTSURFACE,
   MANUAL,
   DEMO,
   TANKAVOIDANCE,
   FIX_POINT,
+  ROTATION_SCAN,
 } scan_type_t;
 
 typedef enum{
@@ -147,6 +150,34 @@ typedef struct {
     INT         iterations;
     INT         gantry_laser;
   } pass_by_par;
+  struct {
+    float plane_angle_start;
+    float plane_angle_end;
+    float plane_angle_step;
+    float tilt_angle_fixed;
+    float starting_radius;
+    float linear_step;
+    float pmt_x;
+    float pmt_y; 
+  } rotaion_scan_par;
+  struct{
+    float azi_start;
+    float zen_start;
+    float azi_step;
+    float zen_step;
+    float azi_distance;
+    float zen_distance;
+    float init_x;
+    float init_y;
+    float init_z;
+  } spin_scan_par;
+  struct{
+    float pmt_x;
+    float pmt_y; 
+    float pmt_tip_z;
+    float pmt_angle_center;
+    INT scan_dir;
+  } patch_scan_par;
   //PMT coordinate system
   struct {
     //defines starting point on PMT surface

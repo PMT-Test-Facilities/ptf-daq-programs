@@ -100,6 +100,8 @@ int ScanSequence::GeneratePath(std::vector<std::vector<double> > &points_in){
       fs.scan_type == TANKAVOIDANCE ? "tank avoidance" :
       fs.scan_type == ALIGNMENT ? "alignment" :
       fs.scan_type == TILT_SCAN ? "tilt Scan" : //Anubhav's edit
+      fs.scan_type == SPIN_SCAN ? "spin scan" :
+      fs.scan_type == PATCH_SCAN? "path scan" :
       fs.scan_type == FIX_POINT ? "fixed point [NOT IMPLEMENTED]":
       "INVALID"
   );
@@ -125,11 +127,15 @@ int ScanSequence::GeneratePath(std::vector<std::vector<double> > &points_in){
     case ALIGNMENT:
       non_zero_points = AlignmentPath(points_in);
       break;
-  case TILT_SCAN: //Anubhav's edit
+    case TILT_SCAN: //Anubhav's edit
       non_zero_points = TiltPath(points_in);
       break;
-    case FIX_POINT:
-      //    non_zero_points = FixedPointPath(points_in);
+    case SPIN_SCAN:
+      non_zero_points = SpinPath(points_in);
+      break;
+    case PATCH_SCAN:
+      non_zero_points = PatchPath(points_in);
+      break;
     default:
       cm_msg(MERROR,"GeneratePath","Invalid scan type.");
       return 0;
@@ -147,6 +153,144 @@ int ScanSequence::GeneratePath(std::vector<std::vector<double> > &points_in){
 
 }
 
+int ScanSequence::SpinPath(std::vector<std::vector<double>> &points){
+  /*
+    This will do a fixed-position scan scanning in azimiuth and zenith
+  */
+  points.clear();
+  
+  const float azi_start = fs.spin_scan_par.azi_start;
+  const float azi_step = fs.spin_scan_par.azi_step;
+  const float zen_start = fs.spin_scan_par.zen_start;
+  const float zen_step = fs.spin_scan_par.zen_step;
+
+  const float zen_dist = fs.spin_scan_par.zen_distance;
+  const float azi_dist = fs.spin_scan_par.azi_distance;
+
+  const float gantry_0_x = fs.spin_scan_par.init_x;
+  const float gantry_0_y = fs.spin_scan_par.init_y;
+  const float gantry_0_z = fs.spin_scan_par.init_z;
+  
+  float current_azi = azi_start;
+  float current_zen = zen_start;
+
+  const float max_azi = azi_start + azi_dist;
+  const float max_zen = zen_start + zen_dist;
+
+  bool scan_forwards = true;
+
+  while (current_azi < max_azi){
+
+    current_zen = scan_forwards ? zen_start : max_zen ;
+
+    while (current_zen < max_zen){
+      points.emplace_back(
+          gantry_0_x,
+          gantry_0_y,
+          gantry_0_z,
+          current_zen*3.14159/180.0,
+          current_azi*3.14159/180.0,
+          -99999,
+          -99999,
+          -99999,
+          -99999,
+          -99999
+      );
+      
+      current_zen += zen_step; 
+    }
+    current_azi += azi_step;
+  }
+
+  return points.size();
+}
+
+const float pi = 3.1415926;
+
+int ScanSequence::PatchPath(std::vector<std::vector<double>> &points){
+    std::vector<double> takenasan_angles={
+      10, 20, 30, 40, //  45, 50, 55, 60, 65, 70, 75, 80
+    };
+
+    const float pmt_center_x = fs.patch_scan_par.pmt_x;
+    const float pmt_center_y = fs.patch_scan_par.pmt_y; 
+    const float pmt_center_z = fs.patch_scan_par.pmt_tip_z; // should be in gantry coordinates 
+    const float gantry_phi_pointing = fs.patch_scan_par.pmt_angle_center; // phi angle optical box needs to point at the surface 
+    const int scantype = fs.patch_scan_par.scan_dir;
+
+    const double step_len = 0.05;
+
+    double phi_positional = 180;
+    if(scantype==0){ // perpendicular (moving away from center to -x)
+      // do nothing... 
+    }else if (scantype==1){ //diagonal 
+      phi_positional+=45; 
+    }else if (scantype==2){ // parallel (moving away from center to -y)
+      phi_positional+=90; 
+    }else{
+      throw std::runtime_error("Unknown scan direction :(");
+    }
+    phi_positional*= pi/180; 
+
+
+
+    double pmt_height = pmt_norm.evaluate_radius(pi/2, phi_positional);
+
+    std::vector<double> point_on_pmt;
+    std::vector<double> final_point_pmt_coords;
+    std::vector<double> final_point; 
+
+    for(int ia=0; ia<takenasan_angles.size(); ia++){
+      double theta = pi/2 - takenasan_angles[ia]*3.14159/180;
+
+      
+
+      std::vector<double> norm_vector = pmt_norm.evaluate_norm(theta, phi_positional);
+      double radius = pmt_norm.evaluate_radius(theta, phi_positional);
+
+      point_on_pmt  = {// in PMT coordinates! 
+        radius*cos(phi_positional)*sin(theta),
+        radius*sin(phi_positional)*sin(theta),
+        radius*cos(phi_positional)
+      };
+      
+    
+    final_point_pmt_coords = {
+      point_on_pmt[0] + norm_vector[0]*step_len,
+      point_on_pmt[1] + norm_vector[1]*step_len,
+      point_on_pmt[2] + norm_vector[2]*step_len 
+    };
+
+    // TODO - we need to make sure this is actually a real point! May need to move a long this line until we're inside of the valid box :(
+    final_point = {
+        final_point_pmt_coords[0] + pmt_center_x,
+        final_point_pmt_coords[1] + pmt_center_y,
+        pmt_height + static_cast<double>(pmt_center_z) - final_point_pmt_coords[2]
+    };
+
+    // optical box tilt angle is determined from the normal vector 
+    float ob_theta = atan2(
+      -norm_vector[2],
+      sqrt(pow(norm_vector[0],2) + pow(norm_vector[1],2))
+    );
+
+    //convert from PMT bulb-centered coordinates to gantry coordinates 
+
+    points.emplace_back(
+      final_point[0], 
+      final_point[1],
+      final_point[2], 
+      ob_theta,
+      gantry_phi_pointing,
+      -99999,
+	    -99999,
+	    -99999,
+	    -99999,
+      -99999
+    );
+
+    }
+}
 
 //--Anubhav's edit-----------------------------------------
 
@@ -190,7 +334,7 @@ int ScanSequence::TiltPath(std::vector<std::vector<double> > &points){
 	    -99999,
 	    -99999,
 	    -99999,
-            -99999
+      -99999
 	  };
 	  planepoints.push_back(p);
 	}
@@ -228,7 +372,7 @@ int ScanSequence::TiltPath(std::vector<std::vector<double> > &points){
 	    -99999,
 	    -99999,
 	    -99999,
-            -99999
+      -99999
 	  };
 	  planepoints.push_back(p);
 	}

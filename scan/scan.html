@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PTF Scan Settings</title>
+    <script src="midas.js"></script>
+    <script src="mhttpd.js"></script>
+    <link href="midas.css" rel="stylesheet">
+    <link href="overrides.css" rel="stylesheet">
+
+<script>
+let selected = null,
+    pToLoad  = [],
+    eToLoad  = [];
+
+
+function onSelectorChange(path, value) {
+    mjsonrpc_db_paste([path], [value]);
+}
+
+
+function selectTab(i) {
+    if (selected !== null) {
+        try {
+		document.getElementById('data-' + selected).classList.remove("visible");
+		document.getElementById('tab-'  + selected).classList.remove("selected");
+        } catch(e) {}
+    }
+    selected = i;
+    document.getElementById('data-' + selected).classList.add("visible");
+    document.getElementById('tab-'  + selected).classList.add("selected");
+}
+
+
+function makeProp(prop, path) {
+    let row = document.createElement('tr');
+    let path_ = `/equipment/scan/settings/${path}/${prop.path}`;
+    if (prop.hasOwnProperty('unit')) {
+        let fmt = prop.hasOwnProperty('fmt') ? prop.fmt : 'f3';
+        row.innerHTML = `
+            <td>${prop.name} <span class="unit">[${prop.unit}]</span>:</td>
+            <td name="modbvalue" data-odb-path="${path_}" data-odb-editable="1" data-format="${fmt}"></td>
+        `;
+    } else if (prop.hasOwnProperty('selector')) {
+        let td = document.createElement('td');
+        td.innerText = prop.name;
+        row.appendChild(td);
+
+        td = document.createElement('td');
+
+        let select = document.createElement('select');
+        select.oninput = function() {
+            onSelectorChange(path_, select.value);
+        };
+        select.id = 'select-' + path + '-' + prop.path;
+
+        for (let key in prop.selector) if (prop.selector.hasOwnProperty(key)) {
+            let option = document.createElement('option');
+            option.value = key;
+            option.innerText = prop.selector[key];
+            select.appendChild(option);
+        }
+
+        td.appendChild(select);
+	pToLoad.push(path_);
+        eToLoad.push(select);
+
+        row.appendChild(td);
+    }
+    return row;
+}
+
+
+function makeControlGrouped(id, info) {
+    let ret = document.createElement('p');
+    ret.innerText = 'todo';
+    return ret;
+}
+
+
+function makeControlSimple(id, info) {
+    let div = document.createElement('div');
+    div.id = id;
+    div.classList.add('data');
+    let table = document.createElement('table');
+    if (!info.hasOwnProperty('props')) {
+        if (info.hasOwnProperty('message')) {
+            div.innerHtml = '<p>' + info.message + '</p>';
+        }
+    
+        return div;
+    }
+    info.props.forEach(function(prop) {
+        let row = makeProp(prop, info.path);
+        table.appendChild(row);
+    });
+    div.appendChild(table);
+    return div;
+}
+
+
+function makeControls() {
+    let select = document.createElement('select');
+    select.id = 'select-scan-type';
+    select.innerHTML = `
+        <option value="0">Cylindrical</option>
+        <option value="1">Rectangular</option>
+        <option value="2">Alignment</option>
+        <option value="3">Tilt Scan</option>
+        <option value="4">Spin Scan</option>
+        <option value="5">Patch Scan</option>
+        <option value="6">Manual</option>
+    `; //Anubhav's edit
+    select.oninput = function() {
+        onSelectorChange('/equipment/scan/settings/scantype', select.value);
+        selectTab(select.value);
+    };
+    pToLoad.push('/equipment/scan/settings/scantype');
+    eToLoad.push(select);
+    document.getElementById('td-scan-type').appendChild(select);
+
+    let elem = document.getElementById('data');
+    IDS.forEach(function(id){
+        let info = DATA[id];
+        if (id.propsets) {
+            elem.appendChild(makeControlGrouped(id, info));
+        } else {
+            elem.appendChild(makeControlSimple(id, info));
+        }
+    });
+
+    mjsonrpc_db_get_values(pToLoad).then(function(rpc){
+        for (let i = 0; i < eToLoad.length; i++) {
+	        eToLoad[i].value = rpc.result.data[i];
+        }
+    	document.getElementById('loading').remove();
+	    document.getElementById('tab-0').disabled = false;
+        document.getElementById('tab-1').disabled = false;
+        document.getElementById('tab-2').disabled = false;
+        document.getElementById('tab-3').disabled = false; //Anubhav's edit
+        document.getElementById('tab-4').disabled = false;
+        document.getElementById('tab-5').disabled = false;
+        document.getElementById('tab-6').disabled = false; 
+        document.getElementById('gdata').classList.add('visible');
+        eToLoad[0].oninput();
+    });
+}
+
+
+const IDS  = ['data-0', 'data-1', 'data-2', 'data-3','data-4', 'data-5', 'data-6']; //Anubhav's edit
+const DATA = Object.freeze({
+    'data-0': {
+        path: 'cylinderparams',
+        propsets: false,
+        props: [
+            {name: 'Height', path: 'height', unit: 'm'},
+            {name: 'Radius', path: 'radius', unit: 'm'},
+            {name: 'Arc step', path: 'arc_step', unit: '?'},
+            {name: 'Loop separation', path: 'loop_separation', unit: '?'},
+            {name: 'Layer thickness', path: 'layer_thickness', unit: 'm'},
+            {name: 'X center', path: 'x_center', unit: 'm'},
+            {name: 'Y center', path: 'y_center', unit: 'm'},
+            {name: 'Gantry', path: 'which_gantry', selector: {0: 'Gantry 0', 1: 'Gantry 1', 2: 'Both'}},
+        ],
+    },
+    'data-1': {
+        path: 'rectangularparams',
+        propsets: false,
+        props: [
+            {name: 'Start x', path: 'init_pos_x', unit: 'm'},
+            {name: 'Start y', path: 'init_pos_y', unit: 'm'},
+            {name: 'Start z', path: 'init_pos_z', unit: 'm'},
+            {name: 'Distance x', path: 'prism_length_x', unit: 'm'},
+            {name: 'Distance y', path: 'prism_width_y', unit: 'm'},
+            {name: 'Distance z', path: 'prism_height_z', unit: 'm'},
+            {name: 'Step x', path: 'x_step', unit: 'm'},
+            {name: 'Step y', path: 'y_step', unit: 'm'},
+            {name: 'Step z', path: 'z_step', unit: 'm'},
+            {name: 'Tilt', path: 'init_tilt', unit: '°'},
+            {name: 'Rotation', path: 'init_rotation', unit: '°'},
+            {name: 'Gantry', path: 'which_gantry', selector: {0: 'Gantry 0', 1: 'Gantry 1', 2: 'Both'}},
+        ],
+    },
+    'data-2': {
+        path: 'alignmentparams',
+        propsets: true,
+        props: [
+            {name: 'Gantry 0', props: [
+                {name: 'Start x', path: 'init_pos[0]', unit: 'm'},
+                {name: 'Start y', path: 'init_pos[1]', unit: 'm'},
+                {name: 'Start z', path: 'init_pos[2]', unit: 'm'},
+                {name: 'Rotation', path: 'init_pos[3]', unit: '°'},
+                {name: 'Tilt', path: 'init_pos[4]', unit: '°'},
+            ]},
+            {name: 'Gantry 1', props: [
+                {name: 'Start x', path: 'init_pos[5]', unit: 'm'},
+                {name: 'Start y', path: 'init_pos[6]', unit: 'm'},
+                {name: 'Start z', path: 'init_pos[7]', unit: 'm'},
+                {name: 'Rotation', path: 'init_pos[8]', unit: '°'},
+                {name: 'Tilt', path: 'init_pos[9]', unit: '°'},
+            ]},
+            {name: '', props: [
+                {name: 'Δ rotation', path: 'delta_rotation', unit: '°'},
+                {name: 'Δ tilt', path: 'delta_tilt', unit: '°'},
+                {name: 'Step rotation', path: 'step_rotation', unit: '°'},
+                {name: 'Step tilt', path: 'step_tilt', unit: '°'},
+                {name: 'Grid length', path: 'grid_length', unit: 'm'},
+                {name: 'Grid width', path: 'grid_width', unit: 'm'},
+                {name: 'Grid length', path: 'grid_length', unit: 'm'},
+                {name: 'Step width', path: 'step_width', unit: 'm'},
+                {name: 'Step length', path: 'step_length', unit: 'm'},
+                {name: 'Laser source', path: 'gantry_laser', selector: {0: 'Gantry 0', 1: 'Gantry 1', 2: 'Both'}},
+            ]},
+        ],
+    },
+     'data-3': { //Anubhav's edit
+        path: 'tiltparams',
+        propsets: false,
+        props: [
+            { name: 'Theta(Azimuthal)', path: 'theta', unit: '°' },
+            { name: 'Phi(Zenith)', path: 'phi', unit: '°' },
+            { name: 'Step', path: 'step', unit: 'm' },
+        ],
+    },
+    'data-4':{
+        path: 'spinparams',
+        propsets: false,
+        props:[ 
+            { name: 'Azimuth Start', path: 'azi_start', unit: '°' },
+            { name: 'Zenith Start', path: 'zen_start', unit: '°' },
+            { name: 'Azimuth Step', path: 'azi_step', unit: '°' },
+            { name: 'Zenith Step', path: 'zen_step', unit: '°' },
+            { name: 'Azimuth Distance', path: 'azi_dist', unit: '°' },
+            { name: 'Zenith Distance', path: 'zen_dist', unit: '°' },
+            {name: 'Fixed x', path: 'init_pos_x', unit: 'm'},
+            {name: 'Fixed y', path: 'init_pos_y', unit: 'm'},
+            {name: 'Fixed z', path: 'init_pos_z', unit: 'm'},
+        ],
+    },
+    'data-5':{
+        path:'patchparams',
+        propsets: false,
+        props:[
+            {name: 'PMT x', path: 'pmt_x', unit: 'm'},
+            {name: 'PMT y', path: 'pmt_y', unit: 'm'},
+            {name: 'PMT z-tip', path: 'pmt_tip_z', unit: 'm'},
+            {name: 'PMT Center Phi', path: 'pmt_angle_center', unit: '°'},
+            {name: 'Scan Direciton', path: 'scan_dir', selector: {0: 'Perpendicular', 1: 'Diagonal', 2: 'Parallel'}},
+        ]
+    },
+
+    // 'data-3': {
+    //     path: '/passbyparams',
+    //     propsets: false,
+    //     props: [
+    //         {name: 'Start x', path: '/passbyparams', unit: 'm'},
+    //     ],
+    // },
+    'data-6': {
+        propsets: false,
+        message: 'This path is set in the code.',
+    },
+    // 'data-7': {
+    //
+    // }
+});
+</script>
+
+<style>
+.data {
+    display: none;
+}
+.data.visible {
+    display: block;
+}
+#tabs {
+    margin: auto;
+    text-align: center;
+}
+#tabs .tab {
+    margin: .5em 0;
+    border-radius: 0;
+    border: 1px solid rgb(160,160,160);
+    background-color: white;
+    border-left: none;
+    font-size: 16px;
+    transition: .5s;
+    padding: .1em .4em;
+}
+#tabs .tab.selected {
+    background-color: rgb(208, 224, 224);   
+    transition: .5s;
+}
+#tabs .tab:hover {
+    background-color: #e1f2f2;
+}
+#tabs .tab:first-child {
+    border-left: 1px solid rgb(160,160,160);
+    border-radius: 5px 0 0 5px;
+}
+#tabs .tab:last-child {
+    border-radius: 0 5px 5px 0;
+}
+#tabs .tab:disabled {
+    background-color: rgb(221, 221, 221);
+    transition: .5s;
+}
+#tabs .tab.selected:disabled {
+    background-color: rgb(221, 221, 221);
+}
+
+.data table {
+    margin: auto;
+}
+.data td {
+    text-align: right;
+}
+</style>
+
+</head>
+<body class="mcss" onload="mhttpd_init('ScanSettings')">
+
+<div id="mheader"></div>
+<div id="msidenav"></div>
+
+<div id="mmain">
+<div class="mtable">
+    <h3 class="mtableheader" style="text-align:center">Scan Settings</h3>
+    <div id="loading" style="text-align: center;">
+        <p>Loading...</p>
+        <progress></progress>
+    </div>
+    <div id="gdata" class="data">
+	<table>
+	    <tr><td>Scan type:</td><td id="td-scan-type"></td></tr>
+	    <tr><td>Time at point <span class="unit">[ms]</span>:</td><td name="modbvalue" data-format="d" data-odb-editable="1" data-odb-path="/equipment/scan/settings/meas_time"></td></tr>
+        </table>
+    </div>
+    <div id="tabs">
+        <button disabled id="tab-0" onclick="selectTab(0)" class="tab">Cylindrical</button>
+<button disabled id="tab-1" onclick="selectTab(1)" class="tab">Rectangular</button>
+<button disabled id="tab-2" onclick="selectTab(2)" class="tab">Alignment</button>
+<button disabled id="tab-3" onclick="selectTab(3)" class="tab">Tilt Scan</button> <!-- Anubhav's edit-->
+<button disabled id="tab-4" onclick="selectTab(4)" class="tab">Spin Scan</button>
+<button disabled id="tab-5" onclick="selectTab(5)" class="tab">Patch Scan</button>
+<button id="tab-6" onclick="selectTab(6)" class="tab">Manual</button>
+    </div>
+    <div id="data"></div>
+    <script>makeControls();</script>
+    <div id="comment" style="text-align: center; margin-top: 10px;">
+    <p>When inputing theta(azimuth) value of Tilt Scan, use the following convention : <br>
+       theta is 0 along +ve x-axis and 90 along +ve y-axis <br><br><br> NOTE THAT THIS DOESN'T APPLY TO ANY OTHER KIND OF SCAN, BUT ONLY TO TILT SCAN.
+    </p>
+</div>
+</div>
+</div>
+
+</body>
+</html>
