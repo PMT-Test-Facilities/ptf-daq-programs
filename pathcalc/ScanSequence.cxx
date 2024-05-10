@@ -180,22 +180,22 @@ int ScanSequence::SpinPath(std::vector<std::vector<double>> &points){
   bool scan_forwards = true;
   while (current_azi < max_azi){
 
-    current_zen = scan_forwards ? zen_start : max_zen ;
+    current_zen = zen_start;
 
     while (current_zen < max_zen){
       points.push_back({
           gantry_0_x,
           gantry_0_y,
           gantry_0_z,
-          current_zen*3.14159/180.0,
-          current_azi*3.14159/180.0,
+          current_azi,
+          current_zen,
           -99999,
           -99999,
           -99999,
           -99999,
           -99999}
       );
-      
+      std::cout << "adding a point!" << std::endl;
       current_zen += zen_step; 
     }
     current_azi += azi_step;
