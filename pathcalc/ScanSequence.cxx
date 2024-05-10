@@ -178,13 +178,12 @@ int ScanSequence::SpinPath(std::vector<std::vector<double>> &points){
   const float max_zen = zen_start + zen_dist;
 
   bool scan_forwards = true;
-
   while (current_azi < max_azi){
 
     current_zen = scan_forwards ? zen_start : max_zen ;
 
     while (current_zen < max_zen){
-      points.emplace_back(
+      points.push_back({
           gantry_0_x,
           gantry_0_y,
           gantry_0_z,
@@ -194,7 +193,7 @@ int ScanSequence::SpinPath(std::vector<std::vector<double>> &points){
           -99999,
           -99999,
           -99999,
-          -99999
+          -99999}
       );
       
       current_zen += zen_step; 
@@ -275,8 +274,7 @@ int ScanSequence::PatchPath(std::vector<std::vector<double>> &points){
     );
 
     //convert from PMT bulb-centered coordinates to gantry coordinates 
-
-    points.emplace_back(
+    points.push_back({
       final_point[0], 
       final_point[1],
       final_point[2], 
@@ -287,9 +285,10 @@ int ScanSequence::PatchPath(std::vector<std::vector<double>> &points){
 	    -99999,
 	    -99999,
       -99999
-    );
+    });
 
     }
+    return points.size();
 }
 
 //--Anubhav's edit-----------------------------------------

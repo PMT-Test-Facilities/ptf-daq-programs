@@ -51,8 +51,6 @@ typedef enum{
   RECTANGULAR,
   ALIGNMENT,
   TILT_SCAN,//Anubhav's edit
-  SPIN_SCAN, // this is a fixed point and it spins around 
-  PATCH_SCAN, // the takenaka-san scan type 
   PASS_BY,
   PMTSURFACE,
   MANUAL,
@@ -60,6 +58,8 @@ typedef enum{
   TANKAVOIDANCE,
   FIX_POINT,
   ROTATION_SCAN,
+  SPIN_SCAN, // this is a fixed point and it spins around 
+  PATCH_SCAN, // the takenaka-san scan type 
 } scan_type_t;
 
 typedef enum{
@@ -151,35 +151,6 @@ typedef struct {
     INT         gantry_laser;
   } pass_by_par;
   struct {
-    float plane_angle_start;
-    float plane_angle_end;
-    float plane_angle_step;
-    float tilt_angle_fixed;
-    float starting_radius;
-    float linear_step;
-    float pmt_x;
-    float pmt_y; 
-  } rotaion_scan_par;
-  struct{
-    float azi_start;
-    float zen_start;
-    float azi_step;
-    float zen_step;
-    float azi_distance;
-    float zen_distance;
-    float init_x;
-    float init_y;
-    float init_z;
-  } spin_scan_par;
-  struct{
-    float pmt_x;
-    float pmt_y; 
-    float pmt_tip_z;
-    float pmt_angle_center;
-    INT scan_dir;
-  } patch_scan_par;
-  //PMT coordinate system
-  struct {
     //defines starting point on PMT surface
     float       init_height;
     float       init_polar;
@@ -189,9 +160,30 @@ typedef struct {
 
     float       delta_phi;
     float       delta_h;
+
   } pmt_surf_par;
+  //PMT coordinate system
   INT scan_type;
   INT meas_time;
+  struct{
+    float azi_start;
+    float zen_start;
+    float azi_step;
+    float zen_step;
+    float init_x;
+    float init_y;
+    float init_z;
+    float azi_distance;
+    float zen_distance;
+  } spin_scan_par;
+  struct{
+    float pmt_x;
+    float pmt_y; 
+    float pmt_tip_z;
+    float pmt_angle_center;
+    INT scan_dir;
+  } patch_scan_par;
+  
   //  DWORD     timeout;
 } SCAN_SETTINGS;
 
@@ -281,8 +273,26 @@ typedef struct {
 "delta_phi = FLOAT : 0.2",\
 "delta_h = FLOAT : 0.02",\
 "",\
+"[spinparams]",\
+"azi_start = FLOAT : -75.0",\
+"zen_start = FLOAT : -88.0",\
+"azi_step = FLOAT : 3.0",\
+"zen_step = FLOAT : 3.0",\
+"init_pos_y = FLOAT : 0.0",\
+"init_pos_x = FLOAT : 0.4",\
+"init_pos_z = FLOAT : 0.001",\
+"azi_dist = FLOAT : 60.0",\
+"zen_dist = FLOAT : 80.0",\
+"",\
+"[patchparams]",\
+"scan_dir = INT : 0",\
+"pmt_x = FLOAT : 0.0",\
+"pmt_y = FLOAT : 0.0",\
+"pmt_tip_z = FLOAT : 0.0",\
+"pmt_angle_center = FLOAT : 0.0",\
+"",\
 "[.]",\
-"ScanType = INT : 0",\
+"ScanType = INT : 1",\
 "meas_time = INT : 1000.",\
 "",\
 NULL }
