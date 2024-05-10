@@ -51,6 +51,8 @@ typedef enum{
   RECTANGULAR,
   ALIGNMENT,
   TILT_SCAN,//Anubhav's edit
+  SPIN_SCAN, // this is a fixed point and it spins around 
+  PATCH_SCAN, // the takenaka-san scan type 
   PASS_BY,
   PMTSURFACE,
   MANUAL,
@@ -58,8 +60,6 @@ typedef enum{
   TANKAVOIDANCE,
   FIX_POINT,
   ROTATION_SCAN,
-  SPIN_SCAN, // this is a fixed point and it spins around 
-  PATCH_SCAN, // the takenaka-san scan type 
 } scan_type_t;
 
 typedef enum{
