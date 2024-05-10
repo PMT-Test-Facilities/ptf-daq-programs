@@ -44,6 +44,18 @@ At the time of writing the code only works (reliably) if both gantries are movab
 
 Reinitializing takes a while! Give it at least 3-4 minutes. The displayed positions may show nonsense temporarily while the optical box tilts around and things don't exactly know where the gantries are 
 
+# Making Additions 
+
+## New Scan types 
+
+Many steps here! 
+
+1. Update the frontend scan.html with your new sca
+2. Add new scan settings in the ODB under /Equiptment/Scan/Settings 
+3. You need to now make edits to `experim_new.h` in two places. First, add to the end of the last scan type with the parameters you added to the ODB. The order of these is extremely important, and it needs to precisely match the order in the ODB. Then , similarly, add a new struct for the data relevant to this scan into the SCAN_SETTINGS struct. *This is incredibly fragile.* Any changes here can cause a misread of the scan scantype or scan parameters - and a misread scantype can cause wacky and disastrous results. 
+4. Define a new path method in ScanSequence, this will access the `fs` scan parameter struct you defined earlier 
+5. Add a new check in the `GeneratePath` method's switch to actualyl use your Path calculator when it's called. 
+
 # Common Problems
 
 Need to restart things? 
