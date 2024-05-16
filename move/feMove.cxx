@@ -148,7 +148,8 @@ INT gantry_motor_end = 10;   //TF TODO: get from ODB and make button on gantry_m
 // Gantry dimensions with buffer zones for collision avoidance
 double tiltMotorLength = 0.160;
 double gantryFrontHalfLength = 0.140; //Use 0.140m for safety; measured to be 0.114+/-0.001m (27Apr2017)
-double gantryBackHalfLength = 0.25; //0.22 Use 0.200m for safety; measured to be 0.114+0.07(pipelength)=0.184+/-0.002m (27Apr2017) // John (17Oct2019) 0.185 -> 0.22 for safety
+//double gantryBackHalfLength = 0.25; //0.22 Use 0.200m for safety; measured to be 0.114+0.07(pipelength)=0.184+/-0.002m (27Apr2017) // John (17Oct2019) 0.185 -> 0.22 for safety
+double gantryBackHalfLength = 0.1;
 double gantryOpticalBoxWidth = 0.160; //Use 0.160m for safety; measured to be 0.135+/-0.002m for optical box 0, 0.145+/-0.001m for optical box 1 // John (17Oct2019) 0.15 -> 0.2 for safety
 double gantryTiltGearWidth = 0.060; //Use 0.070 for safety; measured to be 0.060+/-0.001m
 double gantryOpticalBoxHeight = 0.095; //Use 0.110m for safety; measured to be 0.094 +/- 0.004m (27Apr2017)
@@ -162,7 +163,8 @@ double tankPMTholderRadius = 0.53; // max/min from center where PMT holders sit
 // Rika: PMT position for collision avoidance
 std::vector <XYPolygon> pmtPoly0; // Model of PMT for collision avoidance
 std::vector <XYPolygon> pmtPoly1;
-double pmtRadius = 0.323;
+double pmtRadius = 0.01; // temporary 
+// double pmtRadius = 0.323;
 double pmtXcentre0 = 0.389; // Rika (24Apr2017): Updated to estimated new position. // Kevin (22Jan2018) changed from (0.348, 0.366) -> (0.389, 0.309) // need to change
 double pmtYcentre0 = 0.309;
 double pmtXcentre1 = 0.359; // estimate (0.418, 0.396) Feb.21.2018 // 0.366, 0.356
@@ -175,7 +177,7 @@ int numPolyLayers = 0.38 /
 //      so if the gantry goes down to its maximum z height (0.534m), the tip of the optical box will be at 0.178+0.534=0.712,
 //      which is 0.712-0.390=0.372m lower than the position of the top of the PMT (so make it 0.38m to play it safe).
 // PMT height :
-double pmtHeight = 0.390; // Rika (24Apr2017): actual PMT height in gantry coordinates;
+double pmtHeight = 0.390;  // Rika (24Apr2017): actual PMT height in gantry coordinates;
 // Gantry tilted 0 will hit PMT cover at z=0.3m.
 double frpHeight = 0.556; // Rika (28Apr2017): z position of the FRP case, which has a rim that is of wider diameter than the PMT.
 // Calculated from the fact that the PMT acrylic cover has a height of 16.6cm.
@@ -637,7 +639,11 @@ INT frontend_init() {
 
   channel_rw(pInfo, pInfo->hKeyMVel, (void *) tempV, TID_FLOAT, 1);
   channel_rw(pInfo, pInfo->hKeyMAcc, (void *) tempA, TID_FLOAT, 1);
+  cm_msg(MINFO, "frontend_init", "Hey! Did you reset the PMT radius and height to non-zeroish??");
+  
   return CM_SUCCESS;
+
+  
 }
 
 /*-- Frontend Exit -------------------------------------------------*/
@@ -798,7 +804,7 @@ void move_init(HNDLE hDB, HNDLE hKey, void *data) {
   // TODO (MAYBE): first check if tilt measurements agree 
   //               if they disagree --> try to move it to desired location first
   //               if they still dont match exit
-  double tilt_tolerance = 3.0;
+  double tilt_tolerance = 3.5;
   double tilt_min = -105, tilt_max = 15;
   size = sizeof(pInfo->Phidget);
   int tilt_start = 0, tilt_end = 2; //these are the number of gantries we have to correct
@@ -817,7 +823,7 @@ void move_init(HNDLE hDB, HNDLE hKey, void *data) {
       cm_msg(MERROR, "move_init", "Phidget0%i tilt: %f ODB tilt: %f", i, pInfo->Phidget[7], pInfo->Position[axis]);
       cm_msg(MERROR, "move_init", "ERROR: can't start move. Phidget0%i tilt and ODB tilt do not agree within tolerance; axis %i",
              i, axis);
-      return;
+      //return;
     }
 
     // Check if phidget reading is within legal range
@@ -1030,6 +1036,9 @@ int initialize_tilt(INFO *pInfo) {
 
   }//end of loop over both gantries
 
+  //fix memory leak
+  delete start;
+  delete dest;
   return 0;
 
 }
@@ -1320,7 +1329,7 @@ int generate_path(INFO *pInfo) {
 
   // Check for illegal destinations.  Currently just check:
   // rot_min < rotary angle < rot_max
-  double rot_min = -100, rot_max = 120; //Rotation limited to values equal to or greater than -100 degrees
+  double rot_min = -100, rot_max = 135; //Rotation limited to values equal to or greater than -100 degrees
   //to avoid triggering limit switch during scan; updated Feb 28, 2017
   // tilt_min < tilt angle < tilt_max
   double tilt_min = -105, tilt_max = 15;
@@ -1369,7 +1378,7 @@ int generate_path(INFO *pInfo) {
   double gant2_rot2 = 0.0; // pInfo->Position[8] * rad;
   double gant1_tilt_end = pInfo->Position[4] * rad;
   double gant2_tilt_end = 0.0; // pInfo->Position[9] * rad;
-  double gant1_tilt_start = pInfo->Destination[4] * rad;
+  double gant1_tilt_start = pInfo->Phidget[7] * rad; // pInfo->Destination[4] * rad;
   double gant2_tilt_start = 0.0; // pInfo->Destination[9] * rad;
 
   /**NEW**///Rika(31Mar2017)
@@ -2406,13 +2415,19 @@ void monitor(HNDLE hDB, HNDLE hKey, void *data) {
     i++;
   }
   db_set_data(pInfo->hDB, pInfo->hKeyMoving, &pInfo->Moving, sizeof(BOOL), 1, TID_BOOL);
-
+  
+  int size = sizeof(pInfo->Phidget);
 
   // Get the axis positions and write to ODB
   channel_rw(pInfo, pInfo->hKeyMPos, (void *) pInfo->CountPos, TID_FLOAT, 0);
   for (i = gantry_motor_start; i < gantry_motor_end; i++) {
-    pInfo->Position[i] = (pInfo->CountPos[i] - pInfo->mOrigin[i]) / pInfo->mScale[i] + pInfo->LimPos[i];
-
+    // use the phidget to get the tilt on gantry 0 
+    if (i==4){
+      db_get_value(pInfo->hDB, pInfo->hKeyPhidget[0], "PH00", &pInfo->Phidget, &size, TID_DOUBLE, FALSE);
+      pInfo->Position[i] = pInfo->Phidget[7];
+    }else{
+      pInfo->Position[i] = (pInfo->CountPos[i] - pInfo->mOrigin[i]) / pInfo->mScale[i] + pInfo->LimPos[i];
+    }
   }
   db_set_data(pInfo->hDB, pInfo->hKeyPos, pInfo->Position, 10 * sizeof(float), 10, TID_FLOAT);
 
@@ -2421,13 +2436,18 @@ void monitor(HNDLE hDB, HNDLE hKey, void *data) {
   channel_rw(pInfo, pInfo->hKeyMLimitPos, (void *) pInfo->pos_AxisLimit, TID_BOOL, 0);
   db_set_data(pInfo->hDB, pInfo->hKeyAxLimitNeg, pInfo->neg_AxisLimit, 10 * sizeof(BOOL), 10, TID_BOOL);
   db_set_data(pInfo->hDB, pInfo->hKeyAxLimitPos, pInfo->pos_AxisLimit, 10 * sizeof(BOOL), 10, TID_BOOL);
-
+  
 
   /* - If motors have stopped moving, determine next course of action */
   bool stoppedDueToLimit = false;
   if (OldMov && !pInfo->Moving) { // i.e. If the motors just stopped moving
     // Check if the destination has been reached, otherwise return an error
     for (i = gantry_motor_start; i < gantry_motor_end; i++) {
+      // tilt motor will be a little off since we use the phidget angle 
+      if (i==4){
+        continue;
+      }
+
       if ((pInfo->Channels[i] != -1) && (pInfo->MovePath[i][pInfo->PathIndex] != pInfo->CountPos[i])) {
         if (abs(pInfo->MovePath[i][pInfo->PathIndex] - pInfo->CountPos[i]) < 20){
           cm_msg(MINFO, "monitor", "final monitor position %i counts different to destination!", abs(pInfo->MovePath[i][pInfo->PathIndex] - pInfo->CountPos[i]));
