@@ -28,6 +28,7 @@ the next move_next_position.
 #define FAILURE 0
 
 #include <stdio.h>
+#include <iostream>
 #include <stdlib.h>
 #include <math.h>
 #include <sys/time.h>
@@ -69,22 +70,12 @@ HNDLE hMotors00_output_control = 0;
 HNDLE hNScanPoints, hCurrentPoint = 0;
 HNDLE   hReInitialize = 0;
 HNDLE   hIniting = 0;
+HNDLE current_read, voltage_read;
 //HndlehDVMVariables =0;
 
 extern int run_state;
 
 char expt_name[32];
-
-// TF: completely deprecate the "dd"-debugging system: using MDEBUG instead!
-/* These variables can be changed to control the level of debugging messages.
-They should really be collapsed into one variable placed in the ODB
-INT     dd = 1, ddd = 1, dddd=1, ddddd = 1;
-
-
-ddd frontend_loop, begin_of_run
-dddd indicates if running in cycle in frontend loop
-dd = scan info
-*/
 
 // flag indicates that we are currently moving; this ensures that frontend_loop doesn't
 // start another move at the same time.
@@ -136,6 +127,9 @@ double gPhidget01[10];
 // Helmholtz coil readings from Wiener power crate
 float gCoilCurrent[40];
 float gCoilVoltage[40];
+
+double getVoltage[6];
+double getCurrent[6];
 
 // PMT readings captured by fevme, not here
 
@@ -226,6 +220,25 @@ INT move_next_position();
 // NEW:
 BOOL gen_scan_path();      // for preprogrammed cycli
 
+int coil_idx(int coil) {
+  switch(coil) {
+    case 0:
+      return 8;
+    case 1:
+      return 9;
+    case 2:
+      return 2;
+    case 3:
+      return 6;
+    case 4:
+      return 1;
+    case 5:
+      return 0;
+    default:
+      throw "Go away warnings, I got all the cases";
+  }
+}
+
 /*-- Equipment list ------------------------------------------------*/
 EQUIPMENT equipment[] = {
 
@@ -252,11 +265,31 @@ EQUIPMENT equipment[] = {
 
 //---------remove------------------------
 void printScanSettings(const SCAN_SETTINGS& fs) {
-  std::cout << "Scan Type:" << fs.scan_type << std::endl;
-  std::cout << "tilt_par:" << std::endl;
-  std::cout << "  theta: " << fs.tilt_par.theta << std::endl;
-  std::cout << "  phi: " << fs.tilt_par.phi << std::endl;
-  std::cout << "  step: " << fs.tilt_par.step << std::endl;
+  cm_msg(MINFO, "frontend_init", "Scan type %d", fs.scan_type);
+  
+  
+  cm_msg(MINFO, "frontend_init",  "azi_start  %f", fs.spin_scan_par.azi_start);
+  cm_msg(MINFO, "frontend_init",  "zen_start  %f", fs.spin_scan_par.zen_start);
+  cm_msg(MINFO, "frontend_init",  "azi_step  %f", fs.spin_scan_par.azi_step);
+  cm_msg(MINFO, "frontend_init",  "zen_step  %f", fs.spin_scan_par.zen_step);
+  cm_msg(MINFO, "frontend_init",  "azi_dist  %f", fs.spin_scan_par.azi_distance);
+  cm_msg(MINFO, "frontend_init",  "zen_dist  %f", fs.spin_scan_par.zen_distance);
+  cm_msg(MINFO, "frontend_init",  "pos_x  %f" , fs.spin_scan_par.init_x);
+  cm_msg(MINFO, "frontend_init",  "pos y  %f", fs.spin_scan_par.init_y);
+  cm_msg(MINFO, "frontend_init",  "posz  %f", fs.spin_scan_par.init_z);
+
+  cm_msg(MINFO, "frontend_init",  "spin scan dir %d", fs.patch_scan_par.scan_dir);
+  cm_msg(MINFO, "frontend_init",  "patch scan pmt x %f", fs.patch_scan_par.pmt_x);
+  cm_msg(MINFO, "frontend_init",  "patch scan pmt y %f", fs.patch_scan_par.pmt_y);
+  cm_msg(MINFO, "frontend_init",  "patch scan pmt z %f", fs.patch_scan_par.pmt_tip_z);
+  cm_msg(MINFO, "frontend_init",  "patch scan pmt angle %f", fs.patch_scan_par.pmt_angle_center);
+
+  cm_msg(MINFO, "frontend_init",  "patch scan theta %f", fs.tilt_par.theta);
+  cm_msg(MINFO, "frontend_init",  "patch scan phi  %f", fs.tilt_par.phi);
+  cm_msg(MINFO, "frontend_init",  "patch scan step  %f", fs.tilt_par.step);
+  cm_msg(MINFO, "frontend_init",  "patch scan dir %d", fs.tilt_par.scan_dir);
+
+  
 }
 //remove---------------------------------
 
@@ -284,7 +317,9 @@ INT get_settings_parameters(){
 
   INT size = sizeof(fs);
   INT status = db_get_record(hDB, hFS, &fs, &size, 0);
+  //fs.scan_type = 1;
   printScanSettings(fs); //Anubhav's edit
+  
   if (status != DB_SUCCESS) {
     // printScanSettings(fs);
     cm_msg(MERROR, "frontend_init", "cannot retrieve %s (size of fs=%d). Try again?", "/Equipment/Scan/Settings/",
@@ -292,6 +327,7 @@ INT get_settings_parameters(){
 	
     return DB_NO_ACCESS;    
   }
+  //fs.scan_type = 1;
 
   printf("Successfully got scan settings; scan type: %i\n",fs.scan_type);
   return 1;
@@ -351,7 +387,7 @@ INT frontend_init() {
 
   // Obtain the ODB keys for various variables
   // Note: when adding or removing variables to/from this list change the variable num_entires to change the size of the arrays used
-  const int num_entries = 13;
+  const int num_entries = 15;
   char str[num_entries][128];
   HNDLE *ODB_Handles[num_entries];
   //Move settings
@@ -369,8 +405,8 @@ INT frontend_init() {
   sprintf(str[5], "/Equipment/Phidget03/Variables/");
   ODB_Handles[5] = &hPhidgetVars1;
   //Wiener Power Supply
-  //sprintf(str[6], "/Equipment/PtfWiener/Variables/");
-  // ODB_Handles[6] = &hPtfWiener;
+  sprintf(str[6], "/Equipment/PtfWiener/Variables/");
+  ODB_Handles[6] = &hPtfWiener;
   //Motors
   sprintf(str[6], "/Equipment/Motors00/Settings/TurnMotorsOff");
   ODB_Handles[6] = &hMotors00;
@@ -387,6 +423,12 @@ INT frontend_init() {
   ODB_Handles[11] = &hIniting;
   sprintf(str[12], "/Equipment/Motors00/Settings/DigitalOut2");
   ODB_Handles[12] = &hMotors00_output_control;
+
+  sprintf(str[13], "/Equipment/PtfWiener/Variables/current");
+  ODB_Handles[13] = &current_read;
+  sprintf(str[14], "/Equipment/PtfWiener/Variables/sensevoltage");
+  ODB_Handles[14] = &voltage_read;
+
   // Get the above ODB Keys and produce error if unsuccessful
   int i;
   for (i = 0; i < num_entries; i++) {
@@ -396,6 +438,9 @@ INT frontend_init() {
       return DB_NO_ACCESS;
     }
   }
+
+  
+  //gbl_total_number_points = scan_seq.GeneratePath(points);
 
   //Reset watchdog and Alarms
   cm_get_watchdog_params(&watchdog_flag, &gbl_watchdog_timeout);
@@ -411,6 +456,8 @@ INT frontend_init() {
   if (status == CM_SUCCESS)
     cm_msg(MINFO, "frontend_init", "End of routine frontend_init. Program is READY");
   return status;
+
+  
 }
 
 
@@ -841,9 +888,9 @@ INT move_next_position(void) {
     
     for(int i = 0; i < 8;i++){relays_off[i]=FALSE;}
     printf("Brake is On for tilt angle and relay is off! \n");
-    db_set_data(hDB, hMotors00_output_control, &relays_off, sizeof(BOOL), 8, TID_BOOL);
-
-    // switch motors off
+    db_set_data(hDB, hMotors00_output_control, &relays_off, 8*sizeof(BOOL), 8, TID_BOOL); 
+    sleep(1.0); // wait for a second after turning the bake on before turning the motors off 
+    // switch motors off 
     BOOL turn_off = TRUE;//Switching that one
     db_set_data(hDB, hMotors00, &turn_off, sizeof(BOOL), 1, TID_BOOL);
     db_set_data(hDB, hMotors01, &turn_off, sizeof(BOOL), 1, TID_BOOL);
@@ -956,19 +1003,7 @@ INT scan_read(char *pevent, INT off)
       cm_msg(MDEBUG, "scan_read", "Position of gantry 1: (X, Y, Z): %.3F, %.3f, %.3f", gGantryPositions[5],
              gGantryPositions[6], gGantryPositions[7]);
 
-      size = sizeof(gCoilCurrent);
-      //status = db_get_value(hDB, hPtfWiener, "current", &gCoilCurrent, &size, TID_FLOAT, FALSE);
-      //if (status != DB_SUCCESS) {
-      //  cm_msg(MERROR, "scan_read", "cannot get value for Coil Current");
-      //  return DB_NO_ACCESS;
-      // }
 
-      size = sizeof(gCoilVoltage);
-      //status = db_get_value(hDB, hPtfWiener, "senseVoltage", &gCoilVoltage, &size, TID_FLOAT, FALSE);
-      //if (status != DB_SUCCESS) {
-      //  cm_msg(MERROR, "scan_read", "cannot get value for Coil Voltage");
-      //  return DB_NO_ACCESS;
-      // }
 
       //Init bank creation once
       bk_init(pevent);
@@ -982,13 +1017,18 @@ INT scan_read(char *pevent, INT off)
       bk_close(pevent, pwdata);
 
       // for voltage and current field 0->5 relate to the Coil Numbers
-      // TF: NOT anymore!!!
+      float v = 0;
+      size_t size = 4;
       bk_create(pevent, "MAG0", TID_DOUBLE, (void **)&pmagdata);
       *pmagdata++ = (double) gbl_current_point;
-      for (m = 0; m < 40; m++)
-        *pmagdata++ = (double) gCoilCurrent[m];
-      for (m = 0; m < 40; m++)
-        *pmagdata++ = (double) gCoilVoltage[m];
+      for (m = 0; m < 6; m++){
+        db_get_data_index(hDB, current_read, &v, (int*) &size, coil_idx(m), TID_FLOAT);
+        *pmagdata++ = (double) v;
+      }
+      for (m = 0; m < 6; m++){
+        db_get_data_index(hDB, voltage_read, &v, (int*) &size, coil_idx(m), TID_FLOAT);
+        *pmagdata++ = (double) v;
+      }
       bk_close(pevent, pmagdata);
 
       gbl_waiting_measurement = FALSE;
