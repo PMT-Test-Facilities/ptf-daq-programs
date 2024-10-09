@@ -51,78 +51,11 @@ int binary_search(const  double value, const std::vector< double> points){
 }
 
 NormCalc::NormCalc(){
-    std::ifstream file(filename);
+    a = 0.254564663;
+    b = 0.254110205;
+    c = 0.186002389;
 
-    // load the data into a temporary  `data` vector
-    std::vector<std::vector< double>> data; 
-    if(file.is_open()){
-        std::string line;
-        while(std::getline(file, line)){
-            std::vector< double> row;
-            std::stringstream ss(line); 
-             double value;
-
-            while (ss>> value){
-                row.push_back(value);
-            }
-            data.push_back(row);
-        }
-        file.close();
-    }else{
-        std::runtime_error("Could not find file for norm-calculations");
-    }
-
-     double this_phi;
-     double this_theta;
-    // first pass! We sort out the unique thetas and phis 
-    for(int i=0; i<data.size(); i++){
-        this_theta = data[i][0];
-        this_phi = data[i][1];
-
-        add_angle(this_theta, theta_points);
-        add_angle(this_phi, phi_points);
-        
-    }
-
-    // now we instantiate the data vectors 
-    for(int i=0; i<theta_points.size(); i++){
-        norm_x.emplace_back(
-            phi_points.size(), 0.0
-        );
-        norm_y.emplace_back(
-            phi_points.size(), 0.0
-        );
-        norm_z.emplace_back(
-            phi_points.size(), 0.0
-        );
-        radius.emplace_back(
-            phi_points.size(), 0.0
-        );
-    }
-
-    // now we actually assign everything as part of a second pass 
-    int theta_index = 0;
-    int phi_index = 0;
-
-     double this_x;
-     double this_y;
-     double this_z;
-
-     double theta_width = theta_points[1]- theta_points[0];
-     double phi_width = phi_points[1]- phi_points[0];
-    for(int i=0; i<data.size(); i++){
-        this_theta = data[i][0];
-        this_phi = data[i][1];
-
-        theta_index = binary_search(this_theta+0.5*theta_width, theta_points)-1;
-        phi_index = binary_search(this_phi+0.5*phi_width, phi_points)-1;
-
-        radius[theta_index][phi_index] = data[i][2];
-        norm_x[theta_index][phi_index] = data[i][3];
-        norm_y[theta_index][phi_index] = data[i][4];
-        norm_z[theta_index][phi_index] = data[i][5];
-
-    }
+    
 
 }
 
@@ -184,7 +117,11 @@ void NormCalc::test_print(){
     }
 }
 
- double NormCalc::biliner_inerpolation( double theta,  double phi, const std::vector<std::vector< double>>& point_vecs){
+double NormCalc::pmt_height(){
+    return c;
+}
+
+double NormCalc::biliner_inerpolation( double theta,  double phi, const std::vector<std::vector< double>>& point_vecs){
     /*
     Performs a bilinearinterpolation of one of the data arrays we have stored, which is passed as a reference 
 
@@ -230,15 +167,40 @@ void NormCalc::test_print(){
 
 }
 
- double NormCalc::evaluate_radius( double theta,  double phi){
-    return biliner_inerpolation(theta, phi, radius);
+std::vector<double> NormCalc::surface(double theta, double phi){
+    /* 
+        Expects theta running from 0 at the equator (xy plane) to pi at the pole (max z)
+    */
+    return{
+        a*cos(phi)*cos(theta),
+        b*sin(phi)*cos(theta),
+        c*sin(theta)
+    };
 }
 
 std::vector< double> NormCalc::evaluate_norm( double theta,  double phi){ 
-    // not the most efficient, but the code is neater 
-    return {
-        biliner_inerpolation(theta, phi, norm_x),
-        biliner_inerpolation(theta, phi, norm_y),
-        biliner_inerpolation(theta, phi, norm_z),
-    };
+    double norm_y_nosin = 1.0/sqrt(\
+        pow(sin(theta),2) + pow((b/a)*cos(phi), 2) + pow((b/c)*tan(theta), 2)
+    );
+
+    double norm_y = norm_y_nosin*sin(phi);
+
+
+
+    // in this case, we extract the wrong sign solution for sqrt(blah)
+    if(phi<0){
+        norm_y*=-1; 
+    }
+
+    double norm_z = norm_y_nosin*(b/c)*tan(theta);
+    double norm_x = norm_y_nosin*(b/a)*cos(phi);
+    
+    double mag = pow(pow(norm_x,2) + pow(norm_y,2) + pow(norm_z, 2), 0.5);
+
+    norm_x/=mag;
+    norm_y/=mag;
+    norm_z/=mag; 
+
+    return {norm_x, norm_y, norm_z};
+
 }
