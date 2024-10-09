@@ -73,7 +73,7 @@ INT serial_number;
 INT display_period = 0;
 
 /* maximum event size produced by this frontend                     */
-INT max_event_size = 10*1024;
+INT max_event_size = 12*1024;
 
 /* buffer size to hold events                                       */
 INT event_buffer_size = 1*1024*1024;
@@ -137,12 +137,17 @@ int etime = 0;
 int etime_us = 0;
 int count = 0;
 
+double read_temp=0.0;
+double read_hum =0.0;
+
+
 // ---------------------------------------------------------------
 // Phidget Spatial setup routines.
 
 //callback that will run if the Spatial is attached to the computer
 static void CCONV onAttach(PhidgetHandle ch, void * ctx)
 {
+  int res;
   int serialNo;
   //CPhidget_getSerialNumber(spatial, &serialNo);
   
@@ -157,25 +162,10 @@ static void CCONV onAttach(PhidgetHandle ch, void * ctx)
 
   //PhidgetSpatial_setDataInterval(spatial_test, 50);
   PhidgetSpatial_setDataRate((PhidgetSpatialHandle)ch, 50);  
-  auto res = PhidgetSpatial_setHeatingEnabled((PhidgetSpatialHandle)ch, false);
   if (res!=EPHIDGET_OK){
     std::cout << "problem setting temp "<< res << std::endl;
   }
-  
-  PhidgetTemperatureSensorHandle temp_test;
-  PhidgetTemperatureSensor_create(&temp_test);
-  Phidget_openWaitForAttachment((PhidgetHandle)temp_test, PHIDGET_TIMEOUT_DEFAULT);
 
-  double read_temp=0.0;
-  std::chrono::milliseconds timespan(1000);
-  while(false){
-    res = PhidgetTemperatureSensor_getTemperature((PhidgetTemperatureSensorHandle)temp_test, &read_temp);
-    if (res!=EPHIDGET_OK){
-        std::cout << "problem reading remp "<< res << std::endl;
-    }
-    std::this_thread::sleep_for(timespan);
-    std::cout << "waiting for sensor at " <<read_temp << " to reach 50C" << std::endl;
-  }
 //  std::this_thread::sleep_for(timespan);
  
 }
@@ -232,10 +222,19 @@ static void CCONV onSpatial0_SpatialData(PhidgetSpatialHandle ch, void * ctx, co
  
 }
 
+void CCONV onHum_Data(PhidgetHumiditySensorHandle ch, void *ctx, double this_humidity){
+  read_hum = this_humidity;
+
+}
+
+void CCONV onTemp_Data(PhidgetTemperatureSensorHandle ch, void *ctx, double this_temp){
+  read_temp = this_temp;
+}
+
 static void CCONV onSpatial0_SpatialData(PhidgetSpatialHandle ch, void * ctx, const double temp_acceleration[3], const double temp_angularRate[3], const double temp_magneticField[3], double temp_timestamp)
 {  
 	// Save the results of this read for midas readout routine
-	acceleration[0] = temp_acceleration[0];
+	  acceleration[0] = temp_acceleration[0];
 	//data1[i]->acceleration[0];
     acceleration[1] = temp_acceleration[1];
     acceleration[2] = temp_acceleration[2];
@@ -372,11 +371,20 @@ INT frontend_init()
   //PhidgetSpatialHandle spatial = 0;
   PhidgetAccelerometerHandle accelerometer0;
   PhidgetSpatialHandle spatial0;
+  
+    
+  PhidgetHumiditySensorHandle hum_test;
+  PhidgetTemperatureSensorHandle temp_test;
+
+  
+
+
 
   //create the spatial object
   PhidgetSpatial_create(&spatial0);
   PhidgetAccelerometer_create(&accelerometer0);
-  
+  PhidgetHumiditySensor_create(&hum_test);
+  PhidgetTemperatureSensor_create(&temp_test);
   
 
   //Set the handlers to be run when the device is plugged in or opened from software, unplugged or closed from software, or generates an error.
@@ -385,7 +393,12 @@ INT frontend_init()
   //Phidget_set_OnError_Handler((PhidgetHandle)spatial0, ErrorHandler, NULL);
  
   PhidgetSpatial_setOnSpatialDataHandler(spatial0, onSpatial0_SpatialData, NULL);
+  PhidgetHumiditySensor_setOnHumidityChangeHandler(hum_test, onHum_Data, NULL);
+  PhidgetTemperatureSensor_setOnTemperatureChangeHandler(temp_test, onTemp_Data, NULL);
   // PhidgetSpatial_setOnSpatialDataHandler(ch, spatialDataHandler, NULL);
+
+
+
   Phidget_setOnAttachHandler((PhidgetHandle)spatial0, onAttach, NULL);
   Phidget_setOnDetachHandler((PhidgetHandle)spatial0, onDetach, NULL);
   Phidget_setOnErrorHandler((PhidgetHandle)spatial0, onError, NULL);
@@ -411,6 +424,8 @@ INT frontend_init()
   //get the program to wait for a spatial device to be attached
   printf("Waiting for spatial to be attached.... \n");
   ret = Phidget_openWaitForAttachment((PhidgetHandle)spatial0, 5000);
+  ret = Phidget_openWaitForAttachment((PhidgetHandle)hum_test, PHIDGET_TIMEOUT_DEFAULT);
+  ret =Phidget_openWaitForAttachment((PhidgetHandle)temp_test, PHIDGET_TIMEOUT_DEFAULT);
   if (ret != EPHIDGET_OK) {
       Phidget_getLastError(&errorCode, &errorString, errorDetail, &errorDetailLen);
       printf("Error (%d): %s", errorCode, errorString);
@@ -524,6 +539,8 @@ INT read_trigger_event(char *pevent, INT off)
   double sum_mag = sqrt(mag[0]*mag[0] + mag[1]*mag[1] + mag[2]*mag[2]);
 
   double *pdata32;
+  double tempy = 0.0;
+  double humy = 0.0;
 
   char bank_name[100];
   sprintf(bank_name,"PH%02d",get_frontend_index());
@@ -539,6 +556,8 @@ INT read_trigger_event(char *pevent, INT off)
   *pdata32++ =  tilt;
   *pdata32++ =  etime;
   *pdata32++ =  etime_us;
+  *pdata32++ =  read_temp;
+  *pdata32++ =  read_hum;
    
   bk_close(pevent, pdata32);
 

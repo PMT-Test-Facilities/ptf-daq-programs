@@ -264,7 +264,7 @@ typedef struct {
   int AbortCode;        // Variable in which to store the reason for aborting a move (AC_*)
 
   // Phidget Tilt variables
-  double Phidget[10];      // Equipment/Phidget0x in ODB
+  double Phidget[12];      // Equipment/Phidget0x in ODB
 
   // Is the motor moving or not
   BOOL Motor01X;
@@ -686,8 +686,8 @@ monitor:        Hotlinked to the variables:
 INT phidget_responding(HNDLE hDB) {
   double tilt_min = -105, tilt_max = 0;
   HNDLE hPhidgetVars0 = 0, hPhidgetVars1 = 0;
-  double phidget_Values_Old[10];
-  double phidget_Values_Now[10];
+  double phidget_Values_Old[12];
+  double phidget_Values_Now[12];
   int size_of_array = sizeof(phidget_Values_Old);
   DWORD time_at_start_of_check;
 

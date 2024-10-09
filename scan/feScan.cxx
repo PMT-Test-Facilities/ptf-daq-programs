@@ -1025,10 +1025,19 @@ INT scan_read(char *pevent, INT off)
         db_get_data_index(hDB, current_read, &v, (int*) &size, coil_idx(m), TID_FLOAT);
         *pmagdata++ = (double) v;
       }
+      db_get_data_index(hDB, current_read, &v, (int*) &size, 16, TID_FLOAT);
+      *pmagdata++ = (double) v; // this is the 20" PMT current
+      db_get_data_index(hDB, current_read, &v, (int*) &size, 25, TID_FLOAT);
+      *pmagdata++ = (double) v; // this is the Monitor PMT current
+
       for (m = 0; m < 6; m++){
         db_get_data_index(hDB, voltage_read, &v, (int*) &size, coil_idx(m), TID_FLOAT);
         *pmagdata++ = (double) v;
       }
+      db_get_data_index(hDB, voltage_read, &v, (int*) &size, 16, TID_FLOAT);
+      *pmagdata++ = (double) v; // this is the 20" PMT voltage
+      db_get_data_index(hDB, voltage_read, &v, (int*) &size, 25, TID_FLOAT);
+      *pmagdata++ = (double) v; // this is the Monitor PMT voltage
       bk_close(pevent, pmagdata);
 
       gbl_waiting_measurement = FALSE;
