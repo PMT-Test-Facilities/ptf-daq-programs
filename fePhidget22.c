@@ -48,7 +48,6 @@ to accommodate multiple phidgets.
 
 #include <chrono>
 #include <thread>
-#include "utils.h"
 
 /* make frontend functions callable from the C framework            */
 
@@ -67,6 +66,7 @@ BOOL frontend_call_loop = TRUE;
 
 BOOL equipment_common_overwrite = FALSE;
 
+INT serial_number;
 
 /* a frontend status page is displayed with this frequency in ms    */
 //INT display_period = 3000;
@@ -148,6 +148,10 @@ static void CCONV onAttach(PhidgetHandle ch, void * ctx)
   
   std::cout << "attaching" << std::endl;  
   Phidget_getDeviceSerialNumber(ch, &serialNo);
+  if (serialNo != serial_number){
+    cm_msg(MERROR,"onAttach","Connected to wrong device!");
+    std::runtime_error("Stopping now before something bad happens"); 
+  }
   cm_msg(MINFO, "AttachHandler", "Phidget Spatial attached. Serial Number = %i", serialNo);
   //Set the data rate for the spatial events
 
@@ -214,11 +218,13 @@ static void CCONV onSpatial0_SpatialData(PhidgetSpatialHandle ch, void * ctx, co
     mag[1] = temp_magneticField[1];
     mag[2] = temp_magneticField[2];
     tilt = 90;
-    if( temp_acceleration[2] != 0){
-      tilt = atan2(-temp_acceleration[1],temp_acceleration[2])*180/3.14159265; //if X is aligned with tilt axis!
+    double deno = pow(pow(temp_acceleration[0],2) + pow(temp_acceleration[2],2), 0.5);
+    if( deno > 0){
+      tilt = atan2(-temp_acceleration[1],deno)*180/3.14159265; //if X is aligned with tilt axis!
     }
     etime = temp_timestamp;//.seconds;
     etime_us =temp_timestamp;//.microseconds;
+    
 
   }
   
@@ -237,20 +243,13 @@ static void CCONV onSpatial0_SpatialData(PhidgetSpatialHandle ch, void * ctx, co
     mag[1] = temp_magneticField[1];
     mag[2] = temp_magneticField[2];
     tilt = 90;
-    if( temp_acceleration[2] != 0){
-      /*previous formula:
-      //tilt = atan(sqrt(data[i]->acceleration[0]*data[i]->acceleration[0] + data[i]->acceleration[1]*data[i]->acceleration[1]) /data[i]->acceleration[2])*180/3.14159265;	
-      // Get the right sign for the angle based on the sign of the Y-acceleration; happens to 
-      // be switched (just depends on orientation of phidget.
-      //if(data[i]->acceleration[1] >0)
-      tilt = -tilt; */
-
-      // phidget_z is defined pointing downwards
-	    tilt = atan2(-temp_acceleration[0],temp_acceleration[1])*180/3.14159265; //if X is aligned with tilt axis!
-	
+    double deno = pow(pow(temp_acceleration[0],2) + pow(temp_acceleration[2],2), 0.5);
+    if( deno > 0){
+      tilt = atan2(-temp_acceleration[1],deno)*180/3.14159265; 
     }
     etime = temp_timestamp;//.seconds;
     etime_us =temp_timestamp;//.microseconds;
+    //std::cout << tilt <<": "<< temp_acceleration[1] <<", "<< deno << std::endl;
 
 }
   
@@ -330,7 +329,7 @@ INT frontend_init()
 
   // Initialize connection to ODB.  Get the serial number for phidget.
   char    expt_name[32];
-  INT status, serial_number, size;
+  INT status, size;
   size = sizeof(expt_name);
   status = db_get_value(hDB, 0, "/experiment/Name", &expt_name, &size, TID_STRING, FALSE);
   cm_msg(MINFO,"frontend_init","fePhidget Front End code for experiment %s now running ... \n",expt_name);
@@ -516,29 +515,6 @@ INT interrupt_configure(INT cmd, INT source, PTYPE adr)
   return CM_SUCCESS;
 }
 
-/*-- Event readout -------------------------------------------------*/
-INT read_trigger_direct(char *pevent, INT off){ //unused, keeping for posterity 
-  //odbWriteDouble
-  char str[1024];
-
-  sprintf(str, "/Equipment/Phidget%02d/Variables/PH00", get_frontend_index() );
-  double sum_mag = sqrt(mag[0]*mag[0] + mag[1]*mag[1] + mag[2]*mag[2]);
-
-  odbWriteDouble(str, 0, acceleration[0]);
-  odbWriteDouble(str, 1, acceleration[1]);
-  odbWriteDouble(str, 2, acceleration[2]);
-
-  odbWriteDouble(str, 3, mag[0]);
-  odbWriteDouble(str, 4, mag[1]);
-  odbWriteDouble(str, 5, mag[2]);
-
-  odbWriteDouble(str, 6, sum_mag);
-  odbWriteDouble(str, 7, tilt);
-  odbWriteDouble(str, 8, etime);
-  odbWriteDouble(str, 9, etime_us);
-
-}
-
 INT read_trigger_event(char *pevent, INT off)
 {
 
@@ -565,7 +541,7 @@ INT read_trigger_event(char *pevent, INT off)
   *pdata32++ =  etime_us;
    
   bk_close(pevent, pdata32);
-  std::cout << "tilt: "<<tilt << std::endl;
+
 
 
   return bk_size(pevent);
