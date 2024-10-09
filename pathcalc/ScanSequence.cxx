@@ -6,6 +6,7 @@
 #include <vector> //Anubhav's edit(to keep track, sorry I don't know git)
 #include <sys/time.h>
 #include <sstream>
+#include <stdexcept>
 
 #include "demo_path.cxx"
 
@@ -23,6 +24,33 @@ ScanSequence::ScanSequence(){
 
 }
 
+std::vector<double> rotate_vector(const std::vector<std::vector<double>> rot_mat, std::vector<double> vector){
+  /*
+      rot_mat should be provided as [row][column]
+  */
+  return {
+    rot_mat[0][0]*vector[0] + rot_mat[0][1]*vector[1] + rot_mat[0][2]*vector[2],
+    rot_mat[1][0]*vector[0] + rot_mat[1][1]*vector[1] + rot_mat[1][2]*vector[2],
+    rot_mat[2][0]*vector[0] + rot_mat[2][1]*vector[1] + rot_mat[2][2]*vector[2]
+  };
+}
+std::vector<std::vector<double>> assemble_matrix(double tilt, double yaw){
+  /*
+    assembles a rotation matrix for tilt of tilt and a azimuthal rotation of yaw
+  */
+
+ std::vector<std::vector<double>> rot_mat = {
+    {cos(tilt), sin(tilt), 0},
+    {-cos(yaw)*sin(tilt), cos(yaw)*cos(tilt), sin(yaw)},
+    {sin(yaw)*sin(tilt), -sin(yaw)*cos(tilt), cos(yaw)}
+ };
+
+  return rot_mat;
+}
+
+
+
+
 //----------------------------------------------------------
 void ScanSequence::Init(SCAN_SETTINGS &fs_in, float *gantryLim){
 //----------------------------------------------------------
@@ -33,6 +61,139 @@ void ScanSequence::Init(SCAN_SETTINGS &fs_in, float *gantryLim){
   return;
 }
 
+const double threshold = -1*pow(0.01, 2); // we add a little bit of a buffer here - 1 cm
+bool box_valid_and_aim(const std::vector<double> point, const double tilt, const double yaw){
+  bool box_check = box_valid(point);
+
+  if(!box_check){
+    return box_check; 
+  }
+
+  std::vector<double> p0={point[0]-PMT_X, point[1]-PMT_Y, point[2] - PMT_Z};
+  std::vector<double> d0={ cos(yaw)*cos(tilt), sin(yaw)*cos(tilt), sin(tilt)};
+
+  double A = (pow(d0[0]/pmta, 2) + pow(d0[1]/pmtb, 2) + pow(d0[2]/pmtc, 2));
+  double B = ((2*d0[0]*p0[0]/pow(pmta,2)) + (2*d0[1]*p0[1]/pow(pmtb,2)) + (2*d0[2]*p0[2]/pow(pmtc,2))) ;
+  double C = (pow(p0[0]/pmta, 2) + pow(p0[1]/pmtb, 2) + pow(p0[2]/pmtc,2) -1);
+
+
+  if ((pow(B,2) - 4*A*C)<threshold){
+    return false;
+  }
+
+  return true; 
+
+}
+
+bool box_valid(const std::vector<double> point){
+  /*
+    Simple box valid function 
+  */
+  if (std::isnan(point[0]) || std::isnan(point[1]) || std::isnan(point[2])){
+    return false;
+  }
+  bool valid_x = point[0]>=0 && point[0]<=0.6250;
+  bool valid_y = point[1]>=0 && point[1]<=0.52;
+  bool valid_z = point[2]>=0 && point[2]<=0.25;
+
+  return (valid_x && valid_y && valid_z);
+}
+
+std::vector<double> get_plane_line_intersection(std::vector<double> line, std::vector<double> plane){
+  /*
+      Returns the intersection of a line with a plane. 
+
+      The line is defined as a len-6 vector (x0,y0,z0, dir_x, dir_y, dir_z)
+      and the plane is deinfed as a len-4 vector (A,B,C,D) - normal plane-ology 
+  */
+
+  if (line.size()!=6){
+    throw std::runtime_error("Line must be defined with a len-6 vector");
+  }
+  if (plane.size()!=4){
+    throw std::runtime_error("Plane must be describred with a len-4 vector ");
+  }
+
+  double x0 =line[0];
+  double y0=line[1];
+  double z0=line[2];
+  double dir_x = line[3];
+  double dir_y = line[4];
+  double dir_z = line[5];
+
+  double A = plane[0];
+  double B = plane[1];
+  double C = plane[2];
+  double D = plane[3];
+
+  double dir_dot = A*dir_x + B*dir_y + C*dir_z; 
+  // dir_dot = B*dir_y 
+  if (abs(dir_dot)<1e-15){
+    return {std::nan(""), std::nan(""), std::nan("")};
+  }
+
+  double t = -(A*x0 + B*y0 + C*z0)/dir_dot;
+  // t = y0 / dir_y  
+
+  return {x0+dir_x*t, y0+dir_y*t , z0+dir_z*t};
+
+}
+
+std::vector<double> ScanSequence::bound_points(const std::vector<double> p1,const std::vector<double> p2){
+  /*
+    Take two points that define a line. We want a point that is a reachable point and along the line defined by this poitn
+    If p2 is valid, we return that one.
+    Otherwise...
+      1. check the z=0 plane. If the intersection is vaid, use that point 
+      2. Check the x=0 plane. If the intersection is valid, use that point 
+      3. check the y=0 plane. If the intersection is valid, use that point 
+      [...] I hope we don't have to go futher 
+
+      We'll use anubav's code 
+  */
+
+ if(box_valid(p2)){
+  return p2;
+ }
+
+  std::vector<double> line =  {\
+        p1[0], p1[2], p1[2],
+        p2[0]-p1[0], \
+        p2[1]-p1[1], \
+        p2[2]-p1[2] };
+
+  std::vector<double> test_point;
+
+  // z=0 plane 
+  test_point = get_plane_line_intersection(
+    line, {0, 0, 1, 0}
+  );
+  if (box_valid(test_point)){
+    std::cout << "z=0"<<std::endl;
+    return test_point;
+  }
+
+  test_point = get_plane_line_intersection(
+    line, {1, 0, 0, 0}
+  );
+  if(box_valid(test_point)){
+    std::cout << "x=0"<<std::endl;
+    return test_point;
+  }
+
+  test_point = get_plane_line_intersection(
+    line, {0, 1, 0, 0}
+  );
+  if(box_valid(test_point)){
+    std::cout << "y=0"<<std::endl;
+    return test_point;
+  }
+
+  return {
+    std::nan(""), std::nan(""), std::nan("")
+  };
+
+}
 
 //---------Anubhav's edit(start)------------------------------------
 bool ScanSequence::is_destinationvalid(const std::vector<double>& l){
@@ -207,9 +368,13 @@ int ScanSequence::SpinPath(std::vector<std::vector<double>> &points){
 const float pi = 3.1415926;
 
 int ScanSequence::PatchPath(std::vector<std::vector<double>> &points){
+      
     std::vector<double> takenasan_angles={
-      10, 20, 30, 40, //  45, 50, 55, 60, 65, 70, 75, 80
+      85, 80, 75, 70, 65, 60, 55, 50,45,40,30,20,10, 0
     };
+    
+
+    // 50, 55, 60, 65, 70, 75, 80
 
     const float pmt_center_x = fs.patch_scan_par.pmt_x;
     const float pmt_center_y = fs.patch_scan_par.pmt_y; 
@@ -217,9 +382,10 @@ int ScanSequence::PatchPath(std::vector<std::vector<double>> &points){
     const float gantry_phi_pointing = fs.patch_scan_par.pmt_angle_center; // phi angle optical box needs to point at the surface 
     const int scantype = fs.patch_scan_par.scan_dir;
 
-    const double step_len = 0.05;
 
-    double phi_positional = 180;
+    const double step_len = 0.15;
+
+    double phi_positional = 0;
     if(scantype==0){ // perpendicular (moving away from center to -x)
       // do nothing... 
     }else if (scantype==1){ //diagonal 
@@ -227,76 +393,116 @@ int ScanSequence::PatchPath(std::vector<std::vector<double>> &points){
     }else if (scantype==2){ // parallel (moving away from center to -y)
       phi_positional+=90; 
     }else{
+      std::cout << scantype << std::endl;
       throw std::runtime_error("Unknown scan direction :(");
     }
     phi_positional*= pi/180; 
+    double half_patch_width = 1.5;
 
 
 
-    double pmt_height = pmt_norm.evaluate_radius(pi/2, phi_positional);
+    double pmt_height = pmt_norm.pmt_height();
 
     std::vector<double> point_on_pmt;
-    std::vector<double> final_point_pmt_coords;
-    std::vector<double> final_point; 
+    std::vector<double> final_point_surface;
+    std::vector<double> final_point_step; 
 
     for(int ia=0; ia<takenasan_angles.size(); ia++){
+
+
       double theta = pi/2 - takenasan_angles[ia]*3.14159/180;
 
-      
-
       std::vector<double> norm_vector = pmt_norm.evaluate_norm(theta, phi_positional);
-      double radius = pmt_norm.evaluate_radius(theta, phi_positional);
 
-      point_on_pmt  = {// in PMT coordinates! 
-        radius*cos(phi_positional)*sin(theta),
-        radius*sin(phi_positional)*sin(theta),
-        radius*cos(phi_positional)
-      };
+      point_on_pmt  = pmt_norm.surface(theta, phi_positional);
       
-    
-    final_point_pmt_coords = {
-      point_on_pmt[0] + norm_vector[0]*step_len,
-      point_on_pmt[1] + norm_vector[1]*step_len,
-      point_on_pmt[2] + norm_vector[2]*step_len 
-    };
+      final_point_surface = {
+        -point_on_pmt[0] + pmt_center_x,
+        -point_on_pmt[1] + pmt_center_y,
+        static_cast<double>(pmt_center_z) - point_on_pmt[2]
+      };
 
-    // TODO - we need to make sure this is actually a real point! May need to move a long this line until we're inside of the valid box :(
-    final_point = {
-        final_point_pmt_coords[0] + pmt_center_x,
-        final_point_pmt_coords[1] + pmt_center_y,
-        pmt_height + static_cast<double>(pmt_center_z) - final_point_pmt_coords[2]
-    };
+      final_point_step = {
+        final_point_surface[0] - norm_vector[0]*step_len,
+        final_point_surface[1] - norm_vector[1]*step_len,
+        final_point_surface[2] - norm_vector[2]*step_len 
+      };
 
-    // optical box tilt angle is determined from the normal vector 
-    float ob_theta = atan2(
-      -norm_vector[2],
-      sqrt(pow(norm_vector[0],2) + pow(norm_vector[1],2))
-    );
 
-    //convert from PMT bulb-centered coordinates to gantry coordinates 
-    points.push_back({
-      final_point[0], 
-      final_point[1],
-      final_point[2], 
-      ob_theta,
-      gantry_phi_pointing,
-      -99999,
-	    -99999,
-	    -99999,
-	    -99999,
-      -99999
-    });
+      std::vector<double> use_point = bound_points(final_point_surface, final_point_step);
+
+      if(std::isnan(use_point[0]) || std::isnan(use_point[1]) | std::isnan(use_point[2])){
+        std::cout << "no valid point for "<< takenasan_angles[ia] <<" deg"<<std::endl;
+        continue;
+      }
+
+      // optical box tilt angle is determined from the normal vector 
+      float ob_theta = -1*atan(
+        norm_vector[2]/sqrt(pow(norm_vector[0],2) + pow(norm_vector[1],2))
+      )*180/pi ; // subtract one degree - the optical box is always off by about that much
+      
+
+      std::cout << " trying to add point "<< use_point[0] << ", "<< use_point[1] << ", "<<use_point[2] <<std::endl;
+
+      //convert from PMT bulb-centered coordinates to gantry coordinates 
+
+      points.push_back({
+        use_point[0], 
+        use_point[1],
+        use_point[2], 
+        gantry_phi_pointing-half_patch_width,
+        ob_theta+half_patch_width,
+        -99999,
+        -99999,
+        -99999,
+        -99999,
+        -99999
+      });
+      points.push_back({
+        use_point[0], 
+        use_point[1],
+        use_point[2], 
+        gantry_phi_pointing+half_patch_width,
+        ob_theta+half_patch_width,
+        -99999,
+        -99999,
+        -99999,
+        -99999,
+        -99999
+      });
+
+          points.push_back({
+        use_point[0], 
+        use_point[1],
+        use_point[2], 
+        gantry_phi_pointing-half_patch_width,
+        ob_theta-half_patch_width,
+        -99999,
+        -99999,
+        -99999,
+        -99999,
+        -99999
+      });
+      points.push_back({
+        use_point[0], 
+        use_point[1],
+        use_point[2], 
+        gantry_phi_pointing+half_patch_width,
+        ob_theta-half_patch_width,
+        -99999,
+        -99999,
+        -99999,
+        -99999,
+        -99999
+      });
 
     }
+    
     return points.size();
 }
 
-//--Anubhav's edit-----------------------------------------
 
 int ScanSequence::TiltPath(std::vector<std::vector<double> > &points){
-
-  std::vector<std::vector<double>> planepoints;
-  std::vector<std::vector<double>> points1;
 
   /*
 
@@ -306,135 +512,135 @@ int ScanSequence::TiltPath(std::vector<std::vector<double> > &points){
   that will be specific to a scan and has to be taken from the 
   frontend "Scan" webpage of the midptf website!
 
+
+  This builds up a plane whose normal is perpendicular to the surface 
+  of the PMT at some azimuth and zenith angle. OB angles are fixed.
+
+  To do this, we get the normal vector at the point, and step away from the PMT
+  some distance (15cm). 
+
+  Then we make a simple 2D plane of points, maybe 0.6 on a side
+
+  Then, we take those points, and rotate them about the center of the plane 
+  to the proper normal angle
+
   */  
 
+  const double PI  = 3.1415926;
+
   const float step = fs.tilt_par.step; //0.002;  // in meters
-  const float phi1 = fs.tilt_par.phi; //-45;    // to be taken from the user as input (in degrees)
-  const float phi = -phi1 * 3.14159/180.0;
-  const float theta1 = fs.tilt_par.theta;//95;   // to be taken from the user as input (in degrees)
-  const float theta = theta1 * 3.14159/180.0;
+  const float phi_positional = fs.tilt_par.theta; //-45;    // to be taken from the user as input (in degrees)
+  const int scantype = fs.tilt_par.scan_dir;
+  const float theta1 = fs.tilt_par.phi;//95;   // to be taken from the user as input (in degrees)
+  const float zen_given = theta1 * PI/180.0;
+
   
-  int nlows = 0;
-  points.clear();
+  // let's build the points for the temp grid 
 
-  if (-90 < theta1 && theta1 < 0) {
-    for (int i = 0; i < std::floor(0.650/step); i++) {
-      points1.clear();
-      planepoints.clear();
-      for (int j = -1*std::floor(0.650/step); j < std::floor(0.650/step); j++) {
-	for (int k = -1*std::floor(0.650/step); k < std::floor(0.650/step); k++) {
-	  std::vector<double> p = {
-	    std::cos(phi) * std::cos(theta) * step * i - j * step * std::sin(theta) - k * step * std::sin(phi) * std::cos(theta),
-	    0.566 + std::cos(phi) * std::sin(theta) * step * i + j * step * std::cos(theta) - k * step * std::sin(phi) * std::sin(theta),
-	    std::sin(phi) * step * i + k * step * std::cos(phi),
-	    theta1+104,
-	    phi1,
-	    -99999,
-	    -99999,
-	    -99999,
-	    -99999,
-      -99999
-	  };
-	  planepoints.push_back(p);
-	}
+
+  double azi_given = 0;
+  if(scantype==0){ // perpendicular (moving away from center to -x)
+    azi_given=180.0;
+  }else if (scantype==1){ //diagonal 
+    azi_given=225.0; 
+  }else if (scantype==2){ // parallel (moving away from center to -y)
+    azi_given=270.0; 
+  }else{
+    std::cout << scantype << std::endl;
+    throw std::runtime_error("Unknown scan direction :(");
+  }
+
+  std::cout << "using azimuth and zenith "<< azi_given<< " and "<< theta1 << std::endl;
+  azi_given = azi_given*PI/180.0;
+  
+  std::vector<std::vector<double>> pre_rotate_points;
+
+  float minval = -0.600;
+  float maxval = 0.600;
+
+  float xstep = minval;
+  float ystep = minval; 
+  int direction = 1;
+  bool cont = true;
+  while (ystep < maxval){
+    xstep = minval*direction; 
+    cont = true;
+    while(cont){
+      if(direction>0){
+        cont = xstep < maxval;
+      }else{
+        cont = xstep > minval;
       }
-      for (const auto& i : planepoints) {
-	if (is_destinationvalid(i)) {
-	  points1.push_back(i);
-	}
-      }
-      if (points1.size() > points.size()) {
-	points = points1;
-      }
-      else if (points1.size() < points.size()) {
-	nlows++;
-      }
-      if (nlows == 3) {
-	break;
-      }
+      pre_rotate_points.push_back({
+        static_cast<double>(xstep), 
+        static_cast<double>(ystep), 
+        0.0
+      });
+      xstep+=step*direction; 
+    }
+    ystep+=step; 
+    direction*=-1;
+  }
+
+  double use_azi = 0.5*PI - azi_given;
+  std::vector<double> shift = pmt_norm.evaluate_norm(static_cast<double>(zen_given), azi_given);
+  double ob_angle = -1*atan(\
+    shift[2] / pow(pow(shift[0], 2) + pow(shift[1],2), 0.5)\
+  );
+
+  double plane_angle = ob_angle + 0.5*PI;
+
+  std::vector<std::vector<double>> rmat_1 = {\
+    {1, 0, 0 },\
+    {0, cos(plane_angle), sin(plane_angle)}, \
+    {0, -sin(plane_angle), cos(plane_angle)}};
+  std::vector<std::vector<double>> rmat_2 = {\
+    {cos(use_azi), sin(use_azi), 0},\
+    {-sin(use_azi), cos(use_azi), 0},\
+    {0,0,1}};
+
+  std::vector<std::vector<double>> rotated_points;
+  while (pre_rotate_points.size()>0) {
+    // push back a twice-rotated vector
+    rotated_points.push_back(rotate_vector(rmat_2, rotate_vector(rmat_1, pre_rotate_points[pre_rotate_points.size()-1] )));
+    pre_rotate_points.pop_back();
+    
+  }
+
+  std::vector<double> scale_shift = {shift[0]*0.150, shift[1]*0.150, shift[2]*0.150};
+  std::vector<double> offset = pmt_norm.surface(static_cast<double>(zen_given), azi_given);
+
+  std::cout <<"surface offset: "<<offset[0] <<", " <<offset[1] <<", "<<offset[2] << std::endl;
+  std::cout <<"normal offset: "<<scale_shift[0] <<", " <<scale_shift[1] <<", "<<scale_shift[2] << std::endl;
+
+  bool valid= false;
+
+  for(int count =0; count<rotated_points.size(); count++){
+    std::vector<double> build_pt={
+      rotated_points[count][0] + PMT_X + scale_shift[0] + offset[0],
+      rotated_points[count][1] + PMT_Y + scale_shift[1] + offset[1],
+      PMT_Z -  (scale_shift[2] + offset[2] + rotated_points[count][2]) ,// 
+      static_cast<double>(phi_positional),
+      static_cast<double>(ob_angle)*180.0/PI, 
+      -99999.,
+      -99999.,
+      -99999.,
+      -99999.,
+      -99999.};
+    if (build_pt[2]<=0){
+      build_pt[2] = 0.0;
+    }
+    
+    valid = box_valid_and_aim(build_pt, -1*ob_angle, azi_given+PI);
+    if(valid){
+      std::cout<< build_pt[0]<<", "<< build_pt[1]<<", "<< build_pt[2]<<", "<< build_pt[3]<<", "<< build_pt[4]<<std::endl;
+      points.push_back(build_pt);
     }
   }
 
-  if (90 < theta1 && theta1 < 180) {
-    for (int i = 0; i < std::floor(0.650/step); i++) {
-      points1.clear();
-      planepoints.clear();
-      for (int j = -1*std::floor(0.650/step); j < std::floor(0.650/step); j++) {
-	for (int k = -1*std::floor(0.650/step); k < std::floor(0.650/step); k++) {
-	  std::vector<double> p = {
-	    0.649 + std::cos(phi) * std::cos(theta) * step * i - j * step * std::sin(theta) - k * step * std::sin(phi) * std::cos(theta),
-	    std::cos(phi) * std::sin(theta) * step * i + j * step * std::cos(theta) - k * step * std::sin(phi) * std::sin(theta),
-	    std::sin(phi) * step * i + k * step * std::cos(phi),
-	    theta1-76,
-	    -180 - phi1,
-	    -99999,
-	    -99999,
-	    -99999,
-	    -99999,
-      -99999
-	  };
-	  planepoints.push_back(p);
-	}
-      }
-      for (const auto& i : planepoints) {
-	if (is_destinationvalid(i)) {
-	  points1.push_back(i);
-	}
-      }
-      if (points1.size() > points.size()) {
-	points = points1;
-      }
-      else if (points1.size() < points.size()) {
-	nlows++;
-      }
-      if (nlows == 3) {
-	break;
-      }
-    }
-  }
-
-  if (0 <= theta1 && theta1 <= 90) {
-    for (int i = 0; i < std::floor(0.650/step); i++) {
-      points1.clear();
-      planepoints.clear();
-      for (int j = -1*std::floor(0.650/step); j < std::floor(0.650/step); j++) {
-	for (int k = -1*std::floor(0.650/step); k < std::floor(0.650/step); k++) {
-	  std::vector<double> p = {
-	    std::cos(phi) * std::cos(theta) * step * i - j * step * std::sin(theta) - k * step * std::sin(phi) * std::cos(theta),
-	    std::cos(phi) * std::sin(theta) * step * i + j * step * std::cos(theta) - k * step * std::sin(phi)* std::sin(theta),
-	    std::sin(phi)* step* i + k * step * std::cos(phi),
-	    theta1-76,
-	    -180-phi1,
-	    -99999,
-	    -99999,
-	    -99999,
-	    -99999,
-            -99999
-	  };
-	  planepoints.push_back(p);
-	}
-      }
-      for (const auto& i : planepoints) {
-	if (is_destinationvalid(i)) {
-	  points1.push_back(i);
-	}
-      }
-      if (points1.size() > points.size()) {
-	points = points1;
-      }
-      else if (points1.size() < points.size()) {
-	nlows++;
-      }
-      if (nlows == 3) {
-	break;
-      }
-    }
-  }
 
   return points.size();
-
 }
-//--Anubhav's Edit(end)------------------------------------
 
 
 //----------------------------------------------------------
@@ -598,6 +804,10 @@ int ScanSequence::RectangularPath(std::vector<std::vector<double> > &points){
    * Well tested!
    */
 
+  double pmt_x_pos = 0.417;
+  double pmt_y_pos = 0.297;
+  double pmt_radius = 0.27;
+
   // Parameter checks
   if((fs.rect_par.init_pos_z + fs.rect_par.prism_height_z) > z_max_value) {
     cm_msg(MERROR,"RectangularPath","Height (+ initial z position) outside of limits.");
@@ -723,7 +933,10 @@ cm_msg(MINFO,"RectangularPath","Generating linear/plane/rectangular prism path..
               single_point[6] = gGantryLimits[6] - offset;
             }
           }
+
           points.push_back(single_point);
+
+          
 
           // If wanted, monitor stability at ref point:
           if(fs.rect_par.subtype == MONITOR_REF){

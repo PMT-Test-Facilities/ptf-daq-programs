@@ -217,9 +217,10 @@ const DATA = Object.freeze({
         path: 'tiltparams',
         propsets: false,
         props: [
-            { name: 'Theta(Azimuthal)', path: 'theta', unit: '°' },
-            { name: 'Phi(Zenith)', path: 'phi', unit: '°' },
+            { name: 'Tilt (aim)', path: 'phi', unit: '°' },
+            { name: 'Azimuth (aim)', path: 'theta', unit: '°' },
             { name: 'Step', path: 'step', unit: 'm' },
+            {name: 'Scan Direciton', path: 'scan_dir', selector: {0: 'x-axis', 1: 'Diagonal', 2: 'y-axis'}},
         ],
     },
     'data-4':{
@@ -348,9 +349,7 @@ const DATA = Object.freeze({
     <div id="data"></div>
     <script>makeControls();</script>
     <div id="comment" style="text-align: center; margin-top: 10px;">
-    <p>When inputing theta(azimuth) value of Tilt Scan, use the following convention : <br>
-       theta is 0 along +ve x-axis and 90 along +ve y-axis <br><br><br> NOTE THAT THIS DOESN'T APPLY TO ANY OTHER KIND OF SCAN, BUT ONLY TO TILT SCAN.
-    </p>
+
 </div>
 </div>
 </div>

@@ -143,6 +143,7 @@ typedef struct {
     float       theta;
     float       phi;
     float       step;
+    INT scan_dir;
     } tilt_par; //Anubhav's edit end 
   struct {
     float       init_pos[5];
@@ -170,18 +171,18 @@ typedef struct {
     float zen_start;
     float azi_step;
     float zen_step;
-    float init_x;
     float init_y;
+    float init_x;
     float init_z;
     float azi_distance;
     float zen_distance;
   } spin_scan_par;
   struct{
+    INT scan_dir;
     float pmt_x;
     float pmt_y; 
     float pmt_tip_z;
     float pmt_angle_center;
-    INT scan_dir;
   } patch_scan_par;
   
   //  DWORD     timeout;
@@ -245,9 +246,10 @@ typedef struct {
 "gantry_laser = INT : 0",\
 "",\
 "[TiltParams]",\
-"theta = FLOAT : 0",\			
-"phi = FLOAT : -45",\
+"theta = FLOAT : 45",\			
+"phi = FLOAT : -32",\
 "step = FLOAT : 0.010",\
+"scan_dir = INT : 0",\
 "",\
 "[PassByParams]",\
 "init_pos = FLOAT[5] : ",\

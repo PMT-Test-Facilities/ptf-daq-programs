@@ -6,6 +6,24 @@
 #include <vector>
 #include "norm_calc/norm_eval.h"
 
+const double PMT_X = 0.417;
+const double PMT_Y = 0.297;
+const double PMT_Z = 0.332; 
+const double pmta=0.254110205;
+const double pmtb=0.254110205;
+const double pmtc=0.186002389;
+
+
+
+bool box_valid(const std::vector<double> point);
+bool box_valid_and_aim(const std::vector<double> point, double tilt, double yaw);
+
+
+std::vector<double> rotate_vector(const std::vector<std::vector<double>> rot_mat, std::vector<double> vector);
+std::vector<std::vector<double>> assemble_matrix(double rx, double rz);
+
+std::vector<double> get_plane_line_intersection(std::vector<double> line, std::vector<double> plane);
+
 
 class ScanSequence {
   
@@ -20,6 +38,8 @@ public:
   
   // Helper functions
   int GetMeasTime(){ return fs.meas_time; };
+
+  std::vector<double> bound_points(std::vector<double> p1, std::vector<double> p2);
   
   
 private:
