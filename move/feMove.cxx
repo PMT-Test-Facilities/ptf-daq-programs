@@ -2082,11 +2082,17 @@ int generate_path(INFO *pInfo) {
     pInfo->MovePath[8][1] = round((pInfo->Destination[8] - pInfo->LimPos[8]) * pInfo->mScale[8] + pInfo->mOrigin[8]);
   }
 
+  float tilt_offset = 0.0;
+  if (pInfo->Destination[4]<-2.5){
+    tilt_offset = -2.5;
+  }else if (pInfo->Destination[4]<-10){
+    tilt_offset = -5; 
+  }
 
 
   // Tilt first - tilt is always either increasing or decreasing boundary size
   if (tiltfirst) {
-    pInfo->MovePath[4][1] = round((pInfo->Destination[4] - pInfo->LimPos[4]) * pInfo->mScale[4] + pInfo->mOrigin[4]);
+    pInfo->MovePath[4][1] = round((pInfo->Destination[4] - pInfo->Phidget[7] * rad +tilt_offset) * pInfo->mScale[4] + pInfo->mOrigin[4]);
     pInfo->MovePath[9][1] = round((pInfo->Destination[9] - pInfo->LimPos[9]) * pInfo->mScale[9] + pInfo->mOrigin[9]);
   }
 
@@ -2183,7 +2189,7 @@ int generate_path(INFO *pInfo) {
   // Move tilt
   if (!tiltfirst) {
     pInfo->MovePath[4][path1.size() + path2.size() + 2] = round(
-								(pInfo->Destination[4] - pInfo->LimPos[4]) * pInfo->mScale[4] + pInfo->mOrigin[4]);
+								(pInfo->Destination[4] - pInfo->Phidget[7] * rad +tilt_offset) * pInfo->mScale[4] + pInfo->mOrigin[4]);
     pInfo->MovePath[9][path1.size() + path2.size() + 2] = round(
 								(pInfo->Destination[9] - pInfo->LimPos[9]) * pInfo->mScale[9] + pInfo->mOrigin[9]);
   } else {
