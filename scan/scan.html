@@ -153,11 +153,11 @@ const DATA = Object.freeze({
         path: 'cylinderparams',
         propsets: false,
         props: [
-            {name: 'Height', path: 'height', unit: 'm'},
-            {name: 'Radius', path: 'radius', unit: 'm'},
-            {name: 'Arc step', path: 'arc_step', unit: '?'},
-            {name: 'Loop separation', path: 'loop_separation', unit: '?'},
-            {name: 'Layer thickness', path: 'layer_thickness', unit: 'm'},
+            {name: 'Start Z', path: 'height', unit: 'm'},
+            {name: 'Start R', path: 'radius', unit: 'm'},
+            {name: 'Arc step', path: 'arc_step', unit: 'deg'},
+            {name: 'R Dist', path: 'loop_separation', unit: 'm'},
+            {name: 'Z Dist', path: 'layer_thickness', unit: 'm'},
             {name: 'X center', path: 'x_center', unit: 'm'},
             {name: 'Y center', path: 'y_center', unit: 'm'},
             {name: 'Gantry', path: 'which_gantry', selector: {0: 'Gantry 0', 1: 'Gantry 1', 2: 'Both'}},
@@ -247,6 +247,10 @@ const DATA = Object.freeze({
             {name: 'PMT z-tip', path: 'pmt_tip_z', unit: 'm'},
             {name: 'PMT Center Phi', path: 'pmt_angle_center', unit: '°'},
             {name: 'Scan Direciton', path: 'scan_dir', selector: {0: 'Perpendicular', 1: 'Diagonal', 2: 'Parallel'}},
+            {name: 'PMT Mode', path: 'pmt_mode', selector: {0:'Ellipse (SK)', 1: 'Sphere (P-CAL)'}},
+            {name: 'R Start', path: 'r_start', unit: 'm'},
+            {name: 'R Step', path: 'r_step', unit: 'm'},
+            {name: 'R End', path: 'r_end', unit: 'm'},
         ]
     },
 

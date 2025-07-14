@@ -183,6 +183,10 @@ typedef struct {
     float pmt_y; 
     float pmt_tip_z;
     float pmt_angle_center;
+    INT pmt_mode;
+    float r_start; 
+    float r_step;
+    float r_end;
   } patch_scan_par;
   
   //  DWORD     timeout;
@@ -292,6 +296,10 @@ typedef struct {
 "pmt_y = FLOAT : 0.0",\
 "pmt_tip_z = FLOAT : 0.0",\
 "pmt_angle_center = FLOAT : 0.0",\
+"pmt_mode = INT : 0",\
+"r_start = FLOAT : 0.0",\
+"r_step = FLOAT : 0.0",\
+"r_end = FLOAT : 0.0",\
 "",\
 "[.]",\
 "ScanType = INT : 1",\

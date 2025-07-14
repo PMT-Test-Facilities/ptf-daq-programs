@@ -15,7 +15,7 @@ const double pmtc=0.186002389;
 
 
 
-bool box_valid(const std::vector<double> point);
+bool box_valid(const std::vector<double> point, float zmax=0.25);
 bool box_valid_and_aim(const std::vector<double> point, double tilt, double yaw);
 
 
@@ -62,6 +62,7 @@ private:
   int TiltPath(std::vector<std::vector<double> > &points);//Anubhav's edit
   int SpinPath(std::vector<std::vector<double>> &points);
   int PatchPath(std::vector<std::vector<double>> &points);
+  int PCALPath(std::vector<std::vector<double>> &points);
 
   bool is_destinationvalid(const std::vector<double>& l); //Anubhav's edit
   

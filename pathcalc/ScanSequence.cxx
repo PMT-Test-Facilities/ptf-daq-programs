@@ -85,7 +85,7 @@ bool box_valid_and_aim(const std::vector<double> point, const double tilt, const
 
 }
 
-bool box_valid(const std::vector<double> point){
+bool box_valid(const std::vector<double> point, float zmax){
   /*
     Simple box valid function 
   */
@@ -295,7 +295,11 @@ int ScanSequence::GeneratePath(std::vector<std::vector<double> > &points_in){
       non_zero_points = SpinPath(points_in);
       break;
     case PATCH_SCAN:
-      non_zero_points = PatchPath(points_in);
+      if (fs.patch_scan_par.pmt_mode==0){
+        non_zero_points = PatchPath(points_in);
+      }else{
+        non_zero_points = PCALPath(points_in);
+      }
       break;
     default:
       cm_msg(MERROR,"GeneratePath","Invalid scan type.");
@@ -366,6 +370,118 @@ int ScanSequence::SpinPath(std::vector<std::vector<double>> &points){
 }
 
 const float pi = 3.1415926;
+
+int ScanSequence::PCALPath(std::vector<std::vector<double>> &points){
+    const float pmt_center_x = fs.patch_scan_par.pmt_x;
+    const float pmt_center_y = fs.patch_scan_par.pmt_y; 
+    const float pmt_center_z = fs.patch_scan_par.pmt_tip_z; // should be in gantry coordinates 
+    const float gantry_phi_pointing = fs.patch_scan_par.pmt_angle_center; // phi angle optical box needs to point at the surface 
+
+    
+    const float start_radius = fs.patch_scan_par.r_start; 
+    const float rad_step = fs.patch_scan_par.r_step; 
+    const float rad_end = fs.patch_scan_par.r_end; 
+
+    const float mintheta = -70; 
+    const float steptheta_fixed = 5;
+    const float maxtheta = -10; 
+
+    
+
+    const std::vector<double>  theta_offsets = {-5,-4,-3,-2,-1,0,1,2,3,4,5};
+
+    float current_rad = start_radius;
+    float theta_compare = maxtheta;
+    float current_theta = mintheta; 
+    
+    bool forward = true;
+    bool fixed_step = true;
+    const float min_step = 0.005; 
+    
+    float steptheta;
+    float arc_step;
+
+    std::vector<double> template_point = {0.0, 0.0,0.0,0.0,0.0,0.0, 0.0,0.0,0.0,0.0};
+    
+    points.clear();
+
+    while (current_rad<rad_end){
+      /*
+        We want the gantry to zig-zag to minimize the bigger movements. 
+        So we alternate between going forwards and backwards  
+      */
+
+      while (  ((current_theta<maxtheta) && forward)
+            || ((current_theta>mintheta) && ~forward)
+      ){
+
+        /*
+        The amount we step the angle by will depend on if we want fixed arc-length steps
+        or fixed angle steps
+
+        for fixed arc-length, we just use the radial step length 
+        */
+        if (fixed_step){
+          steptheta = steptheta_fixed;
+        }else{
+          steptheta = (rad_step/current_rad)*180/pi;
+        }
+
+        /*
+            Now, in fixed-angle steps we also need to make sure that we're actually moving a reasonable amount
+            So if the angular step would result in too small of a move, we instead just use a minimum step length of 5mm
+            and recalculate the angle step 
+        */
+        arc_step = (steptheta*pi/180)*current_rad;
+        if (arc_step<min_step){
+          steptheta = (min_step/current_rad)*180/pi;
+        }
+        
+        template_point = {
+              pmt_center_x, 
+              pmt_center_y - current_rad*cos(current_theta*pi/180),
+              pmt_center_z + current_rad*sin(current_theta*pi/180), 
+              gantry_phi_pointing,
+              current_theta,
+              -99999,
+              -99999,
+              -99999,
+              -99999,
+              -99999
+          };
+
+        // make sure this is a reachable point 
+        if (~box_valid(template_point)){
+          continue;
+        }
+      
+
+        for (int index=0; index<theta_offsets.size(); index++){
+            template_point = {
+              pmt_center_x, 
+              pmt_center_y - current_rad*cos(current_theta*pi/180),
+              pmt_center_z + current_rad*sin(current_theta*pi/180), 
+              gantry_phi_pointing,
+              current_theta + theta_offsets[index],
+              -99999,
+              -99999,
+              -99999,
+              -99999,
+              -99999
+          };
+        }       
+        if(forward){
+          current_theta += steptheta;
+        }else{
+          current_theta -= steptheta;
+        }
+      }
+      forward = ~forward;
+      current_rad+=rad_step;
+    }
+
+    return points.size();
+}
 
 int ScanSequence::PatchPath(std::vector<std::vector<double>> &points){
       
@@ -732,7 +848,6 @@ int ScanSequence::CylinderPath(std::vector<std::vector<double> > &points){
             points[j].reserve(10);
           }
         }
-
 
         //copy all points of the first point in the layer to this point, but change X and Y
         //for(j = 0;j < 3;j++){

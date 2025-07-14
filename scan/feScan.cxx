@@ -283,6 +283,10 @@ void printScanSettings(const SCAN_SETTINGS& fs) {
   cm_msg(MINFO, "frontend_init",  "patch scan pmt y %f", fs.patch_scan_par.pmt_y);
   cm_msg(MINFO, "frontend_init",  "patch scan pmt z %f", fs.patch_scan_par.pmt_tip_z);
   cm_msg(MINFO, "frontend_init",  "patch scan pmt angle %f", fs.patch_scan_par.pmt_angle_center);
+  cm_msg(MINFO, "frontend_init", "patch scan pmt mode %f", fs.patch_scan_par.pmt_mode);
+  cm_msg(MINFO, "frontend_init", "r_start %f", fs.patch_scan_par.r_start);
+  cm_msg(MINFO, "frontend_init", "r_step %f", fs.patch_scan_par.r_step);
+  cm_msg(MINFO, "frontend_init", "r_end %f", fs.patch_scan_par.r_end);
 
   cm_msg(MINFO, "frontend_init",  "patch scan theta %f", fs.tilt_par.theta);
   cm_msg(MINFO, "frontend_init",  "patch scan phi  %f", fs.tilt_par.phi);
