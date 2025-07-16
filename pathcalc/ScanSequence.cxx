@@ -94,9 +94,11 @@ bool box_valid(const std::vector<double> point, float zmax){
   }
   bool valid_x = point[0]>=0 && point[0]<=0.6250;
   bool valid_y = point[1]>=0 && point[1]<=0.52;
-  bool valid_z = point[2]>=0 && point[2]<=0.25;
+  bool valid_z = point[2]>=0 && point[2]<=zmax;
+  bool valid_azi = point[3]>=-97 && point[3]<=120;
+  bool valid_zenith = point[4]>=-89 && point[4]<0;
 
-  return (valid_x && valid_y && valid_z);
+  return (valid_x && valid_y && valid_z && valid_azi && valid_zenith);
 }
 
 std::vector<double> get_plane_line_intersection(std::vector<double> line, std::vector<double> plane){
@@ -762,135 +764,81 @@ int ScanSequence::TiltPath(std::vector<std::vector<double> > &points){
 //----------------------------------------------------------
 int ScanSequence::CylinderPath(std::vector<std::vector<double> > &points){
 //----------------------------------------------------------
+  const float min_z = fs.cyl_par.height; //start z 
+  const float min_r = fs.cyl_par.radius; 
+  const float step_size = fs.cyl_par.arc_step;
 
-  //TODO : test
-  //       add optional norm incidence
+  const float r_dist = fs.cyl_par.loop_separation;
+  const float z_dist = fs.cyl_par.layer_thickness;
+  const float focus_x = fs.cyl_par.x_center;
+  const float focus_y = fs.cyl_par.y_center;
+  const float focus_z = 0; // need to add this in... 
 
-
-  // For cylindrical scan
-  float PI = 3.14159265;
-  int max_size = 0;
-  int prev_max_size = -1;
+  float z_pos = min_z; 
+  float r_pos = min_r;
+  float current_azi = 0;
+  float azi_step;
+  float zenith;
+  
   points.clear();
+  std::vector<double> temp_point = {
+          -99999,
+          -99999,
+          -99999,
+          -99999,
+          -99999,
+          -99999,
+          -99999,
+          -99999,
+          -99999,
+          -99999
+  };
 
-  /*
-     * Cylindrical sequence (for magnetic field scans)
-     * Not adjusted for two gantries
-     * Not tested again: need to be fixed and debugged
-     */
-  // Parameter checks
-  if(fs.cyl_par.height >= z_max_value){   //max Z is not set in gGantryLimits because position at limit Z = 0!
-    cm_msg(MERROR,"CylinderPath","Error: Height outside of limits.");
-    return 0;
-  }
-  float min = 0.;
-
-  // Find min distance to edges (different for both gantries)
-  if(gGantryLimits[5] < gGantryLimits[6])
-    min = gGantryLimits[5];
-  else
-    min = gGantryLimits[6];
-
-  if(fs.cyl_par.radius >= min/2){
-    cm_msg(MERROR,"CylinderPath","Radius outside of limits.");
-    return 0;
-  }
-  if(fs.cyl_par.loop_separation < 0.001){
-    cm_msg(MERROR,"CylinderPath","Loop separation too small for motors (min resolution = 1 mm).");
-    return 0;
-  }
-  if(fs.cyl_par.layer_thickness < 0.001){
-    cm_msg(MERROR,"CylinderPath","Layer thickness too small for motors (min resolution = 1 mm).");
-    return 0;
-  }
-  if(fs.cyl_par.arc_step < 0.001){
-    cm_msg(MERROR,"CylinderPath","Arc step size too small for motors (min resolution = 1 mm).");
-    return 0;
-  }
-  cm_msg(MINFO,"CylinderPath","Generating cylindrical path...");
-  // Generate layers
-  for(int layer = 0;layer <= (trunc(fs.cyl_par.height/fs.cyl_par.layer_thickness));layer++){
-
-    // for efficient vector usage: already resize
-    if (point_num == max_size) {
-      prev_max_size = max_size;
-      max_size =! max_size ? 1 : max_size << 1;
-      points.resize(max_size);
-
-      for(int j = prev_max_size;j < max_size; j++){
-        points[j].reserve(10);
-      }
-    }
+  /* 
+    -75 is the 180 point 
+    11 is the 270 point 
+    97 is the 360 (0) point 
+  */
+  float slope = (11 + 75)*(270 - 180); 
+  float intercept = 11 - slope*270; 
+  float gantry_azi ; 
 
 
-    // fix X, Y, GoTo layer Z
-    points[point_num][0] = 0 + fs.cyl_par.x_center;
-    points[point_num][1] = 0 + fs.cyl_par.y_center;
-    points[point_num][2] = fs.cyl_par.height - (layer*fs.cyl_par.layer_thickness);
+  while(z_pos < (min_z + z_dist)){
+    r_pos = min_r;
+    while (r_pos < (min_r + r_dist)){
+      current_azi = 0;
+      azi_step = (step_size / r_pos)*(180/pi);
+      while( current_azi < (2*pi - azi_step)){
+        // now we need a conversion factor for the aiming direction :(
+        zenith = -atan( (focus_z - z_pos) / r_pos )*180/pi;  
+        // this azimuth is the gantry position... we need to convert it! 
 
-    //Don't change the destination!
-    for(int k = 3; k < 10; k++){
-      points[point_num][k] = -99999;
-    }
-    point_num = point_num + 1;
+        gantry_azi = current_azi*slope + intercept;
 
-    // Generate loops: for each Z, loop through X and Y in a circle
-    for(int loop = 1;loop <= (trunc(fs.cyl_par.radius/fs.cyl_par.loop_separation));loop++){
-      for(int waypoint = 0; waypoint <= trunc((2*PI*loop*fs.cyl_par.loop_separation)/fs.cyl_par.arc_step) ; waypoint++){
+        temp_point={
+          focus_x + r_pos*cos(current_azi),
+          focus_y + r_pos*sin(current_azi),
+          z_pos, 
+          gantry_azi, 
+          zenith, 
+          -99999,
+          -99999,
+          -99999,
+          -99999,
+          -99999
+        };
 
-        // for efficient vector usage: already resize
-        if (point_num == max_size) {
-          prev_max_size = max_size;
-          max_size =! max_size ? 1 : max_size << 1;
-          points.resize(max_size);
-
-          for(int j = prev_max_size;j < max_size; j++){
-            points[j].reserve(10);
-          }
+        if (box_valid(temp_point)){
+          points.push_back(temp_point);
         }
 
-        //copy all points of the first point in the layer to this point, but change X and Y
-        //for(j = 0;j < 3;j++){
-        //points[point_num][j] = points[point_num-1][j];
-        //}
-        //--> just want SAME z
-        float theta = (2*PI)*((fs.cyl_par.arc_step*waypoint)/(2*PI*loop*fs.cyl_par.loop_separation));
-        points[point_num][0] = (loop*fs.cyl_par.loop_separation)*cos(theta) + fs.cyl_par.x_center;
-        points[point_num][1] = (loop*fs.cyl_par.loop_separation)*sin(theta) + fs.cyl_par.y_center;
-        points[point_num][2] = points[point_num-1][2];
-
-        //Don't change the destination!
-        for(int k = 3; k < 10; k++){
-          points[point_num][k] = -99999;
-        }
-
-        point_num = point_num + 1;
-
+        current_azi += azi_step;
       }
+      r_pos += step_size; 
     }
+    z_pos += step_size ;
   }
-
-  // for efficient vector usage: already resize
-  if (point_num == max_size) {
-    prev_max_size = max_size;
-    max_size =! max_size ? 1 : max_size << 1;
-    points.resize(max_size);
-
-    for(int j = prev_max_size;j < max_size; j++){
-      points[j].reserve(10);
-    }
-  }
-
-  // Add end point: back to their corner!
-  for(int j = 0;j < 9; j++){
-    points[point_num][j] = gGantryLimits[j];
-  }
-  point_num = point_num + 1;
-
-  printf("%i - %.4F %.4F %.4F \n",point_num,points[point_num][0],points[point_num][1],points[point_num][2]);
-  printf("%i - %.4F %.4F %.4F \n",point_num,points[point_num][5],points[point_num][6],points[point_num][7]);
-
-  return point_num;
 }
 
 
