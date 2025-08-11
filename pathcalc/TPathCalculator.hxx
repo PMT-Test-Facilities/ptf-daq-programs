@@ -5,6 +5,9 @@
 #include <boost/geometry/geometries/point_xy.hpp>
 #include <boost/geometry/geometries/polygon.hpp>
 
+#include <iostream>
+#include <stdio.h>
+
 typedef boost::geometry::model::d2::point_xy<double> BoostPoint;
 typedef boost::geometry::model::polygon<BoostPoint> BoostPolygon;
 

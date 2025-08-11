@@ -39,8 +39,7 @@ const char *frontend_name = "feMotor";
 const char *frontend_file_name = __FILE__;
 
 /* frontend_loop is called periodically if this variable is TRUE    */
-BOOL frontend_call_loop = FALSE;
-
+BOOL frontend_call_loop = TRUE;
 
 BOOL equipment_common_overwrite = FALSE;
 
@@ -92,7 +91,7 @@ EQUIPMENT equipment[] = {
   "MIDAS",              /* format */
   TRUE,                 /* enabled */
   RO_ALWAYS,		/* read x */
-  10000,                /* read every x millisec */
+  1000,                /* read every x millisec */
   0,                    /* stop run after this event limit */
   0,                    /* number of sub event */
   60,                	/* log history every x sec */

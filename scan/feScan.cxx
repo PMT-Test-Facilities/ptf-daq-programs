@@ -268,30 +268,13 @@ void printScanSettings(const SCAN_SETTINGS& fs) {
   cm_msg(MINFO, "frontend_init", "Scan type %d", fs.scan_type);
   
   
-  cm_msg(MINFO, "frontend_init",  "azi_start  %f", fs.spin_scan_par.azi_start);
-  cm_msg(MINFO, "frontend_init",  "zen_start  %f", fs.spin_scan_par.zen_start);
-  cm_msg(MINFO, "frontend_init",  "azi_step  %f", fs.spin_scan_par.azi_step);
-  cm_msg(MINFO, "frontend_init",  "zen_step  %f", fs.spin_scan_par.zen_step);
-  cm_msg(MINFO, "frontend_init",  "azi_dist  %f", fs.spin_scan_par.azi_distance);
-  cm_msg(MINFO, "frontend_init",  "zen_dist  %f", fs.spin_scan_par.zen_distance);
-  cm_msg(MINFO, "frontend_init",  "pos_x  %f" , fs.spin_scan_par.init_x);
-  cm_msg(MINFO, "frontend_init",  "pos y  %f", fs.spin_scan_par.init_y);
-  cm_msg(MINFO, "frontend_init",  "posz  %f", fs.spin_scan_par.init_z);
-
-  cm_msg(MINFO, "frontend_init",  "spin scan dir %d", fs.patch_scan_par.scan_dir);
-  cm_msg(MINFO, "frontend_init",  "patch scan pmt x %f", fs.patch_scan_par.pmt_x);
-  cm_msg(MINFO, "frontend_init",  "patch scan pmt y %f", fs.patch_scan_par.pmt_y);
-  cm_msg(MINFO, "frontend_init",  "patch scan pmt z %f", fs.patch_scan_par.pmt_tip_z);
-  cm_msg(MINFO, "frontend_init",  "patch scan pmt angle %f", fs.patch_scan_par.pmt_angle_center);
-  cm_msg(MINFO, "frontend_init", "patch scan pmt mode %f", fs.patch_scan_par.pmt_mode);
-  cm_msg(MINFO, "frontend_init", "r_start %f", fs.patch_scan_par.r_start);
-  cm_msg(MINFO, "frontend_init", "r_step %f", fs.patch_scan_par.r_step);
-  cm_msg(MINFO, "frontend_init", "r_end %f", fs.patch_scan_par.r_end);
-
-  cm_msg(MINFO, "frontend_init",  "patch scan theta %f", fs.tilt_par.theta);
-  cm_msg(MINFO, "frontend_init",  "patch scan phi  %f", fs.tilt_par.phi);
-  cm_msg(MINFO, "frontend_init",  "patch scan step  %f", fs.tilt_par.step);
-  cm_msg(MINFO, "frontend_init",  "patch scan dir %d", fs.tilt_par.scan_dir);
+  cm_msg(MINFO, "frontend_init",  "start z  %f", fs.cyl_par.height);
+  cm_msg(MINFO, "frontend_init",  "start r  %f", fs.cyl_par.radius);
+  cm_msg(MINFO, "frontend_init",  "step  %f", fs.cyl_par.arc_step);
+  cm_msg(MINFO, "frontend_init",  "r dist  %f", fs.cyl_par.loop_separation);
+  cm_msg(MINFO, "frontend_init",  "z dist  %f", fs.cyl_par.layer_thickness);
+  cm_msg(MINFO, "frontend_init",  "x cemter  %f", fs.cyl_par.x_center);
+  cm_msg(MINFO, "frontend_init",  "y center  %f", fs.cyl_par.y_center);
 
   
 }

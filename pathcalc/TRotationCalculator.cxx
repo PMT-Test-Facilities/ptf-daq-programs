@@ -64,7 +64,9 @@ bool TRotationCalculator::CalculatePath(XYPoint start0, XYPoint start1, std::pai
                                         std::pair<bool, bool> tank_height_start,
                                         std::pair<bool, bool> tank_height_end) {
 //----------------------------------------------------------
-
+                            
+  return true; 
+  
   const double pi = boost::math::constants::pi<double>();
 
   BoostPolygon fGantry0;
@@ -184,16 +186,15 @@ bool TRotationCalculator::CalculatePath(XYPoint start0, XYPoint start1, std::pai
     CreatePolygon(&fOpticalBox1_lo, opticalBox1_lo);
     CreatePolygon(&fOpticalBox1_up, opticalBox1_up);
 
-    // Check gantry-to-gantry collision:
-    collisionFree = CheckPathForCollisions(&fGantry0, &fGantry1, tank_height_start.first, tank_height_end.first);
+
+    // don't check for gantry-gantry collisions
+    collisionFree = true; // CheckPathForCollisions(&fGantry0, &fGantry1, tank_height_start.first, tank_height_end.first);
     if (!collisionFree) {
       cm_msg(MINFO, "CalculatePath",
              "Invalid rotation/tilt path: gantries will collide against each other or with tank.");
       return false;
     }
 
-    // Temporarily disabling
-    /*
     if (Z0_lo >= 0) { // If Z0_lo>=0, lower surface of optical box 0 is lowered to PMT region, therefore check against PMT for collision.
       collisionFree = CheckPathForCollisions(&fOpticalBox0_lo, fPMTmultiPoly0.at(Z0_lo), tank_height_start.first,
                                              tank_height_end.first);
@@ -210,7 +211,6 @@ bool TRotationCalculator::CalculatePath(XYPoint start0, XYPoint start1, std::pai
       collisionFree = CheckPathForCollisions(&fOpticalBox1_up, fPMTmultiPoly1.at(Z1_up), tank_height_start.second,
                                              tank_height_end.second);
     }
-    */
 
     if (!collisionFree) {
       cm_msg(MINFO, "CalculatePath", "Invalid rotation/tilt path: gantry will collide with PMT.");
@@ -301,10 +301,17 @@ bool TRotationCalculator::CheckPathForCollisions(BoostPolygon *objectMoving, Boo
     // Determine if box moves outside of tank limits. If gantry doesn't move above tank first and if starting height is not outside of tank, must check limits
     if (!tank_height_end) {
       if (!tank_height_start) {
-        if (newX >= Xcent) Xdif = newX - Xcent;
-        else Xdif = Xcent - newX;
-        if (newY >= Ycent) Ydif = newY - Ycent;
-        else Ydif = Ycent - newY;
+        if (newX >= Xcent) {
+          Xdif = newX - Xcent;
+        }
+        else{
+          Xdif = Xcent - newX;
+        }
+        if (newY >= Ycent){
+          Ydif = newY - Ycent;
+        }else {
+          Ydif = Ycent - newY;
+        }
         if ((sqrt(Xdif * Xdif + Ydif * Ydif) > Maxval) || (Ydifmax < Ydif)) {
           collides_tank = true;
         }

@@ -45,12 +45,12 @@ XYPolygon TGantryConfigCalculator::GetGantryConfig(int whichGantry, double rot, 
   double gantryXDimensions[4];
   double gantryYDimensions[4];
 
-  if (whichGantry == 1) { // Gantry 1 is rotated 180 degrees compared to Gantry 0
-    front_tiltMotor *= -1;
-    back *= -1;
-    left *= -1;
-    right *= -1;
-    height *= -1;
+  if (whichGantry == 1) { // Gantry 1 is rotated 180 degrees compared to Gantry 0 and also doesn't have any box on it 
+    front_tiltMotor *= -0.001;
+    back *= -0.001;
+    left *= -0.001;
+    right *= -0.001;
+    height *= -0.001;
   }
 
   // Calculating gantry configuration, including tilt motor at the top

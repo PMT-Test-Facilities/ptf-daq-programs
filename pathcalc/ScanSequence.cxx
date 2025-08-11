@@ -389,8 +389,8 @@ int ScanSequence::PCALPath(std::vector<std::vector<double>> &points){
     const float maxtheta = -10; 
 
     
-
-    const std::vector<double>  theta_offsets = {-5,-4,-3,-2,-1,0,1,2,3,4,5};
+    // we can optionally just use 0.0 if we don't want any of these offsets
+    const std::vector<double>  theta_offsets = {-3,-2,-1,0,1,2,3};
 
     float current_rad = start_radius;
     float theta_compare = maxtheta;
@@ -470,7 +470,8 @@ int ScanSequence::PCALPath(std::vector<std::vector<double>> &points){
               -99999,
               -99999,
               -99999
-          };
+            };
+            points.push_back(template_point);
         }       
         if(forward){
           current_theta += steptheta;
@@ -802,19 +803,32 @@ int ScanSequence::CylinderPath(std::vector<std::vector<double> > &points){
   float slope = (11 + 75)*(270 - 180); 
   float intercept = 11 - slope*270; 
   float gantry_azi ; 
+  bool forward = true; 
 
 
-  while(z_pos < (min_z + z_dist)){
+  while(z_pos <= (min_z + z_dist)){ // needs to be LEQ to ensure at least one step
     r_pos = min_r;
-    while (r_pos < (min_r + r_dist)){
-      current_azi = 0;
-      azi_step = (step_size / r_pos)*(180/pi);
-      while( current_azi < (2*pi - azi_step)){
-        // now we need a conversion factor for the aiming direction :(
-        zenith = -atan( (focus_z - z_pos) / r_pos )*180/pi;  
-        // this azimuth is the gantry position... we need to convert it! 
+    while (r_pos <= (min_r + r_dist)){
+      azi_step = (step_size / r_pos);
+      azi_step = forward? azi_step: -1*azi_step;
 
-        gantry_azi = current_azi*slope + intercept;
+
+      while (true){
+        if (forward){
+          if(current_azi>=(2*pi - azi_step)){
+            break;
+          }
+        }else{
+          if(current_azi<=0){
+            break;
+          }
+        }
+        
+        zenith = -atan( (focus_z - z_pos) / r_pos )*180/pi;  
+        
+        // now we need a conversion factor for the aiming direction :(
+        // this azimuth is the gantry position... we need to convert it! 
+        gantry_azi = 180*current_azi*slope/pi + intercept;
 
         temp_point={
           focus_x + r_pos*cos(current_azi),
@@ -835,6 +849,7 @@ int ScanSequence::CylinderPath(std::vector<std::vector<double> > &points){
 
         current_azi += azi_step;
       }
+      forward = !forward;
       r_pos += step_size; 
     }
     z_pos += step_size ;

@@ -163,7 +163,7 @@ double tankPMTholderRadius = 0.53; // max/min from center where PMT holders sit
 // Rika: PMT position for collision avoidance
 std::vector <XYPolygon> pmtPoly0; // Model of PMT for collision avoidance
 std::vector <XYPolygon> pmtPoly1;
-double pmtRadius = 0.01; // temporary 
+double pmtRadius = 0.00; // temporary 
 // double pmtRadius = 0.323;
 double pmtXcentre0 = 0.389; // Rika (24Apr2017): Updated to estimated new position. // Kevin (22Jan2018) changed from (0.348, 0.366) -> (0.389, 0.309) // need to change
 double pmtYcentre0 = 0.309;
@@ -177,11 +177,11 @@ int numPolyLayers = 0.38 /
 //      so if the gantry goes down to its maximum z height (0.534m), the tip of the optical box will be at 0.178+0.534=0.712,
 //      which is 0.712-0.390=0.372m lower than the position of the top of the PMT (so make it 0.38m to play it safe).
 // PMT height :
-double pmtHeight = 0.390;  // Rika (24Apr2017): actual PMT height in gantry coordinates;
+double pmtHeight = 0.0;  // Rika (24Apr2017): actual PMT height in gantry coordinates;
 // Gantry tilted 0 will hit PMT cover at z=0.3m.
-double frpHeight = 0.556; // Rika (28Apr2017): z position of the FRP case, which has a rim that is of wider diameter than the PMT.
+double frpHeight = 0.0; // Rika (28Apr2017): z position of the FRP case, which has a rim that is of wider diameter than the PMT.
 // Calculated from the fact that the PMT acrylic cover has a height of 16.6cm.
-double frpRadius = 0.322; // Rika (27Apr2017): radius of the rim of the FRP case, to which the PMT cover is attached.
+double frpRadius = 0.0; // Rika (27Apr2017): radius of the rim of the FRP case, to which the PMT cover is attached.
 // Value taken from PMT acrylic cover diagram found in Mark Hartz's slides on the T2K Canada page.
 
 // Create GantryConfigCalculator object for calculating different gantry & optical box positions in space
@@ -1614,6 +1614,7 @@ int generate_path(INFO *pInfo) {
 
   // Rika: Check destination to ensure optical boxes will not collide with each other, with tank, or with PMT.
   // Rika (31Mar2016): Updated to include check for both bottom & top surfaces of boxes
+  std::cout <<" I'm here ln 1617"<< std::endl;
   bool validDestination_box0 = true;
   bool validDestination_box1 = true;
   std::pair<double, double> finalZ_box0_lo_up = gantryConfigCalc.GetOpticalBoxZ(0, gant1_tilt_start, gantry1ZDes);
@@ -1642,26 +1643,31 @@ int generate_path(INFO *pInfo) {
     return GENPATH_BAD_DEST;
   }
 */
+  std::cout <<" I'm here ln 1646"<< std::endl;
 
   // Check PMT:
-  if (finalZ_box0_lo >= 0) {
-    validDestination_box0 = pathCalc_checkDestination.CheckDestination(box0_endpos_rotfirst_tiltfirst.first,
-                                                                       pmtPoly0.at(finalZ_box0_lo),
-                                                                       tankheight_gantend1);
-    if (validDestination_box0 && finalZ_box0_up >= 0) {
-      validDestination_box0 = pathCalc_checkDestination.CheckDestination(box0_endpos_rotfirst_tiltfirst.second,
-                                                                         pmtPoly0.at(finalZ_box0_up),
-                                                                         tankheight_gantend1);
+  validDestination_box0= true;
+  validDestination_box1 = true;
+  if(false){
+    if (finalZ_box0_lo >= 0) {
+      validDestination_box0 = pathCalc_checkDestination.CheckDestination(box0_endpos_rotfirst_tiltfirst.first,
+                                                                        pmtPoly0.at(finalZ_box0_lo),
+                                                                        tankheight_gantend1);
+      if (validDestination_box0 && finalZ_box0_up >= 0) {
+        validDestination_box0 = pathCalc_checkDestination.CheckDestination(box0_endpos_rotfirst_tiltfirst.second,
+                                                                          pmtPoly0.at(finalZ_box0_up),
+                                                                          tankheight_gantend1);
+      }
     }
-  }
-  if (finalZ_box1_lo >= 0) {
-    validDestination_box1 = pathCalc_checkDestination.CheckDestination(box1_endpos_rotfirst_tiltfirst.first,
-                                                                       pmtPoly1.at(finalZ_box1_lo),
-                                                                       tankheight_gantend2);
-    if (validDestination_box1 && finalZ_box1_up >= 0) {
-      validDestination_box1 = pathCalc_checkDestination.CheckDestination(box1_endpos_rotfirst_tiltfirst.second,
-                                                                         pmtPoly1.at(finalZ_box1_up),
-                                                                         tankheight_gantend2);
+    if (finalZ_box1_lo >= 0) {
+      validDestination_box1 = pathCalc_checkDestination.CheckDestination(box1_endpos_rotfirst_tiltfirst.first,
+                                                                        pmtPoly1.at(finalZ_box1_lo),
+                                                                        tankheight_gantend2);
+      if (validDestination_box1 && finalZ_box1_up >= 0) {
+        validDestination_box1 = pathCalc_checkDestination.CheckDestination(box1_endpos_rotfirst_tiltfirst.second,
+                                                                          pmtPoly1.at(finalZ_box1_up),
+                                                                          tankheight_gantend2);
+      }
     }
   }
   // Remove comments
@@ -1675,7 +1681,7 @@ int generate_path(INFO *pInfo) {
   // Define xy plane in terms of z heights at which path will be checked for collision avoidance.
   double gantry1Z = gantry1ZDes;
   double gantry2Z = gantry2ZDes;
-
+  std::cout <<" I'm here ln 1680"<< std::endl;
   if (gantry1ZDes <= gantry1ZPos) {
     gantry1Z = gantry1ZDes;
     move_z1_first = true; // It is always safer to move up first (to region with more space)
@@ -1732,7 +1738,7 @@ int generate_path(INFO *pInfo) {
   pathCalc2b.InitialiseOpticalBoxes(box0_endpos_rotsecond_tiltfirst.first, box0_endpos_rotsecond_tiltfirst.second,
                                     box1_startpos_rotfirst_tiltfirst.first, box1_startpos_rotfirst_tiltfirst.second,
                                     opticalBox0_lo_Z[0], opticalBox0_up_Z[0], opticalBox1_lo_Z[0], opticalBox1_up_Z[0]);
-
+  std::cout <<" I'm here ln 1737"<< std::endl;
   // Initialise gantries and water tank in path calculator for gantry 2 move first, rotation first
   pathCalc3a.InitialiseGantries(gantry1_startpos_rotfirst_tiltfirst, gantry2_startpos_rotfirst_tiltfirst);
   pathCalc3b.InitialiseGantries(gantry1_startpos_rotfirst_tiltfirst, gantry2_endpos_rotfirst_tiltfirst);
@@ -1800,6 +1806,7 @@ int generate_path(INFO *pInfo) {
                                     box1_endpos_rotsecond_tiltsecond.first, box1_endpos_rotsecond_tiltsecond.second,
                                     opticalBox0_lo_Z[1], opticalBox0_up_Z[1], opticalBox1_lo_Z[1], opticalBox1_up_Z[1]);
 
+  std::cout <<" I'm here ln 1805"<< std::endl;
   // Start, end, and path for gantry 1 move first 
   XYPoint xy_start1 = std::make_pair(gantry1XPos, gantry1YPos);
   XYPoint xy_end1 = std::make_pair(gantry1XDes, gantry1YDes);
