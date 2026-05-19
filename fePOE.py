@@ -6,8 +6,15 @@ import midas.event
 
 import py_netgear_plus
 
-IP = '192.168.0.222'
-PWD = 'TRIUMF@edevel01'
+import json
+import os 
+_obj = open(os.path.join(
+    os.path.dirname(__file__),
+    "poe_data.json"
+), 'rt')
+this_pwd = json.load(_obj)
+IP = this_pwd["IP"]
+PWD = this_pwd["PWD"]
 
 class POESwitch(midas.frontend.EquipmentBase):
     def __init__(self, client: midas.client.MidasClient):
@@ -69,7 +76,7 @@ class POESwitch(midas.frontend.EquipmentBase):
                 power_active.append(True)
             else:
                 power_active.append(False)
-                
+
             power_output.append(this_data[con_power_out.format(this_port)])
 
         self.client.odb_set("/Equipment/POESwitch/Variables/POEE", power_active)
