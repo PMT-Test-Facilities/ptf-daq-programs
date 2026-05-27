@@ -4,6 +4,8 @@ import midas
 import midas.frontend
 import midas.event
 
+import numpy as np 
+
 import py_netgear_plus
 
 import json
@@ -43,14 +45,24 @@ class POESwitch(midas.frontend.EquipmentBase):
 
     def detailed_settings_changed_func(self, path, idx, new_value):
         if "port_enable" in path:
+            
+            if new_value:
+                self.client.odb_set("/Equipment/slowControlListener0/Variables/device_state", "Powering Up", False)
+                self.sw.turn_on_poe_port(1+idx)
+            else:
+                mpmt_hvs = np.array(self.client.odb_get("/Equipment/slowControlListener0/Variables/pmt_hvvolval"))>50
+
+                if any(mpmt_hvs):
+                    self.client.msg("Cannot unpower mPMT!! HV still ON", True)
+                    self.client.odb_set("/Equipment/POESwitch/Settings/port_enable[{}]".format(idx), True, False)
+                    return 
+                else:
+                    self.client.odb_set("/Equipment/slowControlListener0/Variables/device_state", "Unpowered", False)
+                    self.sw.turn_off_poe_port(1+idx)
             self.client.msg("Setting POE Port {} to {}".format(
                 idx+1,
                 "on" if new_value else "off"
             ))
-            if new_value:
-                self.sw.turn_on_poe_port(1+idx)
-            else:
-                self.sw.turn_off_poe_port(1+idx)
 
     def readout_func(self):
         this_data = self.sw.get_switch_infos()
