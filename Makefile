@@ -5,9 +5,9 @@
 # $Log$
 #
 
-VPATH = degauss:motor:scan:pathcalc:move
+VPATH = degauss:norm_calc:motor:scan:pathcalc:move
 
-CFLAGS   = -DOS_LINUX -Dextname -ggdb -g3 -Wall -Wuninitialized -I/home/midptf/packages/boost_1_61_0 -std=gnu++0x -Ipathcalc -Iscan -Imove -Imotor  -I. -DDEBUG
+CFLAGS   = -DOS_LINUX -Dextname -ggdb -g3 -std=c++14 -Wall -Wuninitialized -I/home/midptf/packages/boost_1_61_0 -std=gnu++0x -Ipathcalc -Iscan -Imove -Imotor  -I. -DDEBUG
 CXXFLAGS = $(CFLAGS)
 
 # MIDAS location
@@ -83,7 +83,7 @@ feMove: $(MIDASLIBS) $(MFE)  feMove.o TPathCalculator.o TRotationCalculator.o TG
 #feMoveOld: $(MIDASLIBS) $(MFE) feMove.o TPathCalculator.o TRotationCalculator.o
 #	$(CXX) -o $@ $(CFLAGS)  $^ $(MIDASLIBS) $(LIBS) $(VMELIBS)
 
-feScan: $(MIDASLIBS) $(MFE) feScan.o  ScanSequence.o
+feScan: $(MIDASLIBS) $(MFE) feScan.o  ScanSequence.o norm_eval.o
 	$(CXX) -o $@ $(CFLAGS) $^ $(MIDASLIBS) $(LIBS) $(VMELIBS)
 
 testVI: $(MIDASLIBS) coilVoltageCurrent.o
