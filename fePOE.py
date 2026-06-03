@@ -47,7 +47,7 @@ class POESwitch(midas.frontend.EquipmentBase):
         if "port_enable" in path:
             
             if new_value:
-                self.client.odb_set("/Equipment/slowControlListener0/Variables/device_state", "Powering Up", False)
+                self.client.odb_set("/Equipment/slowControlListener0/Readback/device_state", "Powering Up", False)
                 self.sw.turn_on_poe_port(1+idx)
             else:
                 mpmt_hvs = np.array(self.client.odb_get("/Equipment/slowControlListener0/Variables/pmt_hvvolval"))>50
@@ -57,7 +57,7 @@ class POESwitch(midas.frontend.EquipmentBase):
                     self.client.odb_set("/Equipment/POESwitch/Settings/port_enable[{}]".format(idx), True, False)
                     return 
                 else:
-                    self.client.odb_set("/Equipment/slowControlListener0/Variables/device_state", "Unpowered", False)
+                    self.client.odb_set("/Equipment/slowControlListener0/Readback/device_state", "Unpowered", False)
                     self.sw.turn_off_poe_port(1+idx)
             self.client.msg("Setting POE Port {} to {}".format(
                 idx+1,
