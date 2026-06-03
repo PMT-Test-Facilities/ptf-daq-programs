@@ -255,9 +255,6 @@ void galil_read_stopcode(EQUIPMENT *pequipment, int debug) {
     cm_msg(MERROR, "galil_move", "Move command error in response from controller %s", response);
   }
 
-  if (debug) {
-    cm_msg(MINFO, "galil_read", "Last Stop - %s ", response);
-  }
 
   presponse = response;
   i = 0;
@@ -350,12 +347,12 @@ void galil_read(EQUIPMENT *pequipment, int channel) {
     if (response[i] == ',') {
       count++;
     } else if ((isspace(response[i]) == 0) && (isdigit(response[i]) == 0) && (response[i] != ':')) {
-      cm_msg(MINFO, "galil_read", "Non-digit in TS read - %d %s", i, response);
+      //cm_msg(MINFO, "galil_read", "Non-digit in TS read - %d %s", i, response);
       goto CompletedTS;
     }
   }
   if ((count != 3) && (count != 7)) {
-    cm_msg(MINFO, "galil_read", "Missing comma in TS read - %s", response);
+    //cm_msg(MINFO, "galil_read", "Missing comma in TS read - %s", response);
     goto CompletedTS;
   }
 
@@ -366,7 +363,7 @@ void galil_read(EQUIPMENT *pequipment, int channel) {
     i++;
     presponse = strchr(presponse, ',');
     if ((presponse++ == NULL) && (i < pInfo->num_channels)) {
-      cm_msg(MERROR, "galil_read", "Error parsing TS response");
+      //cm_msg(MERROR, "galil_read", "Error parsing TS response");
       break;
     }
   } while (i < (pInfo->num_channels));
@@ -398,8 +395,8 @@ void galil_read(EQUIPMENT *pequipment, int channel) {
   buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 128, ":", 500);
   response[buffLength] = 0x0;
   if ((strchr(response, ':') == NULL) || (strchr(response, '?') != NULL)) {
-    cm_msg(MINFO, "galil_read", "Invalid string length or error on RP read. Read %u chars. Response %s Rejected",
-           buffLength, response);
+    //cm_msg(MINFO, "galil_read", "Invalid string length or error on RP read. Read %u chars. Response %s Rejected",
+    //       buffLength, response);
     goto CompletedRP;
   }
 
@@ -409,12 +406,12 @@ void galil_read(EQUIPMENT *pequipment, int channel) {
       count++;
     } else if ((response[i] != ':') && (isdigit(response[i]) == 0) &&
                (response[i] != ',') && (response[i] != '-') && (isspace(response[i]) == 0)) {
-      cm_msg(MINFO, "galil_read", "Invalid char from RP read - %u %d %s", buffLength, response[i], response);
+      //, "galil_read", "Invalid char from RP read - %u %d %s", buffLength, response[i], response);
       goto CompletedRP;
     }
   }
   if ((count != 3) && (count != 7)) {
-    cm_msg(MINFO, "galil_read", "Missing comma in RP read - %s", response);
+    //cm_msg(MINFO, "galil_read", "Missing comma in RP read - %s", response);
     goto CompletedRP;
   }
 
@@ -447,8 +444,8 @@ void galil_read(EQUIPMENT *pequipment, int channel) {
   buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 128, ":", 500);
   response[buffLength] = 0x0;
   if ((strchr(response, ':') == NULL) || (strchr(response, '?') != NULL)) {
-    cm_msg(MINFO, "galil_read", "Invalid string length or error on TP read. Read %u chars. Response %s Rejected",
-           buffLength, response);
+    //cm_msg(MINFO, "galil_read", "Invalid string length or error on TP read. Read %u chars. Response %s Rejected",
+    //      buffLength, response);
     goto CompletedTP;
   }
 
@@ -458,12 +455,12 @@ void galil_read(EQUIPMENT *pequipment, int channel) {
       count++;
     } else if ((response[i] != ':') && (isdigit(response[i]) == 0) &&
                (response[i] != ',') && (response[i] != '-') && (isspace(response[i]) == 0)) {
-      cm_msg(MINFO, "galil_read", "Invalid char from TP read - %u %d %s", buffLength, response[i], response);
+      //cm_msg(MINFO, "galil_read", "Invalid char from TP read - %u %d %s", buffLength, response[i], response);
       goto CompletedTP;
     }
   }
   if ((count != 3) && (count != 7)) {
-    cm_msg(MINFO, "galil_read", "Missing comma in TP read - %s", response);
+    //cm_msg(MINFO, "galil_read", "Missing comma in TP read - %s", response);
     goto CompletedTP;
   }
 
@@ -499,7 +496,7 @@ void galil_read(EQUIPMENT *pequipment, int channel) {
   buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 50, ":", 500);
   response[buffLength] = 0x0;
   if ((strchr(response, ':') == NULL) || (strchr(response, '?') != NULL)) {
-    cm_msg(MINFO, "galil_read", "Invalid response for AN read. Read: %s", response);
+    //cm_msg(MINFO, "galil_read", "Invalid response for AN read. Read: %s", response);
     goto CompletedAN;
   }
   pInfo->fAnalog1[channel] = (float) atof(response);
@@ -514,7 +511,7 @@ void galil_read(EQUIPMENT *pequipment, int channel) {
   buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 50, ":", 500);
   response[buffLength] = 0x0;
   if ((strchr(response, ':') == NULL) || (strchr(response, '?') != NULL)) {
-    cm_msg(MINFO, "galil_read", "Invalid response for AN read. Read: %s", response);
+    //cm_msg(MINFO, "galil_read", "Invalid response for AN read. Read: %s", response);
     goto CompletedAN;
   }
   pInfo->fAnalog2[channel] = (float) atof(response);
@@ -553,7 +550,7 @@ void galil_read(EQUIPMENT *pequipment, int channel) {
   buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 50, ":", 500);
   response[buffLength] = 0x0;
   if ((strchr(response, ':') == NULL) || (strchr(response, '?') != NULL)) {
-    cm_msg(MINFO, "galil_read", "Invalid string length on IN read. Read %u chars. Rejected", buffLength);
+    //cm_msg(MINFO, "galil_read", "Invalid string length on IN read. Read %u chars. Rejected", buffLength);
     goto CompletedAN;
   }
 
@@ -569,7 +566,7 @@ void galil_read(EQUIPMENT *pequipment, int channel) {
   buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 50, ":", 500);
   response[buffLength] = 0x0;
   if ((strchr(response, ':') == NULL) || (strchr(response, '?') != NULL)) {
-    cm_msg(MINFO, "galil_read", "Invalid string length on IN read. Read %u chars. Rejected", buffLength);
+    //cm_msg(MINFO, "galil_read", "Invalid string length on IN read. Read %u chars. Rejected", buffLength);
     goto CompletedIN;
   }
 
@@ -635,7 +632,7 @@ void galil_move(INT hDB, INT hKey, void *info) {
     if (pInfo->bMove[i] == TRUE) {
       INT size = sizeof(float);
       db_get_data_index(hDB, pInfo->hKeySetDest, &pInfo->fDestination[i], &size, i, TID_FLOAT);
-      cm_msg(MINFO, "galil_move", "Move request for axis %i, destination=%f ", i, pInfo->fDestination[i]);
+      //cm_msg(MINFO, "galil_move", "Move request for axis %i, destination=%f ", i, pInfo->fDestination[i]);
       Move(pequipment, i, pInfo->fDestination[i]);
       printf("move complete\n");
       pInfo->bMove[i] = FALSE;
@@ -676,7 +673,7 @@ void turn_motors_off(INT hDB, INT hKey, void *info) {
 
     // Turn motor off (??)
     sprintf(command, "MO");
-    cm_msg(MINFO, "galil_init", "Turning motors back off (command \"%s\")", command);
+    //cm_msg(MINFO, "galil_init", "Turning motors back off (command \"%s\")", command);
     strcat(command, "\r");
 
     buffLength = strlen(command);
@@ -689,7 +686,7 @@ void turn_motors_off(INT hDB, INT hKey, void *info) {
     response[buffLength] = 0x0;
     if ((strchr(response, ':') == NULL) || (strchr(response, '?') != NULL)) {
       cm_msg(MERROR, "galil_init", "Bad response from MO command: \"%s\"", response);
-      cm_msg(MINFO, "galil_init", "Waiting 100 ms and trying again.");
+      //cm_msg(MINFO, "galil_init", "Waiting 100 ms and trying again.");
       usleep(100000);
       buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 100, ":", 500);
       response[buffLength] = 0x0;
@@ -697,7 +694,7 @@ void turn_motors_off(INT hDB, INT hKey, void *info) {
         cm_msg(MERROR, "galil_init", "Bad response from M0 again: \"%s\"", response);
         return;// FE_ERR_HW;
       }
-      cm_msg(MINFO, "galil_init", "Second try successful. Continuing.");
+      //cm_msg(MINFO, "galil_init", "Second try successful. Continuing.");
     }
     // usleep(10000000);
     // Set the bit back to false.
@@ -731,10 +728,10 @@ void enable_do(INT hDB, INT hKey, void *info) {
   // Only turn off is EnableDO is y
   if (pInfo->bEnableDO[0] == TRUE) {
     sprintf(command, "SB1");
-    cm_msg(MINFO, "galil_init", "Enabling digital output 1 (command \"%s\")", command);
+    //cm_msg(MINFO, "galil_init", "Enabling digital output 1 (command \"%s\")", command);
   }else{
     sprintf(command, "CB1");
-    cm_msg(MINFO, "galil_init", "Disabling digital output 1 (command \"%s\")", command);
+    //cm_msg(MINFO, "galil_init", "Disabling digital output 1 (command \"%s\")", command);
   }
   
   strcat(command, "\r");
@@ -750,7 +747,7 @@ void enable_do(INT hDB, INT hKey, void *info) {
   printf("Response %s\n",response);
   if ((strchr(response, ':') == NULL) || (strchr(response, '?') != NULL)) {
     cm_msg(MERROR, "galil_init", "Bad response from SB/CB command: \"%s\"", response);
-    cm_msg(MINFO, "galil_init", "Waiting 100 ms and trying again.");
+    //cm_msg(MINFO, "galil_init", "Waiting 100 ms and trying again.");
     usleep(100000);
     buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 100, ":", 500);
     response[buffLength] = 0x0;
@@ -758,7 +755,7 @@ void enable_do(INT hDB, INT hKey, void *info) {
       cm_msg(MERROR, "galil_init", "Bad response from M0 again: \"%s\"", response);
       return;// FE_ERR_HW;
     }
-    cm_msg(MINFO, "galil_init", "Second try successful. Continuing.");
+    //cm_msg(MINFO, "galil_init", "Second try successful. Continuing.");
   }else{
     printf("Good response\n");
   }
@@ -782,7 +779,7 @@ void galil_advance(INT hDB, INT hKey, void *info) {
   bFalse |= pInfo->bAdvance[0];
   if (pInfo->bAdvance[0] == TRUE) {
     INT size = sizeof(float);
-    cm_msg(MINFO, "galil_move", "Advance request");
+    //cm_msg(MINFO, "galil_move", "Advance request");
     db_get_data_index(hDB, pInfo->hKeySetDest, &fDest, &size, 0, TID_FLOAT);
     Advance(pequipment, 0, 2, fDest);
     pInfo->bAdvance[0] = FALSE;
@@ -818,19 +815,19 @@ void galil_stop(INT hDB, INT hKey, void *info) {
     bFalse |= pInfo->bStop[i];
     if (pInfo->bStop[i] == TRUE) {
       sprintf(command, "ST%s;HX1;HX2", pInfo->letter + i * NAME_LENGTH);
-      cm_msg(MINFO, "galil_stop", "Stop request for %s (command \"%s\").", pInfo->names + i * NAME_LENGTH, command);
+      //cm_msg(MINFO, "galil_stop", "Stop request for %s (command \"%s\").", pInfo->names + i * NAME_LENGTH, command);
       strcat(command, "\r");
 
       buffLength = strlen(command);
       writeCount = DRIVER(0)(CMD_WRITE, pequipment->driver[0].dd_info, command, buffLength);
       if (writeCount != buffLength) {
-        cm_msg(MERROR, "galil_move", "Error in device driver for stop command.");
+        //cm_msg(MERROR, "galil_move", "Error in device driver for stop command.");
       }
       buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 20, ":::", 1000);
       response[buffLength] = 0x0;
 
       if ((buffLength != 3) || (strchr(response, ':') == NULL) || (strchr(response, '?') != NULL)) {
-        cm_msg(MINFO, "galil_stop", "Stop response bad buffer length %u", buffLength);
+        //cm_msg(MINFO, "galil_stop", "Stop response bad buffer length %u", buffLength);
       }
 
       pInfo->bStop[i] = FALSE;
@@ -881,7 +878,7 @@ void galil_jog_pos(INT hDB, INT hKey, void *info) {
       strcat(command, buff);
       sprintf(buff, "BG %c", 'A' + i);
       strcat(command, buff);
-      cm_msg(MINFO, "galil_jog_pos", "Jog Pos request for %s cmd %s", pInfo->names + i * NAME_LENGTH, command);
+      //cm_msg(MINFO, "galil_jog_pos", "Jog Pos request for %s cmd %s", pInfo->names + i * NAME_LENGTH, command);
       strcat(command, "\r");
       buffLength = strlen(command);
       writeCount = DRIVER(0)(CMD_WRITE, pequipment->driver[0].dd_info, command, buffLength);
@@ -951,12 +948,12 @@ void galil_jog_neg(INT hDB, INT hKey, void *info) {
       strcat(command, buff);
       sprintf(buff, "BG %c", 'A' + i);
       strcat(command, buff);
-      cm_msg(MINFO, "galil_jog_pos", "Jog Neg request for %s cmd %s", pInfo->names + i * NAME_LENGTH, command);
+      //cm_msg(MINFO, "galil_jog_pos", "Jog Neg request for %s cmd %s", pInfo->names + i * NAME_LENGTH, command);
       strcat(command, "\r");
       buffLength = strlen(command);
       writeCount = DRIVER(0)(CMD_WRITE, pequipment->driver[0].dd_info, command, buffLength);
       if (writeCount != buffLength) {
-        cm_msg(MERROR, "galil_jog_neg", "Error in device driver for jog neg command");
+        ///cm_msg(MERROR, "galil_jog_neg", "Error in device driver for jog neg command");
       }
       buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 6, ":::::", 500);
       response[buffLength] = 0x0;
@@ -1007,9 +1004,9 @@ void galil_home(INT hDB, INT hKey, void *info) {
       size = sizeof(float);
       db_get_data_index(hDB, pInfo->hKeyJogVelocity, &pInfo->fJogVelocity[i], &size, i, TID_FLOAT);
       if ((pInfo->fJogVelocity[i] >= 0) && (pInfo->bLimitPos[i])) {
-        cm_msg(MINFO, "galil_home", "Home with pos motion at limit switch not allowed");
+        //cm_msg(MINFO, "galil_home", "Home with pos motion at limit switch not allowed");
       } else if ((pInfo->fJogVelocity[i] < 0) && (pInfo->bLimitNeg[i])) {
-        cm_msg(MINFO, "galil_home", "Home with neg motion at limit switch not allowed");
+        //cm_msg(MINFO, "galil_home", "Home with neg motion at limit switch not allowed");
       } else {
         db_get_data_index(hDB, pInfo->hKeySlope, &pInfo->fSlope[i], &size, i, TID_FLOAT);
         size = sizeof(INT);
@@ -1023,7 +1020,7 @@ void galil_home(INT hDB, INT hKey, void *info) {
         sprintf(buff, "XQ #ADVANCE,1;");
         strcat(command, buff);
 
-        cm_msg(MINFO, "galil_home", "Home request for %s %s", pInfo->names + i * NAME_LENGTH, command);
+        //cm_msg(MINFO, "galil_home", "Home request for %s %s", pInfo->names + i * NAME_LENGTH, command);
 
         strcat(command, "\r");
         buffLength = strlen(command);
@@ -1091,7 +1088,7 @@ void galil_phome(INT hDB, INT hKey, void *info) {
       sprintf(command, "XQ #PADVANC,2;");
       strcat(command, buff);
 
-      cm_msg(MINFO, "galil_home", "PHome request for %s %s", pInfo->names + i * NAME_LENGTH, command);
+      //cm_msg(MINFO, "galil_home", "PHome request for %s %s", pInfo->names + i * NAME_LENGTH, command);
       strcat(command, "\r");
       buffLength = strlen(command);
       writeCount = DRIVER(0)(CMD_WRITE, pequipment->driver[0].dd_info, command, buffLength);
@@ -1164,8 +1161,8 @@ void galil_index_position(INT hDB, INT hKey, void *info) {
 
       pInfo->bIndexPosition[i] = FALSE;
 
-      cm_msg(MINFO, "galil_index_primary", "Index request channel %s to %f", pInfo->names + i * NAME_LENGTH,
-             pInfo->fDestination[i]);
+      //cm_msg(MINFO, "galil_index_primary", "Index request channel %s to %f", pInfo->names + i * NAME_LENGTH,
+      //       pInfo->fDestination[i]);
 
     }
   }
@@ -1198,7 +1195,7 @@ void galil_poweron(INT hDB, INT hKey, void *info) {
   for (i = 0; i < pInfo->num_channels; i++) {
     bFalse |= pInfo->bPowerOn[i];
     sprintf(command, "%s%s", (pInfo->bPowerOn[i] ? "SH" : "MO"), pInfo->letter + i * NAME_LENGTH);
-    cm_msg(MINFO, "galil_poweron", "PowerOn request for %s %s", pInfo->names + i * NAME_LENGTH, command);
+    //cm_msg(MINFO, "galil_poweron", "PowerOn request for %s %s", pInfo->names + i * NAME_LENGTH, command);
     strcat(command, "\r");
     buffLength = strlen(command);
     writeCount = DRIVER(0)(CMD_WRITE, pequipment->driver[0].dd_info, command, buffLength);
@@ -1232,10 +1229,10 @@ void galil_digital(INT hDB, INT hKey, void *info) {
   for (i = 0; i < pInfo->num_channels; i++) {
     if (hKey == pInfo->hKeyDigitalOut1) {
       sprintf(command, "%cB %d", (pInfo->bDigitalOut1[i] ? 'S' : 'C'), i + 1);
-      cm_msg(MINFO, "galil_digital", "DigitalOut1 request %s", command);
+      //cm_msg(MINFO, "galil_digital", "DigitalOut1 request %s", command);
     } else if (hKey == pInfo->hKeyDigitalOut2) {
       sprintf(command, "%cB %d", (pInfo->bDigitalOut2[i] ? 'S' : 'C'), i + 9);
-      cm_msg(MINFO, "galil_digital", "DigitalOut2 request %s", command);
+      //cm_msg(MINFO, "galil_digital", "DigitalOut2 request %s", command);
     } else {
       cm_msg(MERROR, "galil_digital", "Invalid key for digital command");
       break;
@@ -1311,7 +1308,7 @@ void galil_bounce(INT hDB, INT hKey, void *info) {
 
   for (i = 0; i < pInfo->num_channels; i++) {
     if (pInfo->bBounce[i] == TRUE) {
-      cm_msg(MINFO, "galil_bounce", "Bounce request for %s", pInfo->names + i * NAME_LENGTH);
+      //cm_msg(MINFO, "galil_bounce", "Bounce request for %s", pInfo->names + i * NAME_LENGTH);
       db_get_data_index(hDB, pInfo->hKeySetDest, &pInfo->fDestination[i], &size, i, TID_FLOAT);
     }
   }
@@ -1333,7 +1330,7 @@ void Bounce(HNDLE hDB, EQUIPMENT *pequipment, int channel) {
   pInfo->fDestination[channel] = (float) (0.0 - pInfo->fDestination[channel]);
   PosCapture(pequipment, channel);
   if (pInfo->bLimitNeg[channel] || pInfo->bLimitPos[channel]) {
-    cm_msg(MINFO, "galil_bounce", "Bounce won't run if on a limit switch");
+    //cm_msg(MINFO, "galil_bounce", "Bounce won't run if on a limit switch");
     pInfo->bBounce[channel] = FALSE;
     db_set_data_index(hDB, pInfo->hKeyBounce, &pInfo->bBounce[channel], sizeof(BOOL), channel, TID_BOOL);
   } else {
@@ -1394,7 +1391,7 @@ INT galil_init(EQUIPMENT *pequipment) {
   } else if (equal_ustring(str, "MIDAS")) {
     pInfo->format = FORMAT_MIDAS;
   } else if (equal_ustring(str, "YBOS")) {
-    pInfo->format = FORMAT_YBOS;
+    throw std::runtime_error("YBOS???");
   }
 
   // If Settings not created, use default from include file
@@ -1863,7 +1860,7 @@ INT galil_init(EQUIPMENT *pequipment) {
   //if (strstr(response, "DMC21")) { // Change by TL 2012/09/01: DMC response has changed?
   if (strstr(response, "DMC41")) {
     response[buffLength - 2] = 0x0;
-    cm_msg(MINFO, "galil_init", "Galil controller found - %s", response);
+    //cm_msg(MINFO, "galil_init", "Galil controller found - %s", response);
   } else {
     cm_msg(MERROR, "galil_init", "Galil controller not found - %s", response);
     return FE_ERR_HW;
@@ -1874,7 +1871,7 @@ INT galil_init(EQUIPMENT *pequipment) {
   // after a motor move; in particular, the 'AG' command fails.  Not sure why.
   // TL: April 19, 2013
   sprintf(command, "RS");
-  cm_msg(MINFO, "galil_init", "%s", command);
+ // cm_msg(MINFO, "galil_init", "%s", command);
   strcat(command, "\r");
 
   buffLength = strlen(command);
@@ -1896,7 +1893,7 @@ INT galil_init(EQUIPMENT *pequipment) {
     sprintf(buff, "%1.0f,", pInfo->fMotorType[i]);
     strcat(command, buff);
   }
-  cm_msg(MINFO, "galil_init", "%s", command);
+  //cm_msg(MINFO, "galil_init", "%s", command);
   strcat(command, "\r");
 
   buffLength = strlen(command);
@@ -1919,7 +1916,7 @@ INT galil_init(EQUIPMENT *pequipment) {
     sprintf(buff, "%1.0f,", 0);
     strcat(command, buff);
   }
-  cm_msg(MINFO, "galil_init", "%s", command);
+  //cm_msg(MINFO, "galil_init", "%s", command);
   strcat(command, "\r");
 
   buffLength = strlen(command);
@@ -1937,7 +1934,7 @@ INT galil_init(EQUIPMENT *pequipment) {
 
   // Turn motor off (??)
   sprintf(command, "MO");
-  cm_msg(MINFO, "galil_init", "%s", command);
+  //cm_msg(MINFO, "galil_init", "%s", command);
   strcat(command, "\r");
 
   buffLength = strlen(command);
@@ -1959,7 +1956,7 @@ INT galil_init(EQUIPMENT *pequipment) {
     sprintf(buff, "%d,", pInfo->iMotorCurrent[i]);
     strcat(command, buff);
   }
-  cm_msg(MINFO, "galil_init", "%s", command);
+  //cm_msg(MINFO, "galil_init", "%s", command);
   strcat(command, "\r");
 
   buffLength = strlen(command);
@@ -1988,7 +1985,7 @@ INT galil_init(EQUIPMENT *pequipment) {
     }
     strcat(command, buff);
   }
-  cm_msg(MINFO, "galil_init", "%s", command);
+  //cm_msg(MINFO, "galil_init", "%s", command);
   strcat(command, "\r");
 
   buffLength = strlen(command);
@@ -2011,7 +2008,7 @@ INT galil_init(EQUIPMENT *pequipment) {
     sprintf(buff, "0,");
     strcat(command, buff);
   }
-  cm_msg(MINFO, "galil_init", "%s", command);
+  //cm_msg(MINFO, "galil_init", "%s", command);
   strcat(command, "\r");
 
   buffLength = strlen(command);
@@ -2073,7 +2070,7 @@ INT galil_init(EQUIPMENT *pequipment) {
 
   // force the ethernet port for all messages to our port
   sprintf(command, "WH            ");
-  cm_msg(MINFO, "galil_init", "%s", command);
+  //cm_msg(MINFO, "galil_init", "%s", command);
   strcat(command, "\r");
 
   buffLength = strlen(command);
@@ -2096,7 +2093,7 @@ INT galil_init(EQUIPMENT *pequipment) {
 
   ptr++;
   sprintf(command, "CF%c            ", *ptr);
-  cm_msg(MINFO, "galil_init", "%s", command);
+  //cm_msg(MINFO, "galil_init", "%s", command);
   strcat(command, "\r");
 
   buffLength = strlen(command);
@@ -2119,8 +2116,8 @@ INT galil_init(EQUIPMENT *pequipment) {
   }
 
 
-  cm_msg(MINFO, "galil_init", "Add code for current and error bands motor type dependent?");
-  cm_msg(MINFO, "galil_init", "Add code for program load and execute.");
+  //cm_msg(MINFO, "galil_init", "Add code for current and error bands motor type dependent?");
+  //cm_msg(MINFO, "galil_init", "Add code for program load and execute.");
 
 
   return FE_SUCCESS;
@@ -2280,7 +2277,7 @@ INT cd_Galil(INT cmd, EQUIPMENT *pequipment) {//printf ("\ncd_galil\n");
 
   switch (cmd) {
     case CMD_INIT:
-      cm_msg(MINFO, "Galil class driver", "Galil Class Driver Version %s %s", __DATE__, __TIME__);
+      //cm_msg(MINFO, "Galil class driver", "Galil Class Driver Version %s %s", __DATE__, __TIME__);
       status = galil_init(pequipment);
       break;
 
@@ -2328,7 +2325,7 @@ INT PosCapture(EQUIPMENT *pequipment, INT i) {
   buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 20, ":", 500);
   response[buffLength] = 0x0;
 
-  cm_msg(MINFO, "PosCapture", "Capture %d                      ", atoi(response));
+  //cm_msg(MINFO, "PosCapture", "Capture %d                      ", atoi(response));
 
   sprintf(command, "AL %s\r", pInfo->letter + i * NAME_LENGTH);
 
@@ -2377,9 +2374,9 @@ INT Move(EQUIPMENT *pequipment, INT i, float fDestination) {
   iMoveTime = (INT)(fabs(fDestination - pInfo->fPosition[i]) / pInfo->fVelocity[i] + MOVE_MIN);
 
 
-  if (verbose)
-    cm_msg(MINFO, "galil_idle", "Move of %s to %f will take max %d seconds", pInfo->names + i * NAME_LENGTH,
-           fDestination, iMoveTime);
+  //if (verbose)
+  //  cm_msg(MINFO, "galil_idle", "Move of %s to %f will take max %d seconds", pInfo->names + i * NAME_LENGTH,
+  //         fDestination, iMoveTime);
 
   // make a different command for the tilt axis; enable out2[0] just for tilt axis movement;
   // enable out2[0] (ie disable brake) only after SH command, so that the tilt is always 
@@ -2408,8 +2405,8 @@ INT Move(EQUIPMENT *pequipment, INT i, float fDestination) {
   sprintf(buff, "BG %c\r", 'A' + i);
   strcat(command, buff);
 
-  if (verbose)
-    cm_msg(MINFO, "galil_move", "Move command = %s", command);
+  //if (verbose)
+  //  cm_msg(MINFO, "galil_move", "Move command = %s", command);
 
   //cm_msg(MINFO,"%s",command);
   buffLength = strlen(command);
@@ -2436,8 +2433,8 @@ INT Move(EQUIPMENT *pequipment, INT i, float fDestination) {
     buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 250, ":", 500);
     response[buffLength] = 0x0;
     ptr = strchr(response, '\r');
-    if (ptr) *ptr = 0x0;
-    cm_msg(MERROR, "galil_move", "Move error - %s", response);
+    //if (ptr) *ptr = 0x0;
+    //cm_msg(MERROR, "galil_move", "Move error - %s", response);
   }
 
   pInfo->bDone[i] = FALSE;
@@ -2517,7 +2514,7 @@ INT Advance(EQUIPMENT *pequipment, INT iLeft, INT iRight, float fDistance) {
   strcat(command, buff);
   sprintf(buff, "TL%s=%1.3f\r", szTakeup, torqueSupply / 2);
   strcat(command, buff);
-  cm_msg(MINFO, "galil_move", "Motors started and holding tension : %s", command);
+  //cm_msg(MINFO, "galil_move", "Motors started and holding tension : %s", command);
   buffLength = strlen(command);
   writeCount = DRIVER(0)(CMD_WRITE, pequipment->driver[0].dd_info, command, buffLength);
   if (writeCount != buffLength) {
@@ -2567,8 +2564,8 @@ INT Advance(EQUIPMENT *pequipment, INT iLeft, INT iRight, float fDistance) {
   buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 128, ":", 500);
   response[buffLength] = 0x0;
   if ((strchr(response, ':') == NULL) || (strchr(response, '?') != NULL)) {
-    cm_msg(MINFO, "galil_read", "Invalid string length or error on TP read. Read %u chars. Response %s Rejected",
-           buffLength, response);
+    //cm_msg(MINFO, "galil_read", "Invalid string length or error on TP read. Read %u chars. Response %s Rejected",
+    //       buffLength, response);
   }
 
   presponse = response;
@@ -2584,8 +2581,8 @@ INT Advance(EQUIPMENT *pequipment, INT iLeft, INT iRight, float fDistance) {
   buffLength = DRIVER(0)(CMD_GETS, pequipment->driver[0].dd_info, response, 128, ":", 500);
   response[buffLength] = 0x0;
   if ((strchr(response, ':') == NULL) || (strchr(response, '?') != NULL)) {
-    cm_msg(MINFO, "galil_read", "Invalid string length or error on TP read. Read %u chars. Response %s Rejected",
-           buffLength, response);
+    //cm_msg(MINFO, "galil_read", "Invalid string length or error on TP read. Read %u chars. Response %s Rejected",
+     //      buffLength, response);
   }
 
   presponse = response;
@@ -2606,7 +2603,7 @@ INT Advance(EQUIPMENT *pequipment, INT iLeft, INT iRight, float fDistance) {
        ],  pInfo->fEncoderPosition[iTakeup],pInfo->fEncoderPosition[iSupply] - pInfo->fEncoderPosition[iTakeup]);
        cm_msg(MINFO, "galil_move", "AdvanceReel supply enc %7.0f takeup enc %7.0f  diff %7.0f\n", encSupply, encTakeup,encSupply - encTakeup);*/
   encDiffTakeupSupply = encSupply - pInfo->fEncoderPosition[iSupply] - encTakeup + pInfo->fEncoderPosition[iTakeup];
-  cm_msg(MINFO, "galil_move", "Advance: Takup-Supply Encoder Difference %7.0f", encDiffTakeupSupply);
+  //cm_msg(MINFO, "galil_move", "Advance: Takup-Supply Encoder Difference %7.0f", encDiffTakeupSupply);
   ss_sleep(200);
 
   command[0] = 0x0;
@@ -2669,8 +2666,6 @@ INT Advance(EQUIPMENT *pequipment, INT iLeft, INT iRight, float fDistance) {
   sprintf(buff, "TL%s=%1.3f\r", szTakeup, fTorque);
   strcat(command, buff);
 
-  cm_msg(MINFO, "galil_move", "Advance command = %s", command);
-
   buffLength = strlen(command);
   writeCount = DRIVER(0)(CMD_WRITE, pequipment->driver[0].dd_info, command, buffLength);
   if (writeCount != buffLength) {
@@ -2730,7 +2725,7 @@ INT Advance(EQUIPMENT *pequipment, INT iLeft, INT iRight, float fDistance) {
   } while (stopCode == 0);
 
   if (stopCode == 1) {
-    cm_msg(MINFO, "galil_move", "Advance stop code %d", stopCode);
+    //cm_msg(MINFO, "galil_move", "Advance stop code %d", stopCode);
   } else {
     cm_msg(MERROR, "galil_move", "Tape Advance error - %d", stopCode);
   }
@@ -2740,7 +2735,7 @@ INT Advance(EQUIPMENT *pequipment, INT iLeft, INT iRight, float fDistance) {
   strcat(command, buff);
   sprintf(buff, "TL%s=%1.3f\r", szTakeup, torqueSupply);
   strcat(command, buff);
-  cm_msg(MINFO, "galil_move", "Motors stopped and holding tension : %s", command);
+  //cm_msg(MINFO, "galil_move", "Motors stopped and holding tension : %s", command);
   buffLength = strlen(command);
   writeCount = DRIVER(0)(CMD_WRITE, pequipment->driver[0].dd_info, command, buffLength);
   if (writeCount != buffLength) {
@@ -2770,7 +2765,7 @@ INT Advance(EQUIPMENT *pequipment, INT iLeft, INT iRight, float fDistance) {
     command[0] = 0x0;
     sprintf(buff, "AM %s\r", szTakeup);
     strcat(command, buff);
-    cm_msg(MINFO, "galil_move", "Wait for Motor end move : %s", command);
+    //cm_msg(MINFO, "galil_move", "Wait for Motor end move : %s", command);
     buffLength = strlen(command);
     writeCount = DRIVER(0)(CMD_WRITE, pequipment->driver[0].dd_info, command, buffLength);
     if (writeCount != buffLength) {
@@ -2799,7 +2794,7 @@ INT Advance(EQUIPMENT *pequipment, INT iLeft, INT iRight, float fDistance) {
     command[0] = 0x0;
     sprintf(buff, "WT 50;MO %s;MO %s\r", szTakeup, szSupply);
     strcat(command, buff);
-    cm_msg(MINFO, "galil_move", "Motors OFF : %s", command);
+    //cm_msg(MINFO, "galil_move", "Motors OFF : %s", command);
     buffLength = strlen(command);
     writeCount = DRIVER(0)(CMD_WRITE, pequipment->driver[0].dd_info, command, buffLength);
     if (writeCount != buffLength) {
@@ -2821,7 +2816,7 @@ INT Advance(EQUIPMENT *pequipment, INT iLeft, INT iRight, float fDistance) {
     db_set_data(hDB, pInfo->hKeySetDest, pInfo->fDestination, pInfo->num_channels * sizeof(float), pInfo->num_channels,
                 TID_FLOAT);
     pInfo->iMotorER[0] = 0;
-    cm_msg(MINFO, "galil_move", "Tape Advance direction changed : %f", pInfo->fDestination[0]);
+    //cm_msg(MINFO, "galil_move", "Tape Advance direction changed : %f", pInfo->fDestination[0]);
   } else {
     pInfo->iMotorER[0]++; // increase advance counter
   }
