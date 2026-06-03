@@ -24,6 +24,7 @@
 #include "mfe.h"
 #include "midas.h"
 #include "msystem.h"
+#include <bsd/string.h>
 
 /*
    This is exceptionally confusing and should've been documented when it was originally written! 
@@ -32,6 +33,8 @@
    that way the static methods it contains can actually be used 
 
    Since they're static, they'll also have acccess to the unique implementation of the frontend name and database handle, and no other frontends can accidentally write to the wrong place
+
+   And, since they're in the same translation unit because of the include, these static methods are accessible here. 
 */
 #include "utils.cxx"
 

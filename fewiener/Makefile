@@ -7,7 +7,7 @@ OSFLAGS  = -DOS_LINUX -Dextname
 CFLAGS   =  -ggdb -fPIC -Wall -Wuninitialized -I. -I$(MIDASSYS)/include -I.. -I./ -std=c++11
 CXXFLAGS = $(CFLAGS)
 
-LIBS = -lm -lz -lutil -lnsl -lpthread -lrt
+LIBS = -lm -lz -lutil -lnsl -lpthread -lrt -lbsd
 
 # MIDAS library
 MIDASLIBS = $(MIDASSYS)/lib/libmidas.a

@@ -2,6 +2,8 @@
 //#include <utils.h>
 #include <midas.h>
 #include <cstring>
+#include <bsd/string.h>
+
 
 extern const char* frontend_name;
 extern HNDLE hDB;
