@@ -63,6 +63,15 @@ private:
   int SpinPath(std::vector<std::vector<double>> &points);
   int PatchPath(std::vector<std::vector<double>> &points);
   int PCALPath(std::vector<std::vector<double>> &points);
+  int PCALPathAzimuth(std::vector<std::vector<double>> &points);
+  int PCALPathSingleyz(std::vector<std::vector<double>> &points);
+  int PCALPathFOV(std::vector<std::vector<double>> &points);
+  int PCALPathFOVyz(std::vector<std::vector<double>> &points);
+  int PCALPathFOVyzSweep(std::vector<std::vector<double>> &points);
+  int PCALxAlignmentSweep(std::vector<std::vector<double>> &points);
+  int PCALzAlignmentSweep(std::vector<std::vector<double>> &points);
+  int PCALyzSweep(std::vector<std::vector<double>> &points);
+  int PCALxySweep(std::vector<std::vector<double>> &points);
 
   bool is_destinationvalid(const std::vector<double>& l); //Anubhav's edit
   

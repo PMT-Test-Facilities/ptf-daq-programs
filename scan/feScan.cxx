@@ -875,12 +875,12 @@ INT move_next_position(void) {
     
     for(int i = 0; i < 8;i++){relays_off[i]=FALSE;}
     printf("Brake is On for tilt angle and relay is off! \n");
-    db_set_data(hDB, hMotors00_output_control, &relays_off, 8*sizeof(BOOL), 8, TID_BOOL); 
+    // db_set_data(hDB, hMotors00_output_control, &relays_off, 8*sizeof(BOOL), 8, TID_BOOL); 
     sleep(1.0); // wait for a second after turning the bake on before turning the motors off 
     // switch motors off 
     BOOL turn_off = TRUE;//Switching that one
-    db_set_data(hDB, hMotors00, &turn_off, sizeof(BOOL), 1, TID_BOOL);
-    db_set_data(hDB, hMotors01, &turn_off, sizeof(BOOL), 1, TID_BOOL);
+    // db_set_data(hDB, hMotors00, &turn_off, sizeof(BOOL), 1, TID_BOOL);
+    // db_set_data(hDB, hMotors01, &turn_off, sizeof(BOOL), 1, TID_BOOL);
     usleep(500000);
     printf("Motors are off!\n");
     //ss_sleep(50);
@@ -963,6 +963,7 @@ INT scan_read(char *pevent, INT off)
       // for voltage and current field 0->5 relate to the Coil Numbers
       char bk_name[4] = "EOM";
       double *unused_pointer2;
+      usleep(5000000); // P-CAL Sleep before sending EOM to let vibrations die down
       cm_msg(MDEBUG, "scan_read", "EOM Created");
       bk_create(pevent, bk_name, TID_DOUBLE,(void **) &unused_pointer2);
       *unused_pointer2++ = (double) gbl_current_point;
@@ -1032,7 +1033,7 @@ INT scan_read(char *pevent, INT off)
 
       //switch the turn_off hotlink back to false
       BOOL turn_off = FALSE;
-      //db_set_data(hDB, hMotors00, &turn_off, sizeof(BOOL), 1, TID_BOOL);
+      db_set_data(hDB, hMotors00, &turn_off, sizeof(BOOL), 1, TID_BOOL);
       db_set_data(hDB, hMotors01, &turn_off, sizeof(BOOL), 1, TID_BOOL);
       
       time_Done_read = ss_millitime();

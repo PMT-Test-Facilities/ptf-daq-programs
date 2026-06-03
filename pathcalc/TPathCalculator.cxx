@@ -85,8 +85,7 @@ bool TPathCalculator::CalculatePath(XYPoint start, XYPoint end, std::vector <XYP
                                     std::pair<bool, bool> tank_height_start, std::pair<bool, bool> tank_height_end) {
 //----------------------------------------------------------
 
-  cm_msg(MINFO, "CalculatePath", "Calculating path from %.3lf in X to %.3lf and from %.3lf in Y to %.3lf", start.first,
-         end.first, start.second, end.second);
+
 
   bool isObject0 = 1;
   bool validEndPoint = 0;

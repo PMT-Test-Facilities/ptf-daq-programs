@@ -96,7 +96,7 @@ bool box_valid(const std::vector<double> point, float zmax){
   bool valid_y = point[1]>=0 && point[1]<=0.52;
   bool valid_z = point[2]>=0 && point[2]<=zmax;
   bool valid_azi = point[3]>=-97 && point[3]<=120;
-  bool valid_zenith = point[4]>=-89 && point[4]<0;
+  bool valid_zenith = point[4]>=-111 && point[4]<=1;
 
   return (valid_x && valid_y && valid_z && valid_azi && valid_zenith);
 }
@@ -300,8 +300,8 @@ int ScanSequence::GeneratePath(std::vector<std::vector<double> > &points_in){
       if (fs.patch_scan_par.pmt_mode==0){
         non_zero_points = PatchPath(points_in);
       }else{
-        non_zero_points = PCALPath(points_in);
-      }
+        non_zero_points = PCALyzSweep(points_in);//PCALPath or PCALPathAzimuth or PCALPathSingleyz or PCALPathFOV or PCALPathFOVyz
+      } // or PCALPathFOVyzSweep or PCALxySweep
       break;
     default:
       cm_msg(MERROR,"GeneratePath","Invalid scan type.");
@@ -384,19 +384,24 @@ int ScanSequence::PCALPath(std::vector<std::vector<double>> &points){
     const float rad_step = fs.patch_scan_par.r_step; 
     const float rad_end = fs.patch_scan_par.r_end; 
 
-    const float mintheta = -70; 
-    const float steptheta_fixed = 5;
-    const float maxtheta = -10; 
+    const float mintheta = -102;
+    const float steptheta_fixed = 10; //10 //2;
+    const float maxtheta = 0; // -10;
 
     
     // we can optionally just use 0.0 if we don't want any of these offsets
-    const std::vector<double>  theta_offsets = {-3,-2,-1,0,1,2,3};
+    // const std::vector<double>  theta_offsets = {-1, 0, 1};
+    // const std::vector<double>  theta_offsets = {-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2};
+    // const std::vector<double>  theta_offsets = {-1.5, -1, -0.5, 0, 0.5, 1, 1.5};
+    // const std::vector<double>  theta_offsets = {-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5};
+    // const std::vector<double>  theta_offsets = {-9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    const std::vector<double>  theta_offsets = {2};
 
     float current_rad = start_radius;
     float theta_compare = maxtheta;
-    float current_theta = mintheta; 
+    float current_theta = maxtheta; //mintheta; 
     
-    bool forward = true;
+    bool forward = false;//true;
     bool fixed_step = true;
     const float min_step = 0.005; 
     
@@ -408,15 +413,19 @@ int ScanSequence::PCALPath(std::vector<std::vector<double>> &points){
     points.clear();
 
     while (current_rad<rad_end){
+      std::cout<< "Going to radius "<<current_rad<<std::endl;
       /*
         We want the gantry to zig-zag to minimize the bigger movements. 
         So we alternate between going forwards and backwards  
       */
 
-      while (  ((current_theta<maxtheta) && forward)
-            || ((current_theta>mintheta) && ~forward)
+      while (  ((current_theta<=maxtheta) && forward)
+            || ((current_theta>=mintheta) && (!forward))
       ){
-
+        std::cout<< "Going to angle "<<current_theta<<std::endl;
+        std::cout <<"   "<<rad_step<<std::endl;
+        std::cout <<"   "<<current_rad<<std::endl;
+        
         /*
         The amount we step the angle by will depend on if we want fixed arc-length steps
         or fixed angle steps
@@ -438,6 +447,10 @@ int ScanSequence::PCALPath(std::vector<std::vector<double>> &points){
         if (arc_step<min_step){
           steptheta = (min_step/current_rad)*180/pi;
         }
+        std::cout <<"   "<<arc_step<<std::endl;
+        std::cout <<"   "<<arc_step<<std::endl;
+        std::cout <<"   "<<min_step<<std::endl;
+        std::cout <<"   "<<steptheta<<std::endl;
         
         template_point = {
               pmt_center_x, 
@@ -453,7 +466,12 @@ int ScanSequence::PCALPath(std::vector<std::vector<double>> &points){
           };
 
         // make sure this is a reachable point 
-        if (~box_valid(template_point)){
+        if (!box_valid(template_point, 0.510)){
+          if(forward){
+            current_theta += steptheta;
+          }else{
+            current_theta -= steptheta;
+          }
           continue;
         }
       
@@ -479,10 +497,679 @@ int ScanSequence::PCALPath(std::vector<std::vector<double>> &points){
           current_theta -= steptheta;
         }
       }
-      forward = ~forward;
+      forward = !forward;
       current_rad+=rad_step;
     }
 
+    points.push_back({pmt_center_x, 0.05, 0.0, 11, -100, -99999, -99999, -99999, -99999, -99999});
+
+    // !!!!!!!!!!!!!!!
+    // OPTIONAL REVERSE THE POINTS VECTOR TO REVERSE THE SWEEP DIRECTION
+    // std::reverse(points.begin(), points.end());
+    // !!!!!!!!!!!!!!!
+    
+    return points.size();
+
+}
+
+int ScanSequence::PCALPathAzimuth(std::vector<std::vector<double>> &points){
+    const float pmt_center_x = fs.patch_scan_par.pmt_x;
+    const float pmt_center_y = fs.patch_scan_par.pmt_y; 
+    const float pmt_center_z = fs.patch_scan_par.pmt_tip_z; // should be in gantry coordinates 
+    const float gantry_phi_pointing = fs.patch_scan_par.pmt_angle_center; // phi angle optical box needs to point at the surface 
+
+    
+    const float start_radius = fs.patch_scan_par.r_start; 
+    const float rad_step = fs.patch_scan_par.r_step; 
+    const float rad_end = fs.patch_scan_par.r_end; 
+
+    // these will go around the side of the module instead of over the top
+    const float maxtheta = 102;
+    const float steptheta_fixed = 10; //10 //2;
+    const float mintheta = 0; // -10; 
+    const float gantry_zenith = 0;
+    
+    // we can optionally just use 0.0 if we don't want any of these offsets
+    // const std::vector<double>  theta_offsets = {-2, -1.5, -1, -0.5, 0, 0.5, 1, 1.5, 2};
+    // const std::vector<double>  theta_offsets = {-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5};
+    // const std::vector<double>  theta_offsets = {-9, -8, -7, -6, -5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    // const std::vector<double>  theta_offsets = {0};
+
+    float current_rad = start_radius;
+    // float theta_compare = mintheta;
+    float current_theta = mintheta; //maxtheta; 
+    
+    bool forward = true;//false;
+    bool fixed_step = true;
+    const float min_step = 0.005; 
+    
+    float steptheta;
+    float arc_step;
+
+    std::vector<double> template_point = {0.0, 0.0,0.0,0.0,0.0,0.0, 0.0,0.0,0.0,0.0};
+    
+    points.clear();
+
+    while (current_rad<rad_end){
+      std::cout<< "Going to radius "<<current_rad<<std::endl;
+      /*
+        We want the gantry to zig-zag to minimize the bigger movements. 
+        So we alternate between going forwards and backwards  
+      */
+
+      while (  ((current_theta<=maxtheta) && forward)
+            || ((current_theta>=mintheta) && (!forward))
+      ){
+        std::cout<< "Going to angle "<<current_theta<<std::endl;
+        std::cout <<"   "<<rad_step<<std::endl;
+        std::cout <<"   "<<current_rad<<std::endl;
+        
+        /*
+        The amount we step the angle by will depend on if we want fixed arc-length steps
+        or fixed angle steps
+
+        for fixed arc-length, we just use the radial step length 
+        */
+        if (fixed_step){
+          steptheta = steptheta_fixed;
+        }else{
+          steptheta = (rad_step/current_rad)*180/pi;
+        }
+
+        /*
+            Now, in fixed-angle steps we also need to make sure that we're actually moving a reasonable amount
+            So if the angular step would result in too small of a move, we instead just use a minimum step length of 5mm
+            and recalculate the angle step 
+        */
+        arc_step = (steptheta*pi/180)*current_rad;
+        if (arc_step<min_step){
+          steptheta = (min_step/current_rad)*180/pi;
+        }
+        std::cout <<"   "<<arc_step<<std::endl;
+        std::cout <<"   "<<arc_step<<std::endl;
+        std::cout <<"   "<<min_step<<std::endl;
+        std::cout <<"   "<<steptheta<<std::endl;
+        
+        template_point = {
+              pmt_center_x + current_rad*sin(current_theta*pi/180), 
+              pmt_center_y - current_rad*cos(current_theta*pi/180),
+              pmt_center_z, 
+              current_theta + gantry_phi_pointing,
+              gantry_zenith,
+              -99999,
+              -99999,
+              -99999,
+              -99999,
+              -99999
+          };
+
+        // make sure this is a reachable point 
+        if (!box_valid(template_point, 0.510)){
+          if(forward){
+            current_theta += steptheta;
+          }else{
+            current_theta -= steptheta;
+          }
+          continue;
+        }
+      
+
+        // for (int index=0; index<theta_offsets.size(); index++){
+        //     template_point = {
+        //       pmt_center_x, 
+        //       pmt_center_y - current_rad*cos(current_theta*pi/180),
+        //       pmt_center_z + current_rad*sin(current_theta*pi/180), 
+        //       gantry_phi_pointing,
+        //       current_theta + theta_offsets[index],
+        //       -99999,
+        //       -99999,
+        //       -99999,
+        //       -99999,
+        //       -99999
+        //     };
+        //     points.push_back(template_point);
+        // }       
+        points.push_back(template_point);
+
+        if(forward){
+          current_theta += steptheta;
+        }else{
+          current_theta -= steptheta;
+        }
+      }
+      forward = !forward;
+      current_rad+=rad_step;
+    }
+
+    points.push_back({0.573, 0.372, 0.15, 111, 0, -99999, -99999, -99999, -99999, -99999});
+    points.push_back({0.573, 0.225, 0.15, 111, 0, -99999, -99999, -99999, -99999, -99999});
+    points.push_back({0.400, 0.225, 0.15, 111, 0, -99999, -99999, -99999, -99999, -99999});
+    points.push_back({0.400, 0.150, 0.15, 111, 0, -99999, -99999, -99999, -99999, -99999});
+
+    return points.size();
+
+}
+
+int ScanSequence::PCALPathSingleyz(std::vector<std::vector<double>> &points){
+    // define where photodiode should be positioned in space
+    const float x = 0.2430;
+    const float y = 0.2591;
+    const float z = 0.1849;
+
+    const float phi   = 11;
+    const float theta = -68;
+
+    // set up sweep points object
+    std::vector<double> template_point = {0.0, 0.0,0.0,0.0,0.0,0.0, 0.0,0.0,0.0,0.0};
+    points.clear();
+
+    // go to point
+    template_point = {
+              x, 
+              y,
+              z, 
+              phi,
+              theta,
+              -99999,
+              -99999,
+              -99999,
+              -99999,
+              -99999
+          };
+    points.push_back(template_point);
+
+    // add extra point to make sure gantry moves away safely
+    points.push_back({x, 0.05, 0.0, 11, theta, -99999, -99999, -99999, -99999, -99999});
+
+    return points.size();
+}
+
+int ScanSequence::PCALPathFOV(std::vector<std::vector<double>> &points){
+    // define where photodiode should be positioned in space
+    const float default_x = 0.245;
+    const float default_y = 0.0;
+    const float default_z = 0.5;
+
+    const float phi_offset   = 11; //fs.patch_scan_par.pmt_angle_center; // phi angle optical box needs to point at the surface 
+    const float theta_offset = 0;
+    const float theta_adjustment = 0; // tilt seems off by ~2 when negative so can adjust the target to offset this 
+
+    // define angular sweep range
+    // **********
+    // theta is the tilt of the gantry head
+    // phi is the rotation in the xy plane
+    // **********
+    const float min_theta  = 0 + theta_offset;
+    const float max_theta  = 0 + theta_offset;
+    const float theta_step = 2;
+
+    const float min_phi  = -15 + phi_offset;
+    const float max_phi  = 15 + phi_offset;
+    const float phi_step = 0.5;
+
+    // set up sweep points object
+    std::vector<double> template_point = {0.0, 0.0,0.0,0.0,0.0,0.0, 0.0,0.0,0.0,0.0};
+    points.clear();
+
+    // loop over phi
+    float current_phi = min_phi;
+    while (current_phi <= max_phi){
+      std::cout << "Going to phi " << current_phi << std::endl;
+
+      // loop over theta
+      float current_theta = min_theta;
+      while (current_theta <= max_theta){
+        std::cout << "Going to theta " << current_theta << std::endl;
+
+        float adjusted_theta = current_theta;
+        if (current_theta < -theta_adjustment){
+          adjusted_theta += theta_adjustment;
+        }
+        
+        template_point = {
+              default_x, 
+              default_y,
+              default_z, 
+              current_phi,
+              adjusted_theta,
+              -99999,
+              -99999,
+              -99999,
+              -99999,
+              -99999
+          };
+
+        points.push_back(template_point);
+
+        current_theta += theta_step;
+      }
+      current_phi += phi_step;
+    }
+
+    return points.size();
+}
+
+int ScanSequence::PCALPathFOVyz(std::vector<std::vector<double>> &points){
+    const float diffuser_center_x = fs.patch_scan_par.pmt_x;
+    const float diffuser_center_y = fs.patch_scan_par.pmt_y; 
+    const float diffuser_center_z = fs.patch_scan_par.pmt_tip_z; // should be in gantry coordinates 
+
+    const float radius = fs.patch_scan_par.r_start;
+
+    const float phi_offset       = fs.patch_scan_par.pmt_angle_center; // phi angle optical box needs to point at the diffuser from head on 
+    const float theta_to_measure = -100;
+    const float theta_adjustment = 2; // tilt seems off by ~2 when negative so can adjust the target to offset this 
+
+    // define angular sweep range
+    // **********
+    // theta is the tilt of the gantry head
+    // phi is the rotation in the xy plane
+    // **********
+    const float min_theta  = -5 + theta_to_measure;
+    const float max_theta  = 5 + theta_to_measure;
+    const float theta_step = 1;
+
+    const float min_phi  = -15 + phi_offset;
+    const float max_phi  = 15 + phi_offset;
+    const float phi_step = 3;
+
+    // set up sweep points object
+    std::vector<double> template_point = {0.0, 0.0,0.0,0.0,0.0,0.0, 0.0,0.0,0.0,0.0};
+    points.clear();
+
+    // loop over phi
+    float current_phi = min_phi;
+    while (current_phi <= max_phi){
+      std::cout << "Going to phi " << current_phi << std::endl;
+
+      // loop over theta
+      float current_theta = min_theta;
+      while (current_theta <= max_theta){
+        std::cout << "Going to theta " << current_theta << std::endl;
+
+        float adjusted_theta = current_theta;
+        if (current_theta < -theta_adjustment){
+          adjusted_theta += theta_adjustment;
+        }
+        
+        template_point = {
+              diffuser_center_x, 
+              diffuser_center_y - radius*cos(theta_to_measure*pi/180),
+              diffuser_center_z + radius*sin(theta_to_measure*pi/180),
+              current_phi,
+              adjusted_theta,
+              -99999,
+              -99999,
+              -99999,
+              -99999,
+              -99999
+          };
+
+        points.push_back(template_point);
+
+        current_theta += theta_step;
+      }
+      current_phi += phi_step;
+    }
+
+    // add extra point to make sure gantry moves away safely
+    points.push_back({diffuser_center_x, 0.05, 0.0, 11, theta_to_measure, -99999, -99999, -99999, -99999, -99999});
+    return points.size();
+}
+
+int ScanSequence::PCALPathFOVyzSweep(std::vector<std::vector<double>> &points){
+    const float diffuser_center_x = fs.patch_scan_par.pmt_x;
+    const float diffuser_center_y = fs.patch_scan_par.pmt_y; 
+    const float diffuser_center_z = fs.patch_scan_par.pmt_tip_z; // should be in gantry coordinates 
+
+    const float radius = fs.patch_scan_par.r_start;
+
+    const float phi_offset       = fs.patch_scan_par.pmt_angle_center; // phi angle optical box needs to point at the diffuser from head on 
+    const float theta_adjustment = 2; // tilt seems off by ~2 when negative so can adjust the target to offset this 
+
+    // define angular sweep range
+    // **********
+    // theta is the tilt of the gantry head
+    // phi is the rotation in the xy plane
+    // **********
+    const float min_theta  = -15;
+    const float max_theta  = 15;
+    const float theta_step = 3;
+
+    const float min_phi  = -15 + phi_offset;
+    const float max_phi  = 15 + phi_offset;
+    const float phi_step = 3;
+
+    const float min_zenith  = 10;
+    const float max_zenith  = 90;
+    const float zenith_step = 10;
+
+    // set up sweep points object
+    std::vector<double> template_point = {0.0, 0.0,0.0,0.0,0.0,0.0, 0.0,0.0,0.0,0.0};
+    points.clear();
+
+    // loop over zenith
+    float current_zenith = min_zenith;
+    while (current_zenith <= max_zenith){
+      std::cout << "Going to zenith " << current_zenith << std::endl;
+
+      // loop over phi
+      float current_phi = min_phi;
+      while (current_phi <= max_phi){
+        std::cout << "Going to phi " << current_phi << std::endl;
+
+        // loop over theta
+        float current_theta = -current_zenith + min_theta;
+        while (current_theta <= -current_zenith + max_theta){
+          std::cout << "Going to theta " << current_theta << std::endl;
+
+          // adjust the tilt because for values past ~-3 the tilt is consistently off
+          float adjusted_theta = current_theta; // + theta_adjustment;
+          if (current_zenith > theta_adjustment){
+            adjusted_theta += theta_adjustment;
+          }
+          
+          template_point = {
+                diffuser_center_x, 
+                diffuser_center_y - radius*cos(-current_zenith*pi/180),
+                diffuser_center_z + radius*sin(-current_zenith*pi/180),
+                current_phi,
+                adjusted_theta,
+                -99999,
+                -99999,
+                -99999,
+                -99999,
+                -99999
+            };
+
+          points.push_back(template_point);
+
+          current_theta += theta_step;
+        }
+        current_phi += phi_step;
+      }
+      current_zenith += zenith_step;
+    }
+
+    // add extra point to make sure gantry moves away safely
+    points.push_back({diffuser_center_x, 0.05, 0.0, phi_offset, -max_zenith + max_theta, -99999, -99999, -99999, -99999, -99999});
+    return points.size();
+}
+
+int ScanSequence::PCALyzSweep(std::vector<std::vector<double>> &points){
+    const float diffuser_center_x = fs.patch_scan_par.pmt_x;
+    const float diffuser_center_y = fs.patch_scan_par.pmt_y; 
+    const float diffuser_center_z = fs.patch_scan_par.pmt_tip_z; // should be in gantry coordinates 
+
+    const float radius = fs.patch_scan_par.r_start;
+
+    const float phi_offset       = fs.patch_scan_par.pmt_angle_center; // phi angle optical box needs to point at the diffuser from head on 
+    const float theta_adjustment = 2; // tilt seems off by ~2 when negative so can adjust the target to offset this 
+
+    // define angular sweep range
+    // **********
+    // theta is the tilt of the gantry head
+    // phi is the rotation in the xy plane
+    // **********
+    const float min_theta  = -15;
+    const float max_theta  = 15;
+    const float theta_step = 3;
+
+    const float min_phi  = -0 + phi_offset;
+    const float max_phi  = 0 + phi_offset;
+    const float phi_step = 3;
+
+    // cos zenith steps
+    const float min_cz_zenith  = 1;    //1
+    const float max_cz_zenith  = -0.2; //-0.2
+    const float cz_zenith_step = -0.05; //-0.05
+
+    // set up sweep points object
+    std::vector<double> template_point = {0.0, 0.0,0.0,0.0,0.0,0.0, 0.0,0.0,0.0,0.0};
+    points.clear();
+
+    // loop over zenith
+    float current_cz_zenith = min_cz_zenith;
+    while (current_cz_zenith >= max_cz_zenith + (cz_zenith_step/2)){
+      float current_zenith = acos(current_cz_zenith)*180/pi; // define current zenith in degrees
+
+      std::cout << "Going to zenith " << current_zenith << std::endl;
+
+      // loop over phi
+      float current_phi = min_phi;
+      while (current_phi <= max_phi){
+        std::cout << "Going to phi " << current_phi << std::endl;
+
+        // loop over theta
+        float current_theta = -current_zenith + min_theta;
+        while (current_theta <= -current_zenith + max_theta){
+          std::cout << "Going to theta " << current_theta << std::endl;
+
+          // adjust the tilt because for values past ~-3 the tilt is consistently off
+          float adjusted_theta = current_theta; // + theta_adjustment;
+          if (current_zenith > theta_adjustment){
+            adjusted_theta += theta_adjustment;
+          }
+          
+          template_point = {
+                diffuser_center_x, 
+                diffuser_center_y - radius*cos(-current_zenith*pi/180),
+                diffuser_center_z + radius*sin(-current_zenith*pi/180),
+                current_phi,
+                adjusted_theta,
+                -99999,
+                -99999,
+                -99999,
+                -99999,
+                -99999
+            };
+
+          points.push_back(template_point);
+
+          current_theta += theta_step;
+        }
+        current_phi += phi_step;
+      }
+      current_cz_zenith += cz_zenith_step;
+    }
+
+    // add extra point to make sure gantry moves away safely
+    points.push_back({diffuser_center_x, 0.05, 0.0, phi_offset, -acos(max_cz_zenith)*180/pi, -99999, -99999, -99999, -99999, -99999});
+    return points.size();
+}
+
+int ScanSequence::PCALxySweep(std::vector<std::vector<double>> &points){
+    const float diffuser_center_x = fs.patch_scan_par.pmt_x;
+    const float diffuser_center_y = fs.patch_scan_par.pmt_y; 
+    const float diffuser_center_z = fs.patch_scan_par.pmt_tip_z; // should be in gantry coordinates 
+
+    const float radius = fs.patch_scan_par.r_start;
+
+    const float phi_offset = fs.patch_scan_par.pmt_angle_center; // phi angle optical box needs to point at the diffuser from head on 
+    
+    // define angular sweep range
+    // **********
+    // theta is the tilt of the gantry head
+    // phi is the rotation in the xy plane
+    // **********
+    const float min_theta  = -0;
+    const float max_theta  = 0;
+    const float theta_step = 3;
+
+    const float min_phi  = -15;
+    const float max_phi  = 15;
+    const float phi_step = 3;
+
+    // cos zenith steps
+    const float min_cz_zenith  = 1;    //1
+    const float max_cz_zenith  = -0.2; //-0.2
+    const float cz_zenith_step = -0.05; //-0.05
+
+    // set up sweep points object
+    std::vector<double> template_point = {0.0, 0.0,0.0,0.0,0.0,0.0, 0.0,0.0,0.0,0.0};
+    points.clear();
+
+    // loop over zenith
+    float current_cz_zenith = min_cz_zenith;
+    while (current_cz_zenith >= max_cz_zenith + (cz_zenith_step/2)){
+      float current_zenith = acos(current_cz_zenith)*180/pi; // define current zenith in degrees
+
+      std::cout << "Going to zenith " << current_zenith << std::endl;
+
+      // loop over phi
+      float current_phi = current_zenith + min_phi + phi_offset;
+      while (current_phi <= current_zenith + max_phi + phi_offset){
+        std::cout << "Going to phi " << current_phi << std::endl;
+
+        // loop over theta
+        float current_theta = min_theta;
+        while (current_theta <= max_theta){
+          std::cout << "Going to theta " << current_theta << std::endl;
+          
+          template_point = {
+                diffuser_center_x + radius*sin(current_zenith*pi/180), 
+                diffuser_center_y - radius*cos(current_zenith*pi/180),
+                diffuser_center_z,
+                current_phi,
+                current_theta,
+                -99999,
+                -99999,
+                -99999,
+                -99999,
+                -99999
+            };
+
+          points.push_back(template_point);
+
+          current_theta += theta_step;
+        }
+        current_phi += phi_step;
+      }
+      current_cz_zenith += cz_zenith_step;
+    }
+
+    // add extra points to make sure gantry moves away safely
+    points.push_back({0.573, 0.372, 0.05, acos(max_cz_zenith)*180/pi + max_phi + phi_offset, max_theta, -99999, -99999, -99999, -99999, -99999});
+    points.push_back({0.573, 0.225, 0.05, acos(max_cz_zenith)*180/pi + max_phi + phi_offset, max_theta, -99999, -99999, -99999, -99999, -99999});
+    points.push_back({0.400, 0.225, 0.05, acos(max_cz_zenith)*180/pi + max_phi + phi_offset, max_theta, -99999, -99999, -99999, -99999, -99999});
+    points.push_back({0.400, 0.150, 0.05, acos(max_cz_zenith)*180/pi + max_phi + phi_offset, max_theta, -99999, -99999, -99999, -99999, -99999});
+
+    return points.size();
+}
+
+int ScanSequence::PCALxAlignmentSweep(std::vector<std::vector<double>> &points){
+    const float diffuser_center_x = fs.patch_scan_par.pmt_x;
+    const float diffuser_center_y = fs.patch_scan_par.pmt_y;
+    const float diffuser_center_z = fs.patch_scan_par.pmt_tip_z; // should be in gantry coordinates 
+    const float phi_offset        = fs.patch_scan_par.pmt_angle_center; // phi angle optical box needs to point at the diffuser from head on
+    const float radius            = fs.patch_scan_par.r_start;
+
+    // define angular sweep range
+    // **********
+    // theta is the tilt of the gantry head
+    // phi is the rotation in the xy plane
+    // **********
+    const float min_x  = -0.05 + diffuser_center_x;
+    const float max_x  = 0.05 + diffuser_center_x;
+    const float x_step = 0.01;
+
+    const float min_phi  = -15 + phi_offset;
+    const float max_phi  = 15 + phi_offset;
+    const float phi_step = 3;
+
+    // set up sweep points object
+    std::vector<double> template_point = {0.0, 0.0,0.0,0.0,0.0,0.0, 0.0,0.0,0.0,0.0};
+    points.clear();
+
+    // loop over x
+    float current_x = min_x;
+    while (current_x <= max_x){
+      std::cout << "Going to x " << current_x << std::endl;
+
+      // loop over phi
+      float current_phi = min_phi;
+      while (current_phi <= max_phi){
+        std::cout << "Going to phi " << current_phi << std::endl;
+          
+        template_point = {
+              current_x, 
+              diffuser_center_y - radius,
+              diffuser_center_z,
+              current_phi,
+              0.,
+              -99999,
+              -99999,
+              -99999,
+              -99999,
+              -99999
+          };
+
+        points.push_back(template_point);
+        current_phi += phi_step;
+      }
+      current_x += x_step;
+    }
+
+    // add extra point to make sure gantry moves away safely
+    // points.push_back({diffuser_center_x, 0.05, 0.0, phi_offset, -max_zenith + max_theta, -99999, -99999, -99999, -99999, -99999});
+    return points.size();
+}
+
+int ScanSequence::PCALzAlignmentSweep(std::vector<std::vector<double>> &points){
+    const float diffuser_center_x = fs.patch_scan_par.pmt_x;
+    const float diffuser_center_y = fs.patch_scan_par.pmt_y;
+    const float diffuser_center_z = fs.patch_scan_par.pmt_tip_z; // should be in gantry coordinates 
+    const float phi_offset        = fs.patch_scan_par.pmt_angle_center; // phi angle optical box needs to point at the diffuser from head on
+    const float radius            = fs.patch_scan_par.r_start;
+
+    // define angular sweep range
+    // **********
+    // theta is the tilt of the gantry head
+    // phi is the rotation in the xy plane
+    // **********
+    const float min_z  = -0.04 + diffuser_center_z;
+    const float max_z  = 0.04 + diffuser_center_z;
+    const float z_step = 0.01;
+
+    const float min_theta  = -15;
+    const float max_theta  = 15;
+    const float theta_step = 3;
+
+    // set up sweep points object
+    std::vector<double> template_point = {0.0, 0.0,0.0,0.0,0.0,0.0, 0.0,0.0,0.0,0.0};
+    points.clear();
+
+    // loop over z
+    float current_z = min_z;
+    while (current_z <= max_z){
+      std::cout << "Going to z " << current_z << std::endl;
+
+      // loop over theta
+      float current_theta = min_theta;
+      while (current_theta <= max_theta){
+        std::cout << "Going to theta " << current_theta << std::endl;
+          
+        template_point = {
+              diffuser_center_x, 
+              diffuser_center_y - radius,
+              current_z,
+              phi_offset,
+              current_theta,
+              -99999,
+              -99999,
+              -99999,
+              -99999,
+              -99999
+          };
+
+        points.push_back(template_point);
+        current_theta += theta_step;
+      }
+      current_z += z_step;
+    }
+
+    // add extra point to make sure gantry moves away safely
+    // points.push_back({diffuser_center_x, 0.05, 0.0, phi_offset, -max_zenith + max_theta, -99999, -99999, -99999, -99999, -99999});
     return points.size();
 }
 
@@ -885,7 +1572,7 @@ int ScanSequence::RectangularPath(std::vector<std::vector<double> > &points){
   double pmt_x_pos = 0.417;
   double pmt_y_pos = 0.297;
   double pmt_radius = 0.27;
-
+  /*
   // Parameter checks
   if((fs.rect_par.init_pos_z + fs.rect_par.prism_height_z) > z_max_value) {
     cm_msg(MERROR,"RectangularPath","Height (+ initial z position) outside of limits.");
@@ -913,6 +1600,7 @@ int ScanSequence::RectangularPath(std::vector<std::vector<double> > &points){
     cm_msg(MERROR,"RectangularPath","Initial y position outside of limits.");
     return 0;
   }
+    */
   if(fs.rect_par.z_step < 0.001){
     cm_msg(MERROR,"RectangularPath","Z step size too small for motors (min resolution = 1 mm).");
     return 0;
@@ -925,6 +1613,7 @@ int ScanSequence::RectangularPath(std::vector<std::vector<double> > &points){
     cm_msg(MERROR,"RectangularPath","Y step size too small for motors (min resolution = 1 mm).");
     return 0;
   }
+    
 cm_msg(MINFO,"RectangularPath","Generating linear/plane/rectangular prism path..."); 
   // Generate path
 

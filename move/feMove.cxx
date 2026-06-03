@@ -314,6 +314,8 @@ int generate_path(INFO *pInfo);
 
 void monitor(HNDLE hDB, HNDLE hKey, void *data);
 
+void adjust_tilt(HNDLE hDB, HNDLE hKey, void *data);
+
 void move(INFO *pInfo);
 
 void stop_move(HNDLE hDB, HNDLE hKey, void *data);
@@ -639,7 +641,6 @@ INT frontend_init() {
 
   channel_rw(pInfo, pInfo->hKeyMVel, (void *) tempV, TID_FLOAT, 1);
   channel_rw(pInfo, pInfo->hKeyMAcc, (void *) tempA, TID_FLOAT, 1);
-  cm_msg(MINFO, "frontend_init", "Hey! Did you reset the PMT radius and height to non-zeroish??");
   
   return CM_SUCCESS;
 
@@ -684,7 +685,7 @@ monitor:        Hotlinked to the variables:
 /*=====================Phidget Check=================================*/
 // Check to see if phidgets are responsive
 INT phidget_responding(HNDLE hDB) {
-  double tilt_min = -105, tilt_max = 0;
+  double tilt_min = -120, tilt_max = 20;// extended tilt range for p-one scans
   HNDLE hPhidgetVars0 = 0, hPhidgetVars1 = 0;
   double phidget_Values_Old[12];
   double phidget_Values_Now[12];
@@ -767,7 +768,7 @@ void move_init(HNDLE hDB, HNDLE hKey, void *data) {
   // DWORD time_at_start_of_check;
 
   // FOR DEBUGGING
-  cm_msg(MDEBUG, "move_init", "Function move_init called.");
+  //cm_msg(MDEBUG, "move_init", "Function move_init called.");
 
   // Check that the user has set "Start Move" to "y"
   int size = sizeof(BOOL);
@@ -777,11 +778,11 @@ void move_init(HNDLE hDB, HNDLE hKey, void *data) {
   // If motors are already moving, set destinations back to previous
   // destination values and return with an error.
   if (pInfo->Moving) {
-    cm_msg(MERROR, "move_init", "Error: Can't start move. Move already in progress.");
+    //cm_msg(MERROR, "move_init", "Error: Can't start move. Move already in progress.");
     return;
   }
 
-  cm_msg(MDEBUG, "move_init", "Checking phidget response...");
+  //cm_msg(MDEBUG, "move_init", "Checking phidget response...");
   if (!phidget_responding(hDB)) {
     return;
   }
@@ -789,14 +790,14 @@ void move_init(HNDLE hDB, HNDLE hKey, void *data) {
   // Check if the motors have been initialized. If not, initialize them
   // before proceeding.
   db_get_data(hDB, pInfo->hKeyInit, &pInfo->Initialized, &size, TID_BOOL);
-  cm_msg(MDEBUG, "move_init", "Checking if motors are initialized...");
+  //cm_msg(MDEBUG, "move_init", "Checking if motors are initialized...");
   if (pInfo->Initialized == 0) {
-    cm_msg(MDEBUG, "move_init", "They aren't. Running initialization.");
+    //cm_msg(MDEBUG, "move_init", "They aren't. Running initialization.");
     initialize(pInfo);
   }
   // If initialization fails, return with error
   if (pInfo->Initialized == 0) {
-    cm_msg(MERROR, "move_init", "Error: Can't start move. Initialization failed.");
+    //cm_msg(MERROR, "move_init", "Error: Can't start move. Initialization failed.");
     return;
   }
   // Check if phidget tilt readings match the ODB variables before proceeding
@@ -805,7 +806,7 @@ void move_init(HNDLE hDB, HNDLE hKey, void *data) {
   //               if they disagree --> try to move it to desired location first
   //               if they still dont match exit
   double tilt_tolerance = 3.5;
-  double tilt_min = -105, tilt_max = 15;
+  double tilt_min = -120, tilt_max = 20; // extended for p-one measurement
   size = sizeof(pInfo->Phidget);
   int tilt_start = 0, tilt_end = 2; //these are the number of gantries we have to correct
   for (int i = tilt_start; i < tilt_end; i++) {
@@ -820,9 +821,9 @@ void move_init(HNDLE hDB, HNDLE hKey, void *data) {
     // Check if  phidget tilt readings match ODB values
     if (pInfo->Position[axis] < pInfo->Phidget[7] - tilt_tolerance ||
         pInfo->Position[axis] > pInfo->Phidget[7] + tilt_tolerance) {
-      cm_msg(MERROR, "move_init", "Phidget0%i tilt: %f ODB tilt: %f", i, pInfo->Phidget[7], pInfo->Position[axis]);
-      cm_msg(MERROR, "move_init", "ERROR: can't start move. Phidget0%i tilt and ODB tilt do not agree within tolerance; axis %i",
-             i, axis);
+      //cm_msg(MERROR, "move_init", "Phidget0%i tilt: %f ODB tilt: %f", i, pInfo->Phidget[7], pInfo->Position[axis]);
+      //cm_msg(MERROR, "move_init", "ERROR: can't start move. Phidget0%i tilt and ODB tilt do not agree within tolerance; axis %i",
+      //       i, axis);
       //return;
     }
 
@@ -839,7 +840,6 @@ void move_init(HNDLE hDB, HNDLE hKey, void *data) {
   db_get_data(hDB, pInfo->hKeyDest, pInfo->Destination, &size, TID_FLOAT);
 
   // Generate collision free path to pInfo->Destination
-  cm_msg(MINFO, "move_init", "Generating Path");
   int Status = generate_path(pInfo);
 
   // Check for unsuccesful path generation
@@ -854,7 +854,6 @@ void move_init(HNDLE hDB, HNDLE hKey, void *data) {
     db_set_data(hDB, pInfo->hKeyBadDest, &pInfo->BadDest, sizeof(BOOL), 1, TID_BOOL);
     return;
   }
-  cm_msg(MINFO, "move_init", "Path succesfully generated");
 
   // Set the "completed" variable in the ODB to 0 (since our newly
   // started move is still incomplete)
@@ -888,7 +887,7 @@ int initialize_tilt(INFO *pInfo) {
   // DWORD time_at_start_of_check;
   // HNDLE hPhidgetVars0 = 0, hPhidgetVars1 = 0;
 
-  // double tilt_min = -105;
+  // double tilt_min = -109;
   // double tilt_max = 15;
   //Only loop over the motors from the 
   //gantry we want to use
@@ -946,7 +945,6 @@ int initialize_tilt(INFO *pInfo) {
 
     if (i == 0)
       printf("\n");
-    cm_msg(MINFO, "move_init", "Tilt %i initial position (from Phidget): tilt angle = %f", i, pInfo->Phidget[7]);
 
 
     // Now we estimate the distance we need in order to get the tilt to zero.
@@ -958,7 +956,6 @@ int initialize_tilt(INFO *pInfo) {
   }
 
   //DEBUG:
-  printf("Destinations: Dest[4] = %f, dest[9] = %f\n", dest[4], dest[9]);
 
   // Write the destinations to the motors
   // Note: channel_rw works for both motors, ie. write both tilt destinations at once and initialize
@@ -990,7 +987,6 @@ int initialize_tilt(INFO *pInfo) {
     }
   }
 
-  cm_msg(MINFO, "initialize_tilt", "Move complete.");
   tilt_ini_attempts++;
   for (i = tilt_start; i < tilt_end; i++) {
     int axis = (i == 0 ? 4 : 9);
@@ -1001,7 +997,6 @@ int initialize_tilt(INFO *pInfo) {
 
     //NaN check:
     if (pInfo->Phidget[7] != pInfo->Phidget[7]) {
-      cm_msg(MERROR, "initialize_tilt", "NAN tilt value, either not connected or bug in tilt angle calculation!");
       continue;
     }
 
@@ -1059,7 +1054,6 @@ void initialize(INFO *pInfo) {
   float lastCountPosArm2;
 
 
-  cm_msg(MINFO, "initialize", "Initializing motors");
   BOOL initing = 1;
   db_set_data(pInfo->hDB, pInfo->hKeyInitializing, &initing, sizeof(BOOL), 1, TID_BOOL);
 
@@ -1073,16 +1067,13 @@ void initialize(INFO *pInfo) {
       //Do nothing, tilt should already be initialized
       tempPos[i] = 0;
       tempNegLimitEnabled[i] = 0;
-      cm_msg(MINFO, "initialize", "Axis %i for tilt motor will be initialized separately.", i);
     } else if (pInfo->LimPos[i] == 9999) {
       tempPos[i] = 0;
       tempNegLimitEnabled[i] = 0;
-      cm_msg(MINFO, "initialize", "Negative limit switch for axis %i disabled. Axis will not be initialized.", i);
     } else {
       tempPos[i] = 500 * fabs(pInfo->mScale[i]);
       tempNegLimitEnabled[i] = 1;
-      cm_msg(MINFO, "initialize",
-             "Negative limit switch for axis %i enabled. Axis will be initialized; use position %f.", i, tempPos[i]);
+
     }
   }
 
@@ -1113,7 +1104,6 @@ void initialize(INFO *pInfo) {
       lastCountPosArm2 = pInfo->CountPos[i + 5];
       sleep(5); // Approx. polling period
       if ((tempNegLimitEnabled[i] == 1) && (tempNegLimitEnabled[i + 5] == 1)) {// If both gantry axes are enabled.
-        cm_msg(MDEBUG, "initialize", "Polling axes %i and %i.", i, i+5);
         channel_rw(pInfo, pInfo->hKeyMLimitNeg, (void *) pInfo->neg_AxisLimit, TID_BOOL, 0);
         if (pInfo->neg_AxisLimit[i] && pInfo->neg_AxisLimit[i + 5]) break;
         else {
@@ -1332,7 +1322,7 @@ int generate_path(INFO *pInfo) {
   double rot_min = -100, rot_max = 135; //Rotation limited to values equal to or greater than -100 degrees
   //to avoid triggering limit switch during scan; updated Feb 28, 2017
   // tilt_min < tilt angle < tilt_max
-  double tilt_min = -105, tilt_max = 15;
+  double tilt_min = -120, tilt_max = 20; // extended for p-one measurement
 
   double z_max_value = 0.535; // Rika (23Mar2017): gantry positive z limit switch at z = 0.534m.
   // John (16Oct2019): Reducing z_max from 0.535 to 0.22 for PMT scans because getting too close to acrylic
@@ -1614,7 +1604,6 @@ int generate_path(INFO *pInfo) {
 
   // Rika: Check destination to ensure optical boxes will not collide with each other, with tank, or with PMT.
   // Rika (31Mar2016): Updated to include check for both bottom & top surfaces of boxes
-  std::cout <<" I'm here ln 1617"<< std::endl;
   bool validDestination_box0 = true;
   bool validDestination_box1 = true;
   std::pair<double, double> finalZ_box0_lo_up = gantryConfigCalc.GetOpticalBoxZ(0, gant1_tilt_start, gantry1ZDes);
@@ -1643,7 +1632,6 @@ int generate_path(INFO *pInfo) {
     return GENPATH_BAD_DEST;
   }
 */
-  std::cout <<" I'm here ln 1646"<< std::endl;
 
   // Check PMT:
   validDestination_box0= true;
@@ -1900,7 +1888,6 @@ int generate_path(INFO *pInfo) {
   // Determine which motion the gantry system can take: IF 1) gantry1 move first, rotate first ELSE 2) gantry1 move first, rotate second ELSE 3) gantry2 move first, rotate first ELSE 4) gantry2 move first, rotate second
   if (goodPath1a && goodPath1b && goodRotationTilt_rotfirst_tiltfirst && goodRotationTilt_endcheck_tiltfirst &&
       !gant2_movefirst) {
-    cm_msg(MINFO, "generate_path", "Good path identified: Gantry 1 move first, rotation first, tilt first");
     pathCalc00.InitialiseGantries(gantry1_startpos_rotfirst_tiltfirst, gantry2_startpos_rotfirst_tiltfirst);
     pathCalc00.InitialiseOpticalBoxes(box0_startpos_rotfirst_tiltfirst.first,
                                       box0_startpos_rotfirst_tiltfirst.second,
@@ -1920,7 +1907,6 @@ int generate_path(INFO *pInfo) {
 
   } else if (goodPath2a && goodPath2b && goodTilt_rotsecond_tiltfirst && goodRotation_rotsecond_tiltfirst &&
              goodRotationTilt_endcheck_tiltfirst && !gant2_movefirst) {
-    cm_msg(MINFO, "generate_path", "Good path identified: Gantry 1 move first, rotation second, tilt first");
     pathCalc00.InitialiseGantries(gantry1_startpos_rotsecond_tiltfirst, gantry2_startpos_rotsecond_tiltfirst);
     pathCalc00.InitialiseOpticalBoxes(box0_startpos_rotsecond_tiltfirst.first, box0_startpos_rotsecond_tiltfirst.second,
                                       box1_startpos_rotsecond_tiltfirst.first, box1_startpos_rotsecond_tiltfirst.second,
@@ -1936,7 +1922,6 @@ int generate_path(INFO *pInfo) {
     tiltfirst = true;
 
   } else if (goodPath3a && goodPath3b && goodRotationTilt_rotfirst_tiltfirst && goodRotationTilt_endcheck_tiltfirst) {
-    cm_msg(MINFO, "generate_path", "Good path identified: Gantry 2 move first, rotation first, tilt first");
     pathCalc00.InitialiseGantries(gantry1_startpos_rotfirst_tiltfirst, gantry2_endpos_rotfirst_tiltfirst);
     pathCalc00.InitialiseOpticalBoxes(box0_startpos_rotfirst_tiltfirst.first, box0_startpos_rotfirst_tiltfirst.second,
                                       box1_startpos_rotfirst_tiltfirst.first, box1_startpos_rotfirst_tiltfirst.second,
@@ -2263,7 +2248,7 @@ void move(INFO *pInfo) {
   // This is added so that the monitor recognizes a move as completed, even
   // when no move is required.
   if (!zerotest) {
-    cm_msg(MINFO, "move", "Warning: No move required");
+    //cm_msg(MINFO, "move", "Warning: No move required");
     // This indicates to the monitor that a move has been initiated
     // even though the motors won't start moving.
     //TODO:: BK: Think of a better way of doing this. The Moving variable should only be used to indicate that the system is moving it could cause confusion when you set it based on other conditions.(This is me being picky)
@@ -2316,7 +2301,6 @@ void move(INFO *pInfo) {
                || Motor00Pos[3] != Motor00StartPos[3] || Motor00Pos[4] != Motor00StartPos[4] ||
                Motor00Pos[5] != Motor00StartPos[5]
                || Motor00Pos[6] != Motor00StartPos[6] || Motor00Pos[7] != Motor00StartPos[7]) {
-        cm_msg(MINFO, "move", " Motors gantry 0 are Moving ");
         waiting = 0;
         started_moving = 1;
         pInfo->Moving = 1;   //not necessary for long moves, but for mm moves, move can stop before monitor can check whether it's moving, so need to set here that is was really moving
@@ -2327,7 +2311,6 @@ void move(INFO *pInfo) {
                || Motor01Pos[3] != Motor01StartPos[3] || Motor01Pos[4] != Motor01StartPos[4] ||
                Motor01Pos[5] != Motor01StartPos[5]
                || Motor01Pos[6] != Motor01StartPos[6] || Motor01Pos[7] != Motor01StartPos[7]) {
-        cm_msg(MINFO, "move", " Motors gantry 1 are Moving ");
         waiting = 0;
         started_moving = 1;
         pInfo->Moving = 1;   //not necessary for long moves, but for mm moves, move can stop before monitor can check whether it's moving, so need to set here that is was really moving
@@ -2338,7 +2321,6 @@ void move(INFO *pInfo) {
       // a move will not be started however no move is needed so set pinfo->moving to 1 so that the next move will be called
       else if (((Motor00Dest[4] > 0) && Motor00LimitNeg[4]) || ((Motor00Dest[5] > 0) && Motor00LimitNeg[5])
                || ((Motor00Dest[6] > 0) && Motor00LimitNeg[6]) || ((Motor00Dest[7] > 0) && Motor00LimitNeg[7])) {
-        cm_msg(MERROR, "move", "Move could not be started because Motor00 is at a negative limit switch");
         waiting = 0;
         started_moving = 1;
         pInfo->Moving = 1;
@@ -2347,7 +2329,6 @@ void move(INFO *pInfo) {
       // Now testing for move in negative direction, and hitting positive limit switch for ganty0
       else if (((Motor00Dest[4] < 0) && Motor00LimitPos[4]) || ((Motor00Dest[5] < 0) && Motor00LimitPos[5])
                || ((Motor00Dest[6] < 0) && Motor00LimitPos[6]) || ((Motor00Dest[7] < 0) && Motor00LimitPos[7])) {
-        cm_msg(MERROR, "move", "Move could not be started because Motor00 is at a Positive limit switch");
         waiting = 0;
         started_moving = 1;
         pInfo->Moving = 1;
@@ -2356,7 +2337,6 @@ void move(INFO *pInfo) {
       // Same for gantry1
       else if (((Motor01Dest[1] > 0) && Motor01LimitNeg[1]) || ((Motor01Dest[2] > 0) && Motor01LimitNeg[2])
                || ((Motor01Dest[3] > 0) && Motor01LimitNeg[3]) || ((Motor01Dest[4] > 0) && Motor01LimitNeg[4])) {
-        cm_msg(MERROR, "move", "Move could not be started because Motor01 is at a negative limit switch");
         waiting = 0;
         started_moving = 1;
         pInfo->Moving = 1;
@@ -2365,7 +2345,6 @@ void move(INFO *pInfo) {
       // Same for gantry1
       else if (((Motor01Dest[1] < 0) && Motor01LimitPos[1]) || ((Motor01Dest[2] < 0) && Motor01LimitPos[2])
                || ((Motor01Dest[3] < 0) && Motor01LimitPos[3]) || ((Motor01Dest[4] < 0) && Motor01LimitPos[4])) {
-        cm_msg(MERROR, "move", "Move could not be started because Motor01 is at a Positive limit switch");
         waiting = 0;
         started_moving = 1;
         pInfo->Moving = 1;
@@ -2375,12 +2354,10 @@ void move(INFO *pInfo) {
       // If 5 seconds has passed and the motors haven't started moving reset the ODB values
       // that should initiate a move with the hope that a move will start.
       else if (ss_millitime() - start_of_loop > 1000 * 5) {
-        cm_msg(MINFO, "move", "Calling channel_rw again after past 5s");
         waiting = 0;
       }
     }
   }
-  cm_msg(MINFO, "move", "Function Move is complete");
 }
 
 /*-- Stop_move -----------------------------------------------------*/
@@ -2458,6 +2435,7 @@ void monitor(HNDLE hDB, HNDLE hKey, void *data) {
     for (i = gantry_motor_start; i < gantry_motor_end; i++) {
       // tilt motor will be a little off since we use the phidget angle 
       if (i==4){
+        // should call the adjust_tilt and then return 
         continue;
       }
 
@@ -2468,7 +2446,7 @@ void monitor(HNDLE hDB, HNDLE hKey, void *data) {
         else{
           if (pInfo->neg_AxisLimit[i] || pInfo->pos_AxisLimit[i]) { //already at limit OR hit limit after move
             stoppedDueToLimit = true;
-            cm_msg(MINFO, "monitor", "Stopped moving because LIMIT SWITCH for move %i reached!", i);
+            //cm_msg(MINFO, "monitor", "Stopped moving because LIMIT SWITCH for move %i reached!", i);
             // Resetting the path to take the current position at the limit (CountPos) as its destination
             // This will make sure CountDest in move() is zero (after hitting a limit switch) and also
             // MDest which is basically the same. The code checking why a move did not start will then
@@ -2485,29 +2463,24 @@ void monitor(HNDLE hDB, HNDLE hKey, void *data) {
             //break; //no break, because also check for other hit limit switches, and reset their path/destination
           } else {
             if (!stoppedDueToLimit) {
-              cm_msg(MERROR, "monitor", "Move failed at i=%d, pathindex=%d : %6.2f, %6.2f", i, pInfo->PathIndex,
-		     pInfo->MovePath[i][pInfo->PathIndex], pInfo->CountPos[i]);
+              //cm_msg(MERROR, "monitor", "Move failed at i=%d, pathindex=%d : %6.2f, %6.2f", i, pInfo->PathIndex,
+		          //pInfo->MovePath[i][pInfo->PathIndex], pInfo->CountPos[i]);
               return;
             }
           }
         }
       }
     }
-
-    printf("Move to index complete\n"); //DEBUG
-    printf("Time to complete Move to index %lf\n", ss_millitime()); //DEBUG
     // Check if we are at the final path index, otherwise initiate next move
     if (pInfo->PathIndex + 1 == pInfo->PathSize) {
       // Final destination reached
       pInfo->Completed = 1;
       db_set_data(hDB, pInfo->hKeyCompleted, &pInfo->Completed, sizeof(BOOL), 1, TID_BOOL);
-      cm_msg(MINFO, "monitor", "Move to destination complete");
-      if (stoppedDueToLimit)
-        cm_msg(MINFO, "monitor", "But destination not reached due to limit switch");
+
     } else {
       pInfo->PathIndex++;
       // DEBUG
-      printf("Monitor called move() at : %lf\n", ss_millitime());
+      //printf("Monitor called move() at : %lf\n", ss_millitime());
       move(pInfo);
     }
   }
@@ -2628,3 +2601,134 @@ getPMTpolygon(XYPolygon &poly, double pmtRadius, int polyNum, double pmtXcentre,
   poly.push_back(std::make_pair(xFromCentre + pmtXcentre, yFromCentre + pmtYcentre));
 
 }
+/*
+void adjust_tilt(HNDLE hDB, HNDLE hKey, void *data){
+    Called to adjust the tilt slightly 
+
+    round((pInfo->Destination[4] - pInfo->Phidget[7] * rad +tilt_offset) * pInfo->mScale[4] + pInfo->mOrigin[4])
+
+    (Dest_angle - current_angle) * scalefactor + origin_step = destination_step 
+
+    dAngle*scale + previous_step  = destination_step  
+
+  INFO *pInfo = (INFO *) data;
+  INT status; 
+  BOOL start[10] = {1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+
+  float Motor00StartPos[8];
+  float Motor01StartPos[8];
+  float Motor00Pos[8];
+  float Motor01Pos[8];
+  float Motor00Dest[8];
+  float Motor01Dest[8];
+  BOOL Motor00LimitPos[8];
+  BOOL Motor00LimitNeg[8];
+  BOOL Motor01LimitPos[8];
+  BOOL Motor01LimitNeg[8];
+
+  int size_bool = sizeof(Motor00LimitPos);
+  int size_float = sizeof(Motor00Pos);
+  bool started_moving = false; 
+  int waiting = 1;
+
+  DWORD start_of_loop;
+  DWORD total_count;
+  
+  // Get the current location of the motor. This will be used to decide on the new location
+  db_get_data(pInfo->hDB, pInfo->hKeyMPos[0], &Motor00StartPos, &size_float, TID_FLOAT);
+  db_get_data(pInfo->hDB, pInfo->hKeyMPos[1], &Motor01StartPos, &size_float, TID_FLOAT);
+  db_get_data(pInfo->hDB, pInfo->hKeyMDest[0], &Motor00Dest, &size_float, TID_FLOAT);
+  db_get_data(pInfo->hDB, pInfo->hKeyMDest[1], &Motor01Dest, &size_float, TID_FLOAT);
+
+  pInfo->CountDest[4] = (pInfo->Destination[4] - pInfo->Phidget[7])* pInfo->mScale[4] + Motor00StartPos[4];
+
+  // Start motors towards the specified destinations
+  // Write motor destinations to the ODB
+  channel_rw(pInfo, pInfo->hKeyMDest, (void *) pInfo->CountDest, TID_FLOAT, 1);
+
+  total_count = ss_millitime();
+  while (!started_moving){
+    start_of_loop = ss_millitime();
+    channel_rw(pInfo, pInfo->hKeyMStart, (void *) start, TID_BOOL, 1);
+    sleep(2);
+    waiting = 1;
+
+    while (waiting){
+      db_get_data(pInfo->hDB, pInfo->hKeyMPos[0], &Motor00Pos, &size_float, TID_FLOAT);
+      db_get_data(pInfo->hDB, pInfo->hKeyMPos[1], &Motor01Pos, &size_float, TID_FLOAT);
+      db_get_data(pInfo->hDB, pInfo->hKeyMLimitPos[0], &Motor00LimitPos, &size_bool, TID_BOOL);
+      db_get_data(pInfo->hDB, pInfo->hKeyMLimitNeg[0], &Motor00LimitNeg, &size_bool, TID_BOOL);
+      db_get_data(pInfo->hDB, pInfo->hKeyMLimitPos[1], &Motor01LimitPos, &size_bool, TID_BOOL);
+      db_get_data(pInfo->hDB, pInfo->hKeyMLimitNeg[1], &Motor01LimitNeg, &size_bool, TID_BOOL);
+
+      if(ss_millitime() - total_count > 1000*300){
+        waiting = 0;
+        started_moving = 1;
+      }
+      // TF NOTE: the code below is vulnerable to which motor channels are used. Switching a cable screws this up.
+      // If any of the motors for gantry0 are no longer at their start position that means the motors are moving and the program behaved properly
+      else if (Motor00Pos[0] != Motor00StartPos[0] || Motor00Pos[1] != Motor00StartPos[1] ||
+               Motor00Pos[2] != Motor00StartPos[2]
+               || Motor00Pos[3] != Motor00StartPos[3] || Motor00Pos[4] != Motor00StartPos[4] ||
+               Motor00Pos[5] != Motor00StartPos[5]
+               || Motor00Pos[6] != Motor00StartPos[6] || Motor00Pos[7] != Motor00StartPos[7]) {
+        waiting = 0;
+        started_moving = 1;
+        pInfo->Moving = 1;   //not necessary for long moves, but for mm moves, move can stop before monitor can check whether it's moving, so need to set here that is was really moving
+      }
+      // Same test for gantry1
+      else if (Motor01Pos[0] != Motor01StartPos[0] || Motor01Pos[1] != Motor01StartPos[1] ||
+               Motor01Pos[2] != Motor01StartPos[2]
+               || Motor01Pos[3] != Motor01StartPos[3] || Motor01Pos[4] != Motor01StartPos[4] ||
+               Motor01Pos[5] != Motor01StartPos[5]
+               || Motor01Pos[6] != Motor01StartPos[6] || Motor01Pos[7] != Motor01StartPos[7]) {
+        waiting = 0;
+        started_moving = 1;
+        pInfo->Moving = 1;   //not necessary for long moves, but for mm moves, move can stop before monitor can check whether it's moving, so need to set here that is was really moving
+      }
+
+
+      // If a motor for gantry0 is trying to move in the positive direction but the corresponding negative limit switch is engaged,
+      // a move will not be started however no move is needed so set pinfo->moving to 1 so that the next move will be called
+      else if (((Motor00Dest[4] > 0) && Motor00LimitNeg[4]) || ((Motor00Dest[5] > 0) && Motor00LimitNeg[5])
+               || ((Motor00Dest[6] > 0) && Motor00LimitNeg[6]) || ((Motor00Dest[7] > 0) && Motor00LimitNeg[7])) {
+        waiting = 0;
+        started_moving = 1;
+        pInfo->Moving = 1;
+      }
+
+      // Now testing for move in negative direction, and hitting positive limit switch for ganty0
+      else if (((Motor00Dest[4] < 0) && Motor00LimitPos[4]) || ((Motor00Dest[5] < 0) && Motor00LimitPos[5])
+               || ((Motor00Dest[6] < 0) && Motor00LimitPos[6]) || ((Motor00Dest[7] < 0) && Motor00LimitPos[7])) {
+        waiting = 0;
+        started_moving = 1;
+        pInfo->Moving = 1;
+      }
+
+      // Same for gantry1
+      else if (((Motor01Dest[1] > 0) && Motor01LimitNeg[1]) || ((Motor01Dest[2] > 0) && Motor01LimitNeg[2])
+               || ((Motor01Dest[3] > 0) && Motor01LimitNeg[3]) || ((Motor01Dest[4] > 0) && Motor01LimitNeg[4])) {
+        waiting = 0;
+        started_moving = 1;
+        pInfo->Moving = 1;
+      }
+
+      // Same for gantry1
+      else if (((Motor01Dest[1] < 0) && Motor01LimitPos[1]) || ((Motor01Dest[2] < 0) && Motor01LimitPos[2])
+               || ((Motor01Dest[3] < 0) && Motor01LimitPos[3]) || ((Motor01Dest[4] < 0) && Motor01LimitPos[4])) {
+        waiting = 0;
+        started_moving = 1;
+        pInfo->Moving = 1;
+      }
+
+
+      // If 5 seconds has passed and the motors haven't started moving reset the ODB values
+      // that should initiate a move with the hope that a move will start.
+      else if (ss_millitime() - start_of_loop > 1000 * 5) {
+        waiting = 0;
+      }
+    }
+  }
+}
+
+*/
