@@ -44,21 +44,27 @@ class POESwitch(midas.frontend.EquipmentBase):
         #sw.turn_on_poe_port(1)
 
     def detailed_settings_changed_func(self, path, idx, new_value):
+        # ignore HV and turn mPMT off
+        override = self.client.odb_get("/Equipment/POESwitch/Settings/override")        
         if "port_enable" in path:
-            
             if new_value:
                 self.client.odb_set("/Equipment/slowControlListener0/Readback/device_state", "Powering Up", False)
                 self.sw.turn_on_poe_port(1+idx)
             else:
                 mpmt_hvs = np.array(self.client.odb_get("/Equipment/slowControlListener0/Variables/pmt_hvvolval"))>50
 
-                if any(mpmt_hvs):
+                if any(mpmt_hvs) and (not override):
                     self.client.msg("Cannot unpower mPMT!! HV still ON", True)
                     self.client.odb_set("/Equipment/POESwitch/Settings/port_enable[{}]".format(idx), True, False)
+                    self.client.odb_set("/Equipment/POESwitch/Variables/channel_override", idx)
                     return 
                 else:
-                    self.client.odb_set("/Equipment/slowControlListener0/Readback/device_state", "Unpowered", False)
                     self.sw.turn_off_poe_port(1+idx)
+                    self.client.odb_set("/Equipment/slowControlListener0/Readback/device_state", "Unpowered", False)
+                    if override:
+                        # re-set the overrides now that they've been used
+                        self.client.odb_set("/Equipment/POESwitch/Settings/override", False) 
+                        self.client.odb_set("/Equipment/POESwitch/Variables/channel_override", -1)
             self.client.msg("Setting POE Port {} to {}".format(
                 idx+1,
                 "on" if new_value else "off"

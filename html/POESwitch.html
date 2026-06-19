@@ -1,0 +1,320 @@
+!DOCTYPE html>
+<html class="mcss">
+<head>
+   <meta charset="UTF-8">
+   <link rel="stylesheet" href="midas.css">
+   <script src="controls.js"></script>
+   <script src="midas.js"></script>
+   <script src="obsolete.js"></script>
+   <script src="mhttpd.js"></script>
+   <title>POE Switch</title>
+
+   <style>
+      .mtable td { padding: 10px; }
+      .emergy-panel {
+        display: grid;
+        grid-template-columns: repeat(1, 1fr);
+        gap: 0px;
+        margin: 20px;
+        padding: 5px;
+        border: 2px solid #ddd;
+        border-radius: 12px;
+        background: #f9f9f9;
+        max-width: 800px;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+      h3 {
+        margin-top: 0;
+        font-size: 1.1em;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 5px;
+      }
+      .panel{
+        background: #fff;
+        border-radius: 10px;
+        padding: 5px;
+        display:grid;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      }
+   </style>
+
+</head>
+<script>
+  var updateTimerId = 0;
+  var updatePeriod = 1000;
+
+  function initialize(){
+    mhttpd_init('POE Switch');
+    reload()
+  }
+
+  function reload(){
+    clearTimeout(updateTimerId);
+    updateTimerId = setTimeout('reload()', updatePeriod);
+
+    var chan_over = ODBGet("/Equipment/POESwitch/Variables/channel_override")
+    var over_enabled = ODBGet("/Equipment/POESwitch/Settings/override")
+    if (over_enabled=='y'){
+      document.getElementById("message_row").innerHTML = 'Override Enabled. You may now disable the port.'
+    }else if(chan_over==-1){
+      document.getElementById("message_row").innerHTML = ''
+    }else{
+      var this_line = `Warning! HV ON for channel ${chan_over}. Override? <input type="button" value="ENABLE OVERRIDE" onclick="enable_override()"></input>`;
+      document.getElementById("message_row").innerHTML = this_line
+    }
+
+    
+  }
+
+  function enable_override(){
+    ODBSet("/Equipment/POESwitch/Settings/override", true)
+  }
+</script>
+
+<body class="mcss" onload="initialize()">
+
+<!-- header and side navigation will be filled in mhttpd_init -->
+<div id="mheader"></div>
+<div id="msidenav"></div>
+
+<div id="mmain">
+  <table class="mtable">
+    <tr>
+      <th colspan="7" class="mtableheader">Status Messages</th>
+    </tr>
+    <tr>
+      <td colspan="7" id="message_row"></td>
+    </tr>
+    <tr>
+      <th colspan="7" class="mtableheader">POE Switch Setup</th>
+    </tr>
+    <tr>
+      <td>
+	Channel
+      </td>
+      <td>
+	Description
+      </td>
+      <td>
+	POE Enable
+      </td>
+      <td>
+	POE Enable <BR> Readback
+      </td>
+      <td>
+	POE Status
+      </td>
+      <td>
+	Network link up?
+      </td>
+      <td>
+	Network speed <BR> (Mbps)
+      </td>
+
+    </tr>
+    <tr>
+      <td>
+        1
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-editable="1" data-odb-path="/Equipment/POESwitch/Settings/Port Description[0]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-editable="1" data-odb-path="/Equipment/POESwitch/Settings/port_enable[0]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POEE[0]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Readback/Port Status[0]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POEO[0]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POES[0]" ></div> 
+      </td>
+    </tr>
+    <tr>
+      <td>
+        2
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-editable="1" data-odb-path="/Equipment/POESwitch/Settings/Port Description[1]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-editable="1" data-odb-path="/Equipment/POESwitch/Settings/port_enable[1]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POEE[1]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Readback/Port Status[1]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POEO[1]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POES[1]" ></div> 
+      </td>
+    </tr>
+    <tr>
+      <td>
+        3
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-editable="1" data-odb-path="/Equipment/POESwitch/Settings/Port Description[2]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-editable="1" data-odb-path="/Equipment/POESwitch/Settings/port_enable[2]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POEE[2]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Readback/Port Status[2]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POEO[2]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POES[2]" ></div> 
+      </td>
+    </tr>
+    <tr>
+      <td>
+        4
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-editable="1" data-odb-path="/Equipment/POESwitch/Settings/Port Description[3]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-editable="1" data-odb-path="/Equipment/POESwitch/Settings/port_enable[3]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POEE[3]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Readback/Port Status[3]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POEO[3]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POES[3]" ></div> 
+      </td>
+    </tr>
+    <tr>
+      <td>
+        5
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-editable="1" data-odb-path="/Equipment/POESwitch/Settings/Port Description[4]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-editable="1" data-odb-path="/Equipment/POESwitch/Settings/port_enable[4]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POEE[4]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Readback/Port Status[4]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POEO[4]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POES[4]" ></div> 
+      </td>
+    </tr>
+    <tr>
+      <td>
+        6
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-editable="1" data-odb-path="/Equipment/POESwitch/Settings/Port Description[5]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-editable="1" data-odb-path="/Equipment/POESwitch/Settings/port_enable[5]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POEE[5]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Readback/Port Status[5]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POEO[5]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POES[5]" ></div> 
+      </td>
+    </tr>
+    <tr>
+      <td>
+        7
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-editable="1" data-odb-path="/Equipment/POESwitch/Settings/Port Description[6]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-editable="1" data-odb-path="/Equipment/POESwitch/Settings/port_enable[6]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POEE[6]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Readback/Port Status[6]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POEO[6]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POES[6]" ></div> 
+      </td>
+    </tr>
+    <tr>
+      <td>
+        8
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-editable="1" data-odb-path="/Equipment/POESwitch/Settings/Port Description[7]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-editable="1" data-odb-path="/Equipment/POESwitch/Settings/port_enable[7]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POEE[7]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Readback/Port Status[7]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POEO[7]" ></div> 
+      </td>
+      <td>
+        <div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POES[7]" ></div> 
+      </td>
+    </tr>
+
+  <table class="mtable">
+    <tr>
+      <th colspan="2" class="mtableheader">POE Switch Power</th>
+    </tr>
+    <tr>
+      <td>
+	Total switch power (W)
+      </td>
+      <td>
+	<div class="modbvalue" data-odb-path="/Equipment/POESwitch/Variables/POEB[0]" ></div>
+      </td>
+     </tr>
+  </table>
+
+
+
+  </table>
+
+</div>
+</body>
+</html>
